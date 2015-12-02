@@ -162,7 +162,7 @@ VX_API_ENTRY vx_kernel VX_API_CALL vxAddOpenCLAsBinaryKernel(vx_context context,
  * \ingroup group_cl_image
  */
 #define vxImagePixel(type, ptr, x, y, sx, sy) \
-    (*(type *)(&((uchar *)ptr)[((y) * sy) + ((x) * sx)]))
+    (*(__global type *)(&((__global uchar *)ptr)[((y) * sy) + ((x) * sx)]))
 
 /*!
  * \brief Allows access to an array item as a typecast pointer deference.
@@ -173,7 +173,7 @@ VX_API_ENTRY vx_kernel VX_API_CALL vxAddOpenCLAsBinaryKernel(vx_context context,
  * \ingroup group_cl_array
  */
 #define vxArrayItem(type, ptr, index, stride) \
-    (*(type *)(&((uchar *)ptr)[index*stride]))
+    (*(__global type *)(&((__global uchar *)ptr)[index*stride]))
 
 /*! \brief Allows access to a matrix element \f$ M_{ij} \f$ where i is the column and j is the row.
  * \param type The OpenCL single element type of the matrix.
