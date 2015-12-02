@@ -75,6 +75,7 @@ static void vxInitArrayMemory(vx_array arr)
     arr->memory.nptrs = 1;
     arr->memory.ndims = 2;
 
+	arr->memory.cl_type = CL_MEM_OBJECT_BUFFER;
     arr->memory.dims[0][0] = (int32_t)arr->item_size;
     arr->memory.dims[0][1] = (int32_t)arr->capacity;
 }

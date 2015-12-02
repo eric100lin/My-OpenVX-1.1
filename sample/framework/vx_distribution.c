@@ -41,6 +41,7 @@ VX_API_ENTRY vx_distribution VX_API_CALL vxCreateDistribution(vx_context context
                 distribution->memory.dims[0][VX_DIM_C] = 1;
                 distribution->memory.dims[0][VX_DIM_X] = (vx_int32)numBins;
                 distribution->memory.dims[0][VX_DIM_Y] = 1;
+				distribution->memory.cl_type = CL_MEM_OBJECT_BUFFER;
                 distribution->window_x = (vx_uint32)range/(vx_uint32)numBins;
                 distribution->window_y = 1;
                 distribution->offset_x = offset;
