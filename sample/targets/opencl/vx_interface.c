@@ -507,7 +507,7 @@ vx_cl_kernel_description_t *vxclFindKernel(vx_enum enumeration)
  * but will cast to internal representation when needed (due to lack of API or
  * need for secret information). This is not an optimal OpenCL invocation.
  */
-vx_status vxclCallOpenCLKernel(vx_node node, vx_reference parameters[], vx_uint32 num)
+vx_status vxclCallOpenCLKernel(vx_node node, const vx_reference *parameters, vx_uint32 num)
 {
     vx_status status = VX_FAILURE;
     vx_context context = node->base.context;
