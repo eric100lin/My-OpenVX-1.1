@@ -44,7 +44,9 @@ if (WIN32)
     include( CMake_windows_tools )
 elseif (ANDROID)
     include( CMake_android_tools )
-else ()
+elseif (CMAKE_TOOLCHAIN_FILE)
+	## Do nothing!!
+else (CMAKE_TOOLCHAIN_FILE)
     include( CMake_linux_tools )
 endif ()
 
@@ -121,7 +123,7 @@ if (CMAKE_BUILD_TYPE EQUAL Debug)
     add_definitions( -DOPENVX_DEBUGGING )
 endif (CMAKE_BUILD_TYPE EQUAL Debug)
 
-if ( EXPERIMENTAL_USE_OPENCL )
+if ( EXPERIMENTAL_USE_OPENCL AND NOT USE_POCL_OPENCL)
     if (DEFINED ENV{VX_OPENCL_INCLUDE_PATH})
         set( OPENCL_INCLUDE_PATH $ENV{VX_OPENCL_INCLUDE_PATH} )
         message( "Use OpenCL headers from: " ${OPENCL_INCLUDE_PATH} )
@@ -135,7 +137,7 @@ if ( EXPERIMENTAL_USE_OPENCL )
 	else(DEFINED ENV{VX_OPENCL_LIB_PATH})
 	    message( "Use OpenCL libs from system default location, in order to set specific path: please set 'VX_OPENCL_LIB_PATH' env. variable and reconfigure")
     endif (DEFINED ENV{VX_OPENCL_LIB_PATH})
-endif ( EXPERIMENTAL_USE_OPENCL )
+endif ( EXPERIMENTAL_USE_OPENCL AND NOT USE_POCL_OPENCL)
 
 FIND_NUM_PROCESSORS()
 if ( ${PROCESSOR_COUNT} LESS "1" )
@@ -158,6 +160,18 @@ set( SAMPLE_TARGETS_FOLDER ${SAMPLE_FOLDER}/Targets )
 set( SAMPLE_CPP_FOLDER SampleCPP )
 set( TOOLS_FOLDER Tools )
 
+
+if ( EXPERIMENTAL_USE_OPENCL AND USE_POCL_OPENCL )
+	set( TARGET_NAME POCL-OpenCL )
+	include_directories(BEFORE ${CMAKE_SOURCE_DIR}/libopencl-stub/include)
+	add_library (${TARGET_NAME} STATIC ${CMAKE_SOURCE_DIR}/libopencl-stub/libopencl.c)
+	set( OPENCL_INCLUDE_PATH ${CMAKE_SOURCE_DIR}/libopencl-stub/include )
+	install ( TARGETS ${TARGET_NAME} 
+          RUNTIME DESTINATION bin
+          ARCHIVE DESTINATION bin
+          LIBRARY DESTINATION bin )
+	set_target_properties( ${TARGET_NAME} PROPERTIES FOLDER ${DEBUG_FOLDER} )
+endif ( EXPERIMENTAL_USE_OPENCL AND USE_POCL_OPENCL )
 
 add_subdirectory( debug )
 add_subdirectory( examples )

@@ -1,4 +1,5 @@
 # Git clone
+You should replace VX_OPENCL_INCLUDE_PATH and VX_OPENCL_LIB_PATH environment variables to your OpenCL path.
 ```
 git clone git@github.com:eric100lin/My-OpenVX-1.0.1.git
 cd My-OpenVX-1.0.1
@@ -9,7 +10,8 @@ export VX_OPENCL_INCLUDE_PATH=$AMDAPPSDK_PATH/include
 export VX_OPENCL_LIB_PATH=$AMDAPPSDK_PATH/lib/x86_64/sdk
 ```
 
-# BUILD FOR DEBUG VERSION
+# BUILD FOR AMD64 Desktop
+debug version:
 ```
 python Build.py --os=linux --arch=64 --conf=Debug --openmp=1 --opencl=1
 cd $OPENVX_ROOT/build/Linux/x64/Debug
@@ -18,11 +20,32 @@ cmake $OPENVX_ROOT -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=$OPENVX_INSTA
 make -j4 && make install
 ```
 
-# BUILD FOR RELEASE VERSION
+release version:
 ```
 python Build.py --os=linux --arch=64 --conf=Release --openmp=1 --opencl=1
 cd $OPENVX_ROOT/build/Linux/x64/Release
 export OPENVX_INSTALL_ROOT=$OPENVX_ROOT/install/Linux/x64/Release
 cmake $OPENVX_ROOT -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$OPENVX_INSTALL_ROOT -DBUILD_X64=1  -DEXPERIMENTAL_USE_OPENMP=1 -DEXPERIMENTAL_USE_OPENCL=1 -DEXPERIMENTAL_USE_TARGET=1 -DCMAKE_C_FLAGS="-DCL_USE_DEPRECATED_OPENCL_1_0_APIS -DCL_USE_DEPRECATED_OPENCL_1_1_APIS -DCL_USE_DEPRECATED_OPENCL_2_0_APIS" -DCMAKE_CXX_FLAGS="-DCL_USE_DEPRECATED_OPENCL_1_0_APIS -DCL_USE_DEPRECATED_OPENCL_1_1_APIS -DCL_USE_DEPRECATED_OPENCL_2_0_APIS"
+make -j4 && make install
+```
+
+# BUILD FOR Android with POCL-OpenCL
+Set debug/release version by BUILD_CONF environment variable
+```
+export BUILD_CON=Debug
+```
+```
+export BUILD_CON=Release
+```
+
+You should replace the ANDROID_NDK environment variable to your NDK path, also you can modifiy ANDROID_ABI for your Android target.
+Other Android build options can be found in cmake_utils/android.toolchain.cmake.
+```
+git submodule init
+export ANDROID_NDK=/home/thlin/Android/android-ndk-r10e
+export ANDROID_ABI=armeabi-v7a
+export OPENVX_INSTALL_ROOT=$OPENVX_ROOT/install/Android/$ANDROID_ABI/$BUILD_CON
+mkdir -p build/Android/$ANDROID_ABI && cd build/Android/$ANDROID_ABI
+cmake $OPENVX_ROOT -DCMAKE_BUILD_TYPE=$BUILD_CON -DCMAKE_INSTALL_PREFIX=$OPENVX_INSTALL_ROOT -DBUILD_X64=0  -DEXPERIMENTAL_USE_OPENMP=1 -DEXPERIMENTAL_USE_OPENCL=1 -DUSE_POCL_OPENCL=1 -DEXPERIMENTAL_USE_TARGET=1   -DCMAKE_TOOLCHAIN_FILE=$OPENVX_ROOT/cmake_utils/android.toolchain.cmake
 make -j4 && make install
 ```
