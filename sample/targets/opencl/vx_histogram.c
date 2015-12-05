@@ -164,7 +164,7 @@ vx_cl_kernel_description_t histogram_kernel = {
         vxHistogramInputValidator,
         vxHistogramOutputValidator,
     },
-    VX_CL_SOURCE_DIR""FILE_JOINER"vx_histogram.cl",
+    FILE_JOINER"vx_histogram.cl",
     "vx_histogram_8",
     INIT_PROGRAMS,
     INIT_KERNELS,
