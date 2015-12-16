@@ -1,8 +1,8 @@
 # Git clone
 You should replace VX_OPENCL_INCLUDE_PATH and VX_OPENCL_LIB_PATH environment variables to your OpenCL path.
 ```
-git clone git@github.com:eric100lin/My-OpenVX-1.0.1.git
-cd My-OpenVX-1.0.1
+git clone git@bitbucket.org:eric100lin/my-openvx-1.0.1-fussion.git
+cd My-OpenVX-1.0.1-fussion
 
 export OPENVX_ROOT=$(pwd)
 export AMDAPPSDK_PATH=/home/thlin/AMDAPPSDK-3.0-0-Beta
