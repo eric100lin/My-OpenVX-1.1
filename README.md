@@ -49,3 +49,12 @@ mkdir -p build/Android/$ANDROID_ABI && cd build/Android/$ANDROID_ABI
 cmake $OPENVX_ROOT -DCMAKE_BUILD_TYPE=$BUILD_CON -DCMAKE_INSTALL_PREFIX=$OPENVX_INSTALL_ROOT -DBUILD_X64=0  -DEXPERIMENTAL_USE_OPENMP=1 -DEXPERIMENTAL_USE_OPENCL=1 -DUSE_POCL_OPENCL=1 -DEXPERIMENTAL_USE_TARGET=1   -DCMAKE_TOOLCHAIN_FILE=$OPENVX_ROOT/cmake_utils/android.toolchain.cmake
 make -j4 && make install
 ```
+
+# Build OpenVX application
+The OPENVX_ROOT and OPENVX_INSTALL_ROOT environment variable should have been setup upon preceding build process.
+Now setup for runtime environment variable.
+```
+export LD_LIBRARY_PATH=$OPENVX_INSTALL_ROOT/bin:$LD_LIBRARY_PATH
+export VX_CL_INCLUDE_DIR=$OPENVX_INSTALL_ROOT/include
+export VX_CL_SOURCE_DIR=$OPENVX_ROOT/kernels/opencl
+```
