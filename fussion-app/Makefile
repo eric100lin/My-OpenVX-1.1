@@ -4,7 +4,7 @@ AR = ar
 LD = g++
 LDFLAGS = -O3
 CFLAGS = -g -Wall
-CXXFLAGS = -g -Wall -std=gnu++0x
+CXXFLAGS = -g -Wall #-std=gnu++0x
 
 PROGRAM_NAME = ./fussion-app
 OPENCV_PATH = /home/thlin/opencv-2.4.9

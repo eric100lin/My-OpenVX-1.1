@@ -789,10 +789,13 @@ vx_status vxclCallOpenCLKernel(vx_node node, const vx_reference *parameters, vx_
             memcpy(&readEvents[re++],&ref->event, sizeof(cl_event));
         }
     }
-    err = clFlush(context->queues[plidx][didx]);
+	err = clFinish(context->queues[plidx][didx]);
+	CL_ERROR_MSG(err, "clFinish");
+    /*err = clFlush(context->queues[plidx][didx]);
     CL_ERROR_MSG(err, "Flush");
     VX_PRINT(VX_ZONE_TARGET, "Waiting for read events!\n");
-    clWaitForEvents(re, readEvents);
+    err = clWaitForEvents(re, readEvents);
+	CL_ERROR_MSG(err, "clWaitForEvents(re, readEvents)");*/
     if (err == CL_SUCCESS)
         status = VX_SUCCESS;
 //exit:
