@@ -116,21 +116,13 @@ void print10x10_U16(IplImage *img)
 	printf("\n");
 }
 
-unsigned int round_div(unsigned int dividend, unsigned int divisor)
-{
-    return (dividend + (divisor / 2)) / divisor;
-}
-
-void my_box3x3(IplImage *in_img, IplImage *result_img, IplImage *sum_cpu)
+void my_box3x3(IplImage *in_img, IplImage *result_img)
 {
 	int x, y;
 	int width = in_img->width;
 	int height = in_img->height;
 	int sx = 1;
 	int sy = width;
-	int TY=1, TX=8;
-	int16_t *ptr_sum = (int16_t *)sum_cpu->imageData;
-	printf("TY=%d, TX=%d\n", TY, TX);
 	
 	#define vxImagePixel(ptr, x, y, sx, sy) \
 		(((unsigned char *)ptr)[((y) * sy) + ((x) * sx)])
@@ -143,32 +135,18 @@ void my_box3x3(IplImage *in_img, IplImage *result_img, IplImage *sum_cpu)
 			{
 				vxImagePixel(result_img->imageData, x, y, sx, sy) = 
 					vxImagePixel(in_img->imageData, x, y, sx, sy);
-				int16_t cast_input = (int16_t)vxImagePixel(in_img->imageData, x, y, sx, sy);
-				ptr_sum[((y) * sy) + ((x) * sx)] = cast_input;
 				continue; // border mode...
 			}
 			sum += vxImagePixel(in_img->imageData, x-1, y-1, sx, sy);
-			if(y==TY && x==TX) printf("%d ", vxImagePixel(in_img->imageData, x-1, y-1, sx, sy));
 			sum += vxImagePixel(in_img->imageData, x+0, y-1, sx, sy);
-			if(y==TY && x==TX) printf("%d ", vxImagePixel(in_img->imageData, x+0, y-1, sx, sy));
 			sum += vxImagePixel(in_img->imageData, x+1, y-1, sx, sy);
-			if(y==TY && x==TX) printf("%d ", vxImagePixel(in_img->imageData, x+1, y-1, sx, sy));
 			sum += vxImagePixel(in_img->imageData, x-1, y+0, sx, sy);
-			if(y==TY && x==TX) printf("%d ", vxImagePixel(in_img->imageData, x-1, y+0, sx, sy));
 			sum += vxImagePixel(in_img->imageData, x+0, y+0, sx, sy);
-			if(y==TY && x==TX) printf("%d ", vxImagePixel(in_img->imageData, x+0, y+0, sx, sy));
 			sum += vxImagePixel(in_img->imageData, x+1, y+0, sx, sy);
-			if(y==TY && x==TX) printf("%d ", vxImagePixel(in_img->imageData, x+1, y+0, sx, sy));
 			sum += vxImagePixel(in_img->imageData, x-1, y+1, sx, sy);
-			if(y==TY && x==TX) printf("%d ", vxImagePixel(in_img->imageData, x-1, y+1, sx, sy));
 			sum += vxImagePixel(in_img->imageData, x+0, y+1, sx, sy);
-			if(y==TY && x==TX) printf("%d ", vxImagePixel(in_img->imageData, x+0, y+1, sx, sy));
 			sum += vxImagePixel(in_img->imageData, x+1, y+1, sx, sy);
-			if(y==TY && x==TX) printf("%d ", vxImagePixel(in_img->imageData, x+1, y+1, sx, sy));
 			
-			if(y==TY && x==TX) printf("\nsum=%d sum/9.0=%.3f sum/9=%d round_div(sum, 9)=%d\n", sum, sum/9.0f, sum/9, round_div(sum, 9));
-			ptr_sum[((y) * sy) + ((x) * sx)] = sum;
-			//sum = round_div(sum, 9);
 			sum /= 9;
 			vxImagePixel(result_img->imageData, x, y, sx, sy) = (unsigned char)sum;
 		}
@@ -197,23 +175,18 @@ int main(int argc, char **argv)
 		IplImage *cloned_img;
 		IplImage *result_cpu = cvCreateImage(dst_cvsize, IPL_DEPTH_8U, 1);
 		IplImage *result_gpu = cvCreateImage(dst_cvsize, IPL_DEPTH_8U, 1);
-		IplImage *sum_gpu = cvCreateImage(dst_cvsize, IPL_DEPTH_16U, 1);
-		IplImage *sum_cpu = cvCreateImage(dst_cvsize, IPL_DEPTH_16U, 1);
 		printf("Iteration:%d\n", i);
 		
 		cloned_img = cvCloneImage(src_gray);
-		int status = boxFilter_not_graph(cloned_img, result_gpu, sum_gpu);
+		int status = boxFilter_not_graph(cloned_img, result_gpu);
 		cvReleaseImage(&cloned_img);
 		
 		printf("Return from boxFilter_not_graph() result: %d\n", status);
 		
 		cloned_img = cvCloneImage(src_gray);
 		
-		my_box3x3(cloned_img, result_cpu, sum_cpu);
-		//cvNot(cloned_img,cloned_img);
-		
-		printf("verify_result_U16(sum_cpu, sum_gpu)\n");
-		verify_result_U16(sum_cpu, sum_gpu);
+		my_box3x3(cloned_img, result_cpu);
+		cvNot(result_cpu, result_cpu);
 		
 		printf("verify_result_U8(result_cpu, result_gpu)\n");
 		if(verify_result_U8(result_cpu, result_gpu))
@@ -227,12 +200,8 @@ int main(int argc, char **argv)
 				print10x10_U8(src_gray);
 				printf("box3x3 result from CPU\n");
 				print10x10_U8(result_cpu);
-				printf("box3x3 sum from CPU\n");
-				print10x10_U16(sum_cpu);
 				printf("box3x3 result from GPU\n");
 				print10x10_U8(result_gpu);
-				printf("box3x3 sum from GPU\n");
-				print10x10_U16(sum_gpu);
 			}
 		}
 		
@@ -240,8 +209,6 @@ int main(int argc, char **argv)
 		cvReleaseImage(&cloned_img);
 		cvReleaseImage(&result_gpu);
 		cvReleaseImage(&result_cpu);
-		cvReleaseImage(&sum_gpu);
-		cvReleaseImage(&sum_cpu);
 	}
 	
 	cvReleaseImage(&src);
