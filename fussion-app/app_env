@@ -1,0 +1,9 @@
+export OPENVX_ROOT=$(pwd)/..
+export AMDAPPSDK_PATH=/home/thlin/AMDAPPSDK-3.0-0-Beta
+export OPENCV_LIB_PATH=/home/thlin/opencv-2.4.9/build/lib
+export VX_OPENCL_INCLUDE_PATH=$AMDAPPSDK_PATH/include
+export VX_OPENCL_LIB_PATH=$AMDAPPSDK_PATH/lib/x86_64/sdk
+export OPENVX_INSTALL_ROOT=$OPENVX_ROOT/install/Linux/x64/Debug
+export LD_LIBRARY_PATH=$OPENVX_INSTALL_ROOT/bin:$OPENCV_LIB_PATH:$LD_LIBRARY_PATH
+export VX_CL_INCLUDE_DIR=$OPENVX_INSTALL_ROOT/include
+export VX_CL_SOURCE_DIR=$OPENVX_ROOT/kernels/opencl

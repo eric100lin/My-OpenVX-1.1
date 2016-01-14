@@ -45,15 +45,25 @@ int main(int argc, char **argv)
 	resize(src, src, Size(IMG_WIDTH,IMG_HEIGHT));
 	cvtColor(src, src, CV_RGB2GRAY);
 	
-	for(i=0; i<10; i++)
+	for(i=0; i<1; i++)
 	{
-		Mat result(IMG_HEIGHT,IMG_WIDTH,CV_8UC1);
+		Mat result_cv(IMG_HEIGHT,IMG_WIDTH,CV_8UC1);
+		Mat result_vx(IMG_HEIGHT,IMG_WIDTH,CV_8UC1);
 		printf("Start to run not_box3x3_graph()\n");
-		//status = not_box3x3_graph(context, src.clone(), result);
-		//printf("Return from not_box3x3_graph() result: %d\n", status);
-		status = not_not_graph(context, src.clone(), result);
-		printf("Return from not_not_graph() result: %d\n", status);
-		if(verify_result(src.clone(), result))
+		not_box3x3_cv(src.clone(), result_cv);
+		status = not_box3x3_graph(context, src.clone(), result_vx);
+		printf("Return from not_box3x3_graph() result_vx: %d\n", status);
+		if(verify_result(result_cv, result_vx))
+			printf("Verify passed!!\n");
+		else
+			printf("Verify fail!!\n");
+		printf("\n");
+		
+		printf("Start to run not_not_graph()\n");
+		not_not_cv(src.clone(), result_cv);
+		status = not_not_graph(context, src.clone(), result_vx);
+		printf("Return from not_not_graph() result_vx: %d\n", status);
+		if(verify_result(result_cv, result_vx))
 			printf("Verify passed!!\n");
 		else
 			printf("Verify fail!!\n");
@@ -71,10 +81,6 @@ bool verify_result(Mat inMat, Mat resultMat)
 	int w, h;
 	int width = inMat.cols;
 	int height = inMat.rows;
-	bitwise_not(inMat,inMat);
-	bitwise_not(inMat,inMat);
-	//blur(inMat, inMat, Size(3,3));
-	//boxFilter(inMat, inMat, inMat.depth(), Size(3,3));
 	
 	unsigned char *ptr_inMat = inMat.data;
 	unsigned char *ptr_resMat = resultMat.data;

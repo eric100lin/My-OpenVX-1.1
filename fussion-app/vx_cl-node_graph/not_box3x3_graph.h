@@ -1,6 +1,52 @@
 #ifndef _NOT_BOX3X3_GRAPH_H_
 #define _NOT_BOX3X3_GRAPH_H_
 
+void my_box3x3(IplImage *in_img, IplImage *result_img)
+{
+	int x, y;
+	int width = in_img->width;
+	int height = in_img->height;
+	int sx = 1;
+	int sy = width;
+	
+	#define vxImagePixel(ptr, x, y, sx, sy) \
+		(((unsigned char *)ptr)[((y) * sy) + ((x) * sx)])
+	for(y=0; y<height; y++)
+	{
+		for(x=0; x<width; x++)
+		{
+			int16_t sum = 0;
+			if (y == 0 || x == 0 || x == (width - 1) || y == (height - 1))
+			{
+				vxImagePixel(result_img->imageData, x, y, sx, sy) = 
+					vxImagePixel(in_img->imageData, x, y, sx, sy);
+				continue; // border mode...
+			}
+			sum += vxImagePixel(in_img->imageData, x-1, y-1, sx, sy);
+			sum += vxImagePixel(in_img->imageData, x+0, y-1, sx, sy);
+			sum += vxImagePixel(in_img->imageData, x+1, y-1, sx, sy);
+			sum += vxImagePixel(in_img->imageData, x-1, y+0, sx, sy);
+			sum += vxImagePixel(in_img->imageData, x+0, y+0, sx, sy);
+			sum += vxImagePixel(in_img->imageData, x+1, y+0, sx, sy);
+			sum += vxImagePixel(in_img->imageData, x-1, y+1, sx, sy);
+			sum += vxImagePixel(in_img->imageData, x+0, y+1, sx, sy);
+			sum += vxImagePixel(in_img->imageData, x+1, y+1, sx, sy);
+			
+			sum /= 9;
+			vxImagePixel(result_img->imageData, x, y, sx, sy) = (unsigned char)sum;
+		}
+	}
+}
+
+void not_box3x3_cv(Mat inMat, Mat &outMat)
+{
+	bitwise_not(inMat,inMat);
+	Mat tmp = inMat.clone();
+	//blur(tmp, outMat, Size(3,3));
+	IplImage tmp_Ipl(tmp), out_Ipl(outMat);
+	my_box3x3(&tmp_Ipl, &out_Ipl);
+}
+
 vx_status not_box3x3_graph(vx_context context, Mat inMat, Mat &outMat)
 {
 	vx_status status = VX_SUCCESS;
@@ -24,10 +70,8 @@ vx_status not_box3x3_graph(vx_context context, Mat inMat, Mat &outMat)
 	//Data
 	vx_image in = vxCreateImage(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
 	CHECK_NOT_NULL(in, "input image");
-		//vx_image virtal_tmp = vxCreateVirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
-		//CHECK_NOT_NULL(virtal_tmp, "virtual tmp image");
-		vx_image virtal_tmp = vxCreateImage(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
-		CHECK_NOT_NULL(virtal_tmp, "tmp image");
+	vx_image virtal_tmp = vxCreateVirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	CHECK_NOT_NULL(virtal_tmp, "virtual tmp image");
 	vx_image out = vxCreateImage(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
 	CHECK_NOT_NULL(out, "output image");
 	status = vxSetParameterByIndex(not_node, 0, (vx_reference)in);
@@ -48,9 +92,7 @@ vx_status not_box3x3_graph(vx_context context, Mat inMat, Mat &outMat)
 	CHECK_STATUS(status, "vxProcessGraph");
 	
 	//Read result back
-	//status = ReadImage(outMat, out);
-	//CHECK_STATUS(status, "ReadImage");
-	status = ReadImage(outMat, virtal_tmp);
+	status = ReadImage(outMat, out);
 	CHECK_STATUS(status, "ReadImage");
 	
 	//Qurey profiling information
