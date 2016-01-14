@@ -1,16 +1,17 @@
 #ifndef _invoke_ocl_kernel_H_
 #define _invoke_ocl_kernel_H_
 #define NOT_KERNEL_FILENAME "/home/thlin/openvx/experiment/My-OpenVX-1.0.1-fussion/kernels/opencl/vx_not.cl"
-#define BOX3X3_KERNEL_FILENAME "/home/thlin/openvx/experiment/My-OpenVX-1.0.1-fussion/kernels/opencl/vx_box3x3.cl"
-//#define BOX3X3_KERNEL_FILENAME "./vx_box3x3.cl"
+//#define BOX3X3_KERNEL_FILENAME "/home/thlin/openvx/experiment/My-OpenVX-1.0.1-fussion/kernels/opencl/vx_box3x3.cl"
+#define BOX3X3_KERNEL_FILENAME "./vx_box3x3.cl"
 #define OPTIONS_STR "-I/home/thlin/openvx/experiment/My-OpenVX-1.0.1-fussion/kernels/opencl -I/home/thlin/openvx/experiment/My-OpenVX-1.0.1-fussion/include -DVX_CL_KERNEL"
 #include <CL/cl.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include "my_cl_utils.h"
 
-int invoke_ocl_kernel(IplImage *in_img, IplImage *out_img, const char *filename, const char *kernel_name)
+int invoke_ocl_kernel(IplImage *in_img, IplImage *out_img, const char *filename, const char *kernel_name, IplImage *sum_img)
 {
 	cl_int status = 0;
 	
@@ -69,6 +70,7 @@ int invoke_ocl_kernel(IplImage *in_img, IplImage *out_img, const char *filename,
 	status = read_file_string(filename, &sourceStrStr);
 	if(status!=0 || sourceStrStr==NULL)
 		return -1;
+	//printf("sourceStrStr:\n%s\nOPTIONS_STR:\n%s\n\n", sourceStrStr, OPTIONS_STR);
 	size_t sourceStrSize[] = {strlen(sourceStrStr)};
 	cl_program program = clCreateProgramWithSource(context, 1, (const char **)&sourceStrStr, sourceStrSize, &status);
 	CHECK_OPENCL_ERROR(status, "clCreateProgramWithSource failed.");
@@ -134,6 +136,9 @@ int invoke_ocl_kernel(IplImage *in_img, IplImage *out_img, const char *filename,
 	cl_mem outputBuffer = 
 	clCreateBuffer(context, CL_MEM_WRITE_ONLY, out_img->imageSize, NULL, &status);
 	CHECK_OPENCL_ERROR(status, "clCreateBuffer for outputBuffer failed.");
+	cl_mem outputSumBuffer = 
+	clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_uint)*sum_img->width*sum_img->height, NULL, &status);
+	CHECK_OPENCL_ERROR(status, "clCreateBuffer for outputSumBuffer failed.");
 
 	/*Step 8: Create kernel object */
 	cl_kernel kernel = clCreateKernel(program, kernel_name, &status);
@@ -162,6 +167,8 @@ int invoke_ocl_kernel(IplImage *in_img, IplImage *out_img, const char *filename,
 	CHECK_OPENCL_ERROR(status, "clSetKernelArg failed.");
 	status = clSetKernelArg(kernel, pidx++, sizeof(cl_mem), (void *)&outputBuffer);
 	CHECK_OPENCL_ERROR(status, "clSetKernelArg failed.");
+	status = clSetKernelArg(kernel, pidx++, sizeof(cl_mem), (void *)&outputSumBuffer);
+	CHECK_OPENCL_ERROR(status, "clSetKernelArg failed.");
 	
 	/*Step 10: Running the kernel.*/
 	size_t global_work_sizes[2] = { in_img->width, in_img->height };
@@ -169,8 +176,25 @@ int invoke_ocl_kernel(IplImage *in_img, IplImage *out_img, const char *filename,
 	CHECK_OPENCL_ERROR(status, "clEnqueueNDRangeKernel failed.");
 	
 	/*Step 11: Read the cout put back to host memory.*/
-	status = clEnqueueReadBuffer(commandQueue, outputBuffer, CL_TRUE, 0, out_img->imageSize, out_img->imageData, 0, NULL, NULL);
+	status = clEnqueueReadBuffer(commandQueue, outputBuffer, CL_TRUE, 0, 
+								 out_img->imageSize, out_img->imageData, 0, NULL, NULL);
 	CHECK_OPENCL_ERROR(status, "clEnqueueReadBuffer failed.");
+	
+	int i;
+	cl_uint *imageDatas = (cl_uint *)malloc(sizeof(cl_uint)*sum_img->width*sum_img->height);
+	memset(imageDatas, 0, sizeof(cl_uint)*sum_img->width*sum_img->height);
+	status = clEnqueueReadBuffer(commandQueue, outputSumBuffer, CL_TRUE, 0, 
+								 sizeof(cl_uint)*sum_img->width*sum_img->height, imageDatas, 0, NULL, NULL);
+	CHECK_OPENCL_ERROR(status, "clEnqueueReadBuffer failed.");
+	int16_t *ptr_out_img = (int16_t *)sum_img->imageData;
+	for(i=0; i<sum_img->width*sum_img->height; i++)
+	{
+		cl_uint pixel = imageDatas[i];
+		ptr_out_img[i] = (int16_t)pixel;
+		//printf("i=%d pixel=%d (int16_t)pixel=%d ptr_out_img[i]=%d\n",
+		//	i, pixel, (int16_t)pixel, ptr_out_img[i]);
+	}
+	free(imageDatas);
 	
 	/*Step 12: Clean the resources.*/
 	status = clReleaseKernel(kernel);				//Release kernel.
@@ -181,6 +205,8 @@ int invoke_ocl_kernel(IplImage *in_img, IplImage *out_img, const char *filename,
 	CHECK_OPENCL_ERROR(status, "clReleaseMemObject inputBuffer failed.");
 	status = clReleaseMemObject(outputBuffer);
 	CHECK_OPENCL_ERROR(status, "clReleaseMemObject outputBuffer failed.");
+	status = clReleaseMemObject(outputSumBuffer);
+	CHECK_OPENCL_ERROR(status, "clReleaseMemObject outputSumBuffer failed.");
 	status = clReleaseCommandQueue(commandQueue);	//Release  Command queue.
 	CHECK_OPENCL_ERROR(status, "clReleaseCommandQueue failed.");
 	status = clReleaseContext(context);				//Release context.
@@ -196,23 +222,13 @@ int invoke_ocl_kernel(IplImage *in_img, IplImage *out_img, const char *filename,
 	return status;
 }
 
-int not_not_graph(IplImage *in_img, IplImage *out_img)
+int boxFilter_not_graph(IplImage *in_img, IplImage *out_img, IplImage *sum_img)
 {
-	cl_int status = invoke_ocl_kernel(in_img,out_img,NOT_KERNEL_FILENAME, "vx_not");
-	if(status==CL_SUCCESS)
-	{
-		status = invoke_ocl_kernel(out_img,out_img,NOT_KERNEL_FILENAME, "vx_not");
-	}
-	return status;
-}
-
-int boxFilter_not_graph(IplImage *in_img, IplImage *out_img)
-{
-	cl_int status = invoke_ocl_kernel(in_img,out_img,BOX3X3_KERNEL_FILENAME, "vx_box3x3");
-	if(status==CL_SUCCESS)
-	{
-		status = invoke_ocl_kernel(out_img,out_img,NOT_KERNEL_FILENAME, "vx_not");
-	}
+	cl_int status = invoke_ocl_kernel(in_img,out_img,BOX3X3_KERNEL_FILENAME, "vx_box3x3", sum_img);
+	//if(status==CL_SUCCESS)
+	//{
+	//	status = invoke_ocl_kernel(out_img,out_img,NOT_KERNEL_FILENAME, "vx_not");
+	//}
 	return status;
 }
 
