@@ -14,6 +14,7 @@ int verify_result(IplImage *in_img, IplImage *result_img)
 	int w, h;
 	int width = in_img->width;
 	int height = in_img->height;
+	int cnt = 0;
 	
 	unsigned char *ptr_in_img = in_img->imageData;
 	unsigned char *ptr_resMat = result_img->imageData;
@@ -21,22 +22,28 @@ int verify_result(IplImage *in_img, IplImage *result_img)
 	{
 		for(w=0; w<width; w++, ptr_in_img++, ptr_resMat++)
 		{
-			if(*ptr_in_img != *ptr_resMat)
-			{
-				printf("fail at in_img[%d,%d]:%d != result_img[%d,%d]:%d\n",
-					h,w,*ptr_in_img,h,w,*ptr_resMat);
-				return 0;
-			}
+			int in = *ptr_in_img;
+			int res = *ptr_resMat;
+			int diff = in - res;
+			if(diff<=1 && diff>=-1)
+				continue;
+			
+			printf("diff:%d fail at in_img[%d,%d]:%d != result_img[%d,%d]:%d\n",diff,
+				h,w,*ptr_in_img,h,w,*ptr_resMat);
+			++cnt;
+			//if(++cnt>20)
+			//return 0;
 		}
 	}
+	if(cnt!=0)	return 0;
 	return 1;
 }
 
 void print30x30(IplImage *in_img, IplImage *result_img)
 {
 	int w, h;
-	int width = 30;
-	int height = 30;
+	int width = in_img->width;
+	int height = in_img->height;
 	
 	unsigned char *ptr_in_img = in_img->imageData;
 	unsigned char *ptr_resMat = result_img->imageData;
@@ -44,9 +51,10 @@ void print30x30(IplImage *in_img, IplImage *result_img)
 	{
 		for(w=0; w<width; w++, ptr_in_img++)
 		{
-			printf("%3d ", *ptr_in_img);
+			if(w<30 && h<30)
+				printf("%3d ", *ptr_in_img);
 		}
-		printf("\n");
+		if(h<30)	printf("\n");
 	}
 	printf("\n");
 	
@@ -54,9 +62,62 @@ void print30x30(IplImage *in_img, IplImage *result_img)
 	{
 		for(w=0; w<width; w++, ptr_resMat++)
 		{
-			printf("%3d ", *ptr_resMat);
+			if(w<30 && h<30)
+				printf("%3d ", *ptr_resMat);
 		}
-		printf("\n");
+		if(h<30)	printf("\n");
+	}
+}
+
+unsigned int round_div(unsigned int dividend, unsigned int divisor)
+{
+    return (dividend + (divisor / 2)) / divisor;
+}
+
+void my_box3x3(IplImage *in_img, IplImage *result_img)
+{
+	int x, y;
+	unsigned int width = in_img->width;
+	unsigned int height = in_img->height;
+	unsigned int sx = 1;
+	unsigned int sy = width;
+	unsigned int TY=1, TX=16;
+	#define vxImagePixel(ptr, x, y, sx, sy) \
+		(((unsigned char *)ptr)[((y) * sy) + ((x) * sx)])
+	for(y=0; y<height; y++)
+	{
+		for(x=0; x<width; x++)
+		{
+			unsigned int sum = 0;
+			if (y == 0 || x == 0 || x == (width - 1) || y == (height - 1))
+			{
+				vxImagePixel(result_img->imageData, x, y, sx, sy) = 
+					vxImagePixel(in_img->imageData, x, y, sx, sy);
+				continue; // border mode...
+			}
+			sum += vxImagePixel(in_img->imageData, x-1, y-1, sx, sy);
+			if(y==TY && x==TX) printf("%d ", vxImagePixel(in_img->imageData, x-1, y-1, sx, sy));
+			sum += vxImagePixel(in_img->imageData, x+0, y-1, sx, sy);
+			if(y==TY && x==TX) printf("%d ", vxImagePixel(in_img->imageData, x+0, y-1, sx, sy));
+			sum += vxImagePixel(in_img->imageData, x+1, y-1, sx, sy);
+			if(y==TY && x==TX) printf("%d ", vxImagePixel(in_img->imageData, x+1, y-1, sx, sy));
+			sum += vxImagePixel(in_img->imageData, x-1, y+0, sx, sy);
+			if(y==TY && x==TX) printf("%d ", vxImagePixel(in_img->imageData, x-1, y+0, sx, sy));
+			sum += vxImagePixel(in_img->imageData, x+0, y+0, sx, sy);
+			if(y==TY && x==TX) printf("%d ", vxImagePixel(in_img->imageData, x+0, y+0, sx, sy));
+			sum += vxImagePixel(in_img->imageData, x+1, y+0, sx, sy);
+			if(y==TY && x==TX) printf("%d ", vxImagePixel(in_img->imageData, x+1, y+0, sx, sy));
+			sum += vxImagePixel(in_img->imageData, x-1, y+1, sx, sy);
+			if(y==TY && x==TX) printf("%d ", vxImagePixel(in_img->imageData, x-1, y+1, sx, sy));
+			sum += vxImagePixel(in_img->imageData, x+0, y+1, sx, sy);
+			if(y==TY && x==TX) printf("%d ", vxImagePixel(in_img->imageData, x+0, y+1, sx, sy));
+			sum += vxImagePixel(in_img->imageData, x+1, y+1, sx, sy);
+			if(y==TY && x==TX) printf("%d ", vxImagePixel(in_img->imageData, x+1, y+1, sx, sy));
+			
+			if(y==TY && x==TX) printf("\nsum=%d sum/9=%d\n", sum, round_div(sum, 9));
+			sum = round_div(sum, 9);
+			vxImagePixel(result_img->imageData, x, y, sx, sy) = (unsigned char)sum;
+		}
 	}
 }
 
@@ -100,7 +161,6 @@ int main(int argc, char **argv)
 		cvReleaseImage(&result);
 	}
 	
-	float filter_data[N]={1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0};
 	printf("Start to run boxFilter_not_graph()\n");
 	for(i=0; i<1; i++)
 	{
@@ -115,10 +175,8 @@ int main(int argc, char **argv)
 		printf("Return from boxFilter_not_graph() result: %d\n", status);
 		
 		cloned_img = cvCloneImage(src_gray);
-		CvMat filter_kernel;
-		cvInitMatHeader(&filter_kernel, 3, 3, CV_32F, filter_data, 3*sizeof(float));
-		cvFilter2D(cloned_img, cloned_img, &filter_kernel);
-		cvNot(cloned_img,cloned_img);
+		my_box3x3(cloned_img, cloned_img);
+		//cvNot(cloned_img,cloned_img);
 		if(verify_result(cloned_img, result))
 			printf("Verify passed!!\n");
 		else

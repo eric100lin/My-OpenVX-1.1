@@ -2,6 +2,7 @@
 #define _invoke_ocl_kernel_H_
 #define NOT_KERNEL_FILENAME "/home/thlin/openvx/experiment/My-OpenVX-1.0.1-fussion/kernels/opencl/vx_not.cl"
 #define BOX3X3_KERNEL_FILENAME "/home/thlin/openvx/experiment/My-OpenVX-1.0.1-fussion/kernels/opencl/vx_box3x3.cl"
+//#define BOX3X3_KERNEL_FILENAME "./vx_box3x3.cl"
 #define OPTIONS_STR "-I/home/thlin/openvx/experiment/My-OpenVX-1.0.1-fussion/kernels/opencl -I/home/thlin/openvx/experiment/My-OpenVX-1.0.1-fussion/include -DVX_CL_KERNEL"
 #include <CL/cl.h>
 #include <string.h>
