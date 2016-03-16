@@ -98,6 +98,27 @@ if (EXPERIMENTAL_USE_DOT)
     add_definitions( -DEXPERIMENTAL_USE_DOT )
 endif (EXPERIMENTAL_USE_DOT)
 if (EXPERIMENTAL_USE_XML)
+	find_package(PkgConfig)
+	pkg_check_modules(PC_LIBXML QUIET libxml-2.0)
+	set(LIBXML2_DEFINITIONS ${PC_LIBXML_CFLAGS_OTHER})
+
+	find_path(LIBXML2_INCLUDE_DIR libxml/xpath.h
+			  HINTS ${PC_LIBXML_INCLUDEDIR} ${PC_LIBXML_INCLUDE_DIRS}
+			  PATH_SUFFIXES libxml2 )
+
+	find_library(LIBXML2_LIBRARY NAMES xml2 libxml2
+				 HINTS ${PC_LIBXML_LIBDIR} ${PC_LIBXML_LIBRARY_DIRS} )
+
+	include(FindPackageHandleStandardArgs)
+	# handle the QUIETLY and REQUIRED arguments and set LIBXML2_FOUND to TRUE
+	# if all listed variables are TRUE
+	find_package_handle_standard_args(LibXml2  DEFAULT_MSG
+									  LIBXML2_LIBRARY LIBXML2_INCLUDE_DIR)
+
+	mark_as_advanced(LIBXML2_INCLUDE_DIR LIBXML2_LIBRARY )
+
+	set(LIBXML2_LIBRARIES ${LIBXML2_LIBRARY} )
+	set(LIBXML2_INCLUDE_DIRS ${LIBXML2_INCLUDE_DIR} )
     add_definitions( -DEXPERIMENTAL_USE_XML )
 endif (EXPERIMENTAL_USE_XML)
 if (EXPERIMENTAL_USE_TARGET)
@@ -126,16 +147,16 @@ endif (CMAKE_BUILD_TYPE EQUAL Debug)
 if ( EXPERIMENTAL_USE_OPENCL AND NOT USE_POCL_OPENCL)
     if (DEFINED ENV{VX_OPENCL_INCLUDE_PATH})
         set( OPENCL_INCLUDE_PATH $ENV{VX_OPENCL_INCLUDE_PATH} )
-        message( "Use OpenCL headers from: " ${OPENCL_INCLUDE_PATH} )
+        message( "-- Use OpenCL headers from: " ${OPENCL_INCLUDE_PATH} )
 	else(DEFINED ENV{VX_OPENCL_INCLUDE_PATH})
 	    set( OPENCL_INCLUDE_PATH )
-	    message( "Use OpenCL headers from system default location, in order to set specific path: please set 'VX_OPENCL_INCLUDE_PATH' env. variable and reconfigure")
+	    message( "-- Use OpenCL headers from system default location, in order to set specific path: please set 'VX_OPENCL_INCLUDE_PATH' env. variable and reconfigure")
 	endif (DEFINED ENV{VX_OPENCL_INCLUDE_PATH})
 	if (DEFINED ENV{VX_OPENCL_LIB_PATH})
         set( OPENCL_LIB_PATH $ENV{VX_OPENCL_LIB_PATH} )
-	    message( "Use OpenCL headers from: " ${OPENCL_LIB_PATH} )
+	    message( "-- Use OpenCL libs from: " ${OPENCL_LIB_PATH} )
 	else(DEFINED ENV{VX_OPENCL_LIB_PATH})
-	    message( "Use OpenCL libs from system default location, in order to set specific path: please set 'VX_OPENCL_LIB_PATH' env. variable and reconfigure")
+	    message( "-- Use OpenCL libs from system default location, in order to set specific path: please set 'VX_OPENCL_LIB_PATH' env. variable and reconfigure")
     endif (DEFINED ENV{VX_OPENCL_LIB_PATH})
 endif ( EXPERIMENTAL_USE_OPENCL AND NOT USE_POCL_OPENCL)
 

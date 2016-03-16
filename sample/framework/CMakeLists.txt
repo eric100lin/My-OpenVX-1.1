@@ -29,7 +29,8 @@ include_directories( BEFORE
                      ${CMAKE_CURRENT_SOURCE_DIR}/../include
 					 ${CMAKE_SOURCE_DIR}/include 
 					 ${CMAKE_SOURCE_DIR}/debug 
-					 ${OPENCL_INCLUDE_PATH} )
+					 ${OPENCL_INCLUDE_PATH}
+					 ${LIBXML2_INCLUDE_DIRS} )
 					 
 if ((WIN32) OR (CYGWIN))
    add_definitions( ${OPENVX_BUILDING_EXPORT_DEF} )
@@ -54,6 +55,10 @@ if (NOT WIN32)
 	    list( APPEND LINK_ADDITIONAL pthread rt )
 	endif (ANDROID)
 endif (NOT WIN32)
+
+if (EXPERIMENTAL_USE_XML)
+	list( APPEND LINK_ADDITIONAL ${LIBXML2_LIBRARIES} )
+endif (EXPERIMENTAL_USE_XML)
 
 if (EXPERIMENTAL_USE_OPENCL)
 	if (USE_POCL_OPENCL)

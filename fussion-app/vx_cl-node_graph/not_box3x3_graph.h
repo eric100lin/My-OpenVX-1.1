@@ -1,5 +1,6 @@
 #ifndef _NOT_BOX3X3_GRAPH_H_
 #define _NOT_BOX3X3_GRAPH_H_
+#include <VX/vx_khr_xml.h>
 
 void my_box3x3(IplImage *in_img, IplImage *result_img)
 {
@@ -49,6 +50,7 @@ void not_box3x3_cv(Mat inMat, Mat &outMat)
 
 vx_status not_box3x3_graph(vx_context context, Mat inMat, Mat &outMat)
 {
+	vx_char xmlfile[] = "not_box3x3_graph.xml";
 	vx_status status = VX_SUCCESS;
 	
 	//Graph
@@ -82,6 +84,12 @@ vx_status not_box3x3_graph(vx_context context, Mat inMat, Mat &outMat)
 	CHECK_STATUS(status, "set arg 0 of box3x3_node");
 	status = vxSetParameterByIndex(box3x3_node, 1, (vx_reference)out);
 	CHECK_STATUS(status, "set arg 1 of box3x3_node");
+	
+	//Export to xml
+	status |= vxExportToXML(context, xmlfile);
+	CHECK_STATUS(status, "vxExportToXML before write data and verify");
+	
+	//Write input image into vx_image
 	status = WriteImage(inMat, in);
 	CHECK_STATUS(status, "WriteImage");
 	
