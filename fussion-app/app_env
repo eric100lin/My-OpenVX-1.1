@@ -1,5 +1,5 @@
 export OPENVX_ROOT=$(pwd)/..
-export AMDAPPSDK_PATH=/home/thlin/AMDAPPSDK-3.0-0-Beta
+export AMDAPPSDK_PATH=/home/thlin/AMDAPPSDK-3.0
 export OPENCV_LIB_PATH=/home/thlin/opencv-2.4.9/build/lib
 export VX_OPENCL_INCLUDE_PATH=$AMDAPPSDK_PATH/include
 export VX_OPENCL_LIB_PATH=$AMDAPPSDK_PATH/lib/x86_64/sdk
