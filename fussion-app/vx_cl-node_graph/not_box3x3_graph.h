@@ -50,6 +50,7 @@ void not_box3x3_cv(Mat inMat, Mat &outMat)
 
 vx_status not_box3x3_graph(vx_context context, Mat inMat, Mat &outMat)
 {
+	int i;
 	vx_char xmlfile[] = "not_box3x3_graph.xml";
 	vx_status status = VX_SUCCESS;
 	
@@ -89,33 +90,51 @@ vx_status not_box3x3_graph(vx_context context, Mat inMat, Mat &outMat)
 	status |= vxExportToXML(context, xmlfile);
 	CHECK_STATUS(status, "vxExportToXML before write data and verify");
 	
-	//Write input image into vx_image
-	status = WriteImage(inMat, in);
-	CHECK_STATUS(status, "WriteImage");
-	
-	//Verify and process
+	//Verify graph once
 	status = vxVerifyGraph(graph);
 	CHECK_STATUS(status, "vxVerifyGraph");
-	status = vxProcessGraph(graph);
-	CHECK_STATUS(status, "vxProcessGraph");
 	
-	//Read result back
-	status = ReadImage(outMat, out);
-	CHECK_STATUS(status, "ReadImage");
-	
-	//Qurey profiling information
+	//Profiling information
+	vx_uint64 elapsedTime_graph = 0;
+	vx_uint64 elapsedTime_not_node = 0;
+	vx_uint64 elapsedTime_box3x3_node = 0;
 	vx_perf_t perf_graph, perf_not, perf_box3x3;
-	status = vxQueryGraph(graph, VX_GRAPH_ATTRIBUTE_PERFORMANCE, &perf_graph, sizeof(vx_perf_t));
-	CHECK_STATUS(status, "vxQueryGraph");
-	status = vxQueryNode(not_node, VX_NODE_ATTRIBUTE_PERFORMANCE, &perf_not, sizeof(vx_perf_t));
-	CHECK_STATUS(status, "vxQueryNode(perf_not)");
-	status = vxQueryNode(box3x3_node, VX_NODE_ATTRIBUTE_PERFORMANCE, &perf_box3x3, sizeof(vx_perf_t));
-	CHECK_STATUS(status, "vxQueryNode(perf_box3x3)");
+	
+	//Process graph ten times
+	for(i=0; i<10+1; i++)
+	{
+		//Write input image into vx_image
+		status = WriteImage(inMat, in);
+		CHECK_STATUS(status, "WriteImage");
+		
+		//Processing
+		status = vxProcessGraph(graph);
+		CHECK_STATUS(status, "vxProcessGraph");
+	
+		//Read result back
+		status = ReadImage(outMat, out);
+		CHECK_STATUS(status, "ReadImage");
+		
+		//Qurey profiling information
+		if(i!=0)
+		{
+			status = vxQueryGraph(graph, VX_GRAPH_ATTRIBUTE_PERFORMANCE, &perf_graph, sizeof(vx_perf_t));
+			CHECK_STATUS(status, "vxQueryGraph");
+			status = vxQueryNode(not_node, VX_NODE_ATTRIBUTE_PERFORMANCE, &perf_not, sizeof(vx_perf_t));
+			CHECK_STATUS(status, "vxQueryNode(perf_not)");
+			status = vxQueryNode(box3x3_node, VX_NODE_ATTRIBUTE_PERFORMANCE, &perf_box3x3, sizeof(vx_perf_t));
+			CHECK_STATUS(status, "vxQueryNode(perf_box3x3)");
+			elapsedTime_graph += perf_graph.tmp;
+			elapsedTime_not_node += perf_not.tmp;
+			elapsedTime_box3x3_node += perf_box3x3.tmp;
+		}
+	}
+	
 	printf("=== Profiling information ===\n");
 	printf("  function: %s\n", __FUNCTION__);
-	printf("  graph avg=%llu ms\n", (unsigned long long int)perf_graph.avg/1000);
-	printf("  not_node avg=%llu ms\n", (unsigned long long int)perf_not.avg/1000);
-	printf("  box3x3_node avg=%llu ms\n", (unsigned long long int)perf_box3x3.avg/1000);
+	printf("  graph avg=%llu us\n", (unsigned long long int)elapsedTime_graph/(1000*10));
+	printf("  not_node avg=%llu us\n", (unsigned long long int)elapsedTime_not_node/(1000*10));
+	printf("  box3x3_node avg=%llu us\n", (unsigned long long int)elapsedTime_box3x3_node/(1000*10));
 	printf("=============================\n");
 	
 	//Release

@@ -45,7 +45,7 @@ int main(int argc, char **argv)
 	resize(src, src, Size(IMG_WIDTH,IMG_HEIGHT));
 	cvtColor(src, src, CV_RGB2GRAY);
 	
-	for(i=0; i<1; i++)
+	for(i=0; i<10; i++)
 	{
 		Mat result_cv(IMG_HEIGHT,IMG_WIDTH,CV_8UC1);
 		Mat result_vx(IMG_HEIGHT,IMG_WIDTH,CV_8UC1);
