@@ -48,6 +48,7 @@ export OPENVX_INSTALL_ROOT=$OPENVX_ROOT/install/Android/$ANDROID_ABI/$BUILD_CON
 mkdir -p build/Android/$ANDROID_ABI && cd build/Android/$ANDROID_ABI
 ```
 *With prebuilt OpenCL library
+
 Put your prebuilt OpenCL library in the $OPENVX_ROOT/build/Android/$ANDROID_ABI/prebuilt-cl-lib.
 You can adb pull prebuilt OpenCL library from your device. (e.g. from path /system/vendor/lib/libOpenCL.so)
 ```
