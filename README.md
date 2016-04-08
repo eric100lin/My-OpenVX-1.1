@@ -29,7 +29,7 @@ cmake $OPENVX_ROOT -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$OPENVX_INS
 make -j4 && make install
 ```
 
-# BUILD FOR Android with POCL-OpenCL
+# BUILD FOR Android
 Set debug/release version by BUILD_CONF environment variable
 ```
 export BUILD_CON=Debug
@@ -42,10 +42,23 @@ You should replace the ANDROID_NDK environment variable to your NDK path, also y
 Other Android build options can be found in cmake_utils/android.toolchain.cmake.
 ```
 git submodule init
-export ANDROID_NDK=/home/thlin/Android/android-ndk-r10e
+export ANDROID_NDK=/home/thlin/Android/android-ndk-r11c
 export ANDROID_ABI=armeabi-v7a
 export OPENVX_INSTALL_ROOT=$OPENVX_ROOT/install/Android/$ANDROID_ABI/$BUILD_CON
 mkdir -p build/Android/$ANDROID_ABI && cd build/Android/$ANDROID_ABI
+```
+*With prebuilt OpenCL library
+Put your prebuilt OpenCL library in the $OPENVX_ROOT/build/Android/$ANDROID_ABI/prebuilt-cl-lib.
+You can adb pull prebuilt OpenCL library from your device. (e.g. from path /system/vendor/lib/libOpenCL.so)
+```
+mkdir $(pwd)/prebuilt-cl-lib
+export VX_OPENCL_INCLUDE_PATH=$AMDAPPSDK_PATH/include
+export VX_OPENCL_LIB_PATH=$(pwd)/prebuilt-cl-lib/libOpenCL.so
+cmake $OPENVX_ROOT -DCMAKE_BUILD_TYPE=$BUILD_CON -DCMAKE_INSTALL_PREFIX=$OPENVX_INSTALL_ROOT -DBUILD_X64=0  -DEXPERIMENTAL_USE_OPENMP=1 -DEXPERIMENTAL_USE_OPENCL=1 -DEXPERIMENTAL_USE_TARGET=1 -DCMAKE_TOOLCHAIN_FILE=$OPENVX_ROOT/cmake_utils/android.toolchain.cmake
+make -j4 && make install
+```
+*With POCL-OpenCL
+```
 cmake $OPENVX_ROOT -DCMAKE_BUILD_TYPE=$BUILD_CON -DCMAKE_INSTALL_PREFIX=$OPENVX_INSTALL_ROOT -DBUILD_X64=0  -DEXPERIMENTAL_USE_OPENMP=1 -DEXPERIMENTAL_USE_OPENCL=1 -DUSE_POCL_OPENCL=1 -DEXPERIMENTAL_USE_TARGET=1   -DCMAKE_TOOLCHAIN_FILE=$OPENVX_ROOT/cmake_utils/android.toolchain.cmake
 make -j4 && make install
 ```
