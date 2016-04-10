@@ -202,11 +202,15 @@ if( _CMAKE_IN_TRY_COMPILE )
 endif()
 
 # this one is important
-if( CMAKE_VERSION VERSION_GREATER "3.0.99" )
- set( CMAKE_SYSTEM_NAME Android )
-else()
- set( CMAKE_SYSTEM_NAME Linux )
-endif()
+if (NOT WIN32)
+	if( CMAKE_VERSION VERSION_GREATER "3.0.99" )
+	 set( CMAKE_SYSTEM_NAME Android )
+	else()
+	 set( CMAKE_SYSTEM_NAME Linux )
+	endif()
+else(NOT WIN32)
+	set( CMAKE_SYSTEM_NAME Linux )
+endif(NOT WIN32)
 
 # this one not so much
 set( CMAKE_SYSTEM_VERSION 1 )

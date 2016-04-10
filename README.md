@@ -63,6 +63,18 @@ make -j4 && make install
 cmake $OPENVX_ROOT -DCMAKE_BUILD_TYPE=$BUILD_CON -DCMAKE_INSTALL_PREFIX=$OPENVX_INSTALL_ROOT -DBUILD_X64=0  -DEXPERIMENTAL_USE_OPENMP=1 -DEXPERIMENTAL_USE_OPENCL=1 -DUSE_POCL_OPENCL=1 -DEXPERIMENTAL_USE_TARGET=1   -DCMAKE_TOOLCHAIN_FILE=$OPENVX_ROOT/cmake_utils/android.toolchain.cmake
 make -j4 && make install
 ```
+*With prebuilt OpenCL library on Windows Host using MinGW Make
+```
+set OPENVX_ROOT=D:\Android\AndroidWorkspace\OpenVX_Scheduling\my-openvx
+set VX_OPENCL_INCLUDE_PATH=D:\Android\AndroidWorkspace\OpenVX_Scheduling\my-openvx\build\armeabi-v7a\cl_include
+set VX_OPENCL_LIB_PATH=D:\Android\AndroidWorkspace\OpenVX_Scheduling\my-openvx\build\armeabi-v7a\cl_libs\libOpenCL.so
+set BUILD_CON=Debug
+set ANDROID_NDK=D:\Android\android-ndk-r11c
+set ANDROID_ABI=armeabi-v7a
+set OPENVX_INSTALL_ROOT=%OPENVX_ROOT%\install\Android\%ANDROID_ABI%\%BUILD_CON%
+cmake %OPENVX_ROOT% -DCMAKE_BUILD_TYPE=%BUILD_CON% -DCMAKE_INSTALL_PREFIX=%OPENVX_INSTALL_ROOT% -DBUILD_X64=0  -DEXPERIMENTAL_USE_OPENMP=1 -DEXPERIMENTAL_USE_OPENCL=1 -DEXPERIMENTAL_USE_TARGET=1 -DCMAKE_TOOLCHAIN_FILE=%OPENVX_ROOT%/cmake_utils/android.toolchain.cmake -DANDROID_NDK=%ANDROID_NDK% -DPROCESSOR_COUNT=4 -G "Unix Makefiles" -DVX_OPENCL_INCLUDE_PATH=%VX_OPENCL_INCLUDE_PATH% -DVX_OPENCL_LIB_PATH=%VX_OPENCL_LIB_PATH% -DBUILD_CON=%BUILD_CON% -DANDROID_ABI=%ANDROID_ABI%
+make -j8
+```
 
 # Build OpenVX application
 The OPENVX_ROOT and OPENVX_INSTALL_ROOT environment variable should have been setup upon preceding build process.
