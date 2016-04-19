@@ -1168,7 +1168,7 @@ endforeach()
 
 # flags and definitions
 remove_definitions( -DANDROID )
-add_definitions( -DANDROID )
+add_definitions( -DANDROID -D__ANDROID__ )
 
 if( ANDROID_SYSROOT MATCHES "[ ;\"]" )
  if( CMAKE_HOST_WIN32 )
