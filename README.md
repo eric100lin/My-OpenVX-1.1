@@ -64,11 +64,18 @@ cmake $OPENVX_ROOT -DCMAKE_BUILD_TYPE=$BUILD_CON -DCMAKE_INSTALL_PREFIX=$OPENVX_
 make -j4 && make install
 ```
 *With prebuilt OpenCL library on Windows Host using MinGW Make
+
+Set debug/release version by BUILD_CONF environment variable too
+```
+set BUILD_CON=Debug
+```
+```
+set BUILD_CON=Release
+```
 ```
 set OPENVX_ROOT=D:\Android\AndroidWorkspace\OpenVX_Scheduling\my-openvx
 set VX_OPENCL_INCLUDE_PATH=D:\Android\AndroidWorkspace\OpenVX_Scheduling\my-openvx\build\armeabi-v7a\cl_include
 set VX_OPENCL_LIB_PATH=D:\Android\AndroidWorkspace\OpenVX_Scheduling\my-openvx\build\armeabi-v7a\cl_libs\libOpenCL.so
-set BUILD_CON=Debug
 set ANDROID_NDK=D:\Android\android-ndk-r11c
 set ANDROID_ABI=armeabi-v7a
 set OPENVX_INSTALL_ROOT=%OPENVX_ROOT%\install\Android\%ANDROID_ABI%\%BUILD_CON%
