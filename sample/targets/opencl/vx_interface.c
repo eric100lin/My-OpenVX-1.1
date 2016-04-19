@@ -108,9 +108,10 @@ vx_status vxTargetInit(vx_target_t *target)
     for (p = 0; p < context->num_platforms; p++) {
         err = clGetDeviceIDs(context->platforms[p], CL_DEVICE_TYPE_ALL,
             0, NULL, &context->num_devices[p]);
+        context->num_devices[p] = 1;
+        VX_PRINT(VX_ZONE_ERROR, "context->num_devices[%d]=%d CL_MAX_DEVICES=%d", p, context->num_devices[p], CL_MAX_DEVICES);
         err = clGetDeviceIDs(context->platforms[p], CL_DEVICE_TYPE_ALL,
-            context->num_devices[p] > CL_MAX_DEVICES ? CL_MAX_DEVICES : context->num_devices[p],
-            context->devices[p], NULL);
+        				     context->num_devices[p], context->devices[p], NULL);
         if (err == CL_SUCCESS) {
             cl_context_properties props[] = {
                 (cl_context_properties)CL_CONTEXT_PLATFORM,
@@ -275,6 +276,9 @@ vx_status vxTargetInit(vx_target_t *target)
 									sizeof(log),
 									log,
 									&logSize);
+								VX_PRINT(VX_ZONE_ERROR, "Build error cl_kernels[%d]->program[%d][%d] with file %s kernel %s",
+										k, p, d,
+										cl_kernels[k]->sourcepath, cl_kernels[k]->kernelname);
 								VX_PRINT(VX_ZONE_ERROR, "%s", log);
 							}
 						}
@@ -296,7 +300,12 @@ vx_status vxTargetInit(vx_target_t *target)
 								1,
 								&cl_kernels[k]->kernels[p][d],
 								NULL);
-							VX_PRINT(VX_ZONE_INFO, "Found %u cl_kernels in %s (%d)\n", cl_kernels[k]->num_kernels[p], cl_kernels[k]->sourcepath, err);
+//							cl_kernels[k]->kernels[p][d] = clCreateKernel(cl_kernels[k]->program[p][d],
+//									cl_kernels[k]->kernelname, &err);
+							if(err!=CL_SUCCESS)
+								VX_PRINT(VX_ZONE_INFO, "Found cl_kernels in %s return %d!\n", cl_kernels[k]->sourcepath, err);
+							else
+								VX_PRINT(VX_ZONE_INFO, "Found %u cl_kernels in %s (%d)\n", cl_kernels[k]->num_kernels[p], cl_kernels[k]->sourcepath, err);
 							for (k2 = 0; (d==0) && (err == CL_SUCCESS) && (k2 < (cl_int)cl_kernels[k]->num_kernels[p]); k2++)
 							{
 								char kName[VX_MAX_KERNEL_NAME];

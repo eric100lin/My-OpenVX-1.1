@@ -44,7 +44,7 @@
 #define VX_CL_MAX_PLATFORMS (1)
 
 /*! \brief The maximum number of CL devices in the system */
-#define VX_CL_MAX_DEVICES   (2)
+#define VX_CL_MAX_DEVICES   (1)
 
 /*! \brief The maximum number of characters on a line of OpenCL source code */
 #define VX_CL_MAX_LINE_WIDTH (160)
