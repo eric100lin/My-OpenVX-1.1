@@ -952,6 +952,8 @@ typedef struct _vx_node {
     vx_status           status;
     /*! \brief The performance logging variable */
     vx_perf_t           perf;
+	/*! \brief The computation time logging variable */
+	vx_perf_t           computePerf;
     /*! \brief A callback to call when the node is complete */
     vx_nodecomplete_f   callback;
     /*! \brief A back reference to the parent graph. */

@@ -81,6 +81,7 @@ VX_API_ENTRY vx_node VX_API_CALL vxCreateGenericNode(vx_graph g, vx_kernel k)
                         graph->numNodes++;
 
                         vxInitPerf(&graph->nodes[n]->perf);
+						vxInitPerf(&graph->nodes[n]->computePerf);
 
                         /* force a re-verify */
                         graph->verified = vx_false_e;
@@ -120,6 +121,16 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryNode(vx_node n, vx_enum attribute, voi
                 if (VX_CHECK_PARAM(ptr, size, vx_perf_t, 0x3))
                 {
                     memcpy(ptr, &node->perf, size);
+                }
+                else
+                {
+                    status = VX_ERROR_INVALID_PARAMETERS;
+                }
+                break;
+            case VX_NODE_ATTRIBUTE_COMPUTATION_TIME:
+                if (VX_CHECK_PARAM(ptr, size, vx_perf_t, 0x3))
+                {
+                    memcpy(ptr, &node->computePerf, size);
                 }
                 else
                 {

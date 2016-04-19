@@ -776,6 +776,10 @@ enum vx_node_attribute_e {
      * Use a void * parameter.
      */
     VX_NODE_ATTRIBUTE_LOCAL_DATA_PTR = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_NODE) + 0x4,
+	/*! \brief Queries the computation time of the node without data transfer time. 
+	 * Use a <tt>\ref vx_perf_t</tt> parameter. 
+	 */
+	VX_NODE_ATTRIBUTE_COMPUTATION_TIME = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_NODE) + 0x5,
 };
 
 /*! \brief The parameter attributes list

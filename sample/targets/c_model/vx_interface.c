@@ -207,6 +207,7 @@ vx_action vxTargetProcess(vx_target target, vx_node_t *nodes[], vx_size startInd
         nodes[n]->executed = vx_true_e;
         nodes[n]->status = status;
         vxStopCapture(&nodes[n]->perf);
+		nodes[n]->computePerf = nodes[n]->perf;
 
         VX_PRINT(VX_ZONE_GRAPH,"kernel %s returned %d\n", nodes[n]->kernel->name, status);
 

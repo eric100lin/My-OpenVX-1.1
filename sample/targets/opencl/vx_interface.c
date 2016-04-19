@@ -710,8 +710,12 @@ vx_status vxclCallOpenCLKernel(vx_node node, const vx_reference *parameters, vx_
             memcpy(&writeEvents[we++],&ref->event, sizeof(cl_event));
         }
     }
-    //local_dim[0] = 1;
-    //local_dim[1] = 1;
+	
+	err = clFinish(context->queues[plidx][didx]);	//CPU -> GPU data transfer complete
+	CL_ERROR_MSG(err, "clFinish");
+	
+	vxStartCapture(&node->computePerf);				//Measure GPU computing time START
+	
     err = clEnqueueNDRangeKernel(context->queues[plidx][didx],
                                  vxclk->kernels[plidx][didx],
                                  2,
@@ -719,8 +723,13 @@ vx_status vxclCallOpenCLKernel(vx_node node, const vx_reference *parameters, vx_
                                  work_dim,
                                  NULL,
                                  we, writeEvents, &node->base.event);
-
     CL_ERROR_MSG(err, "clEnqueueNDRangeKernel");
+	
+	err = clFinish(context->queues[plidx][didx]);	//GPU compute finish
+	CL_ERROR_MSG(err, "clFinish");
+	
+	vxStopCapture(&node->computePerf);				//Measure GPU computing time STOP
+	
     /* enqueue a read on all output data */
     for (pidx = 0; pidx < num; pidx++)
     {
