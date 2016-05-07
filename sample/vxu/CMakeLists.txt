@@ -26,7 +26,9 @@ set( TARGET_NAME vxu )
 
 include_directories( BEFORE
                      ${CMAKE_CURRENT_SOURCE_DIR}
-					 ${CMAKE_SOURCE_DIR}/include )
+                     ${CMAKE_CURRENT_SOURCE_DIR}/../include
+                     ${CMAKE_SOURCE_DIR}/debug
+                     ${CMAKE_SOURCE_DIR}/include )
 					 
 if ((WIN32) OR (CYGWIN))
    add_definitions( ${OPENVX_BUILDING_EXPORT_DEF} )

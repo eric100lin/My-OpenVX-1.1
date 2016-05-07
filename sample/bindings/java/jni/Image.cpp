@@ -52,7 +52,7 @@ namespace android
     {
         vx_image i = (vx_image)GetHandle(env, obj, ImageClass, handleName);
         jint value = 0;
-        vx_status status = vxQueryImage(i, VX_IMAGE_ATTRIBUTE_WIDTH, &value, sizeof(value));
+        vx_status status = vxQueryImage(i, VX_IMAGE_WIDTH, &value, sizeof(value));
         if (status != VX_SUCCESS)
             value = 0;
         return value;
@@ -62,7 +62,7 @@ namespace android
     {
         vx_image i = (vx_image)GetHandle(env, obj, ImageClass, handleName);
         jint value = 0;
-        vx_status status = vxQueryImage(i, VX_IMAGE_ATTRIBUTE_HEIGHT, &value, sizeof(value));
+        vx_status status = vxQueryImage(i, VX_IMAGE_HEIGHT, &value, sizeof(value));
         if (status != VX_SUCCESS)
             value = 0;
         return value;
@@ -72,7 +72,7 @@ namespace android
     {
         vx_image i = (vx_image)GetHandle(env, obj, ImageClass, handleName);
         jint value = 0;
-        vx_status status = vxQueryImage(i, VX_IMAGE_ATTRIBUTE_HEIGHT, &value, sizeof(value));
+        vx_status status = vxQueryImage(i, VX_IMAGE_HEIGHT, &value, sizeof(value));
         if (status != VX_SUCCESS)
             value = 0;
         return value;

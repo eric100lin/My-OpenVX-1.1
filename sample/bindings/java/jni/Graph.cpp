@@ -52,7 +52,7 @@ namespace android
     {
         vx_graph g = (vx_graph)GetHandle(env, obj, GraphClass, handleName);
         jint value = 0;
-        vx_status status = vxQueryGraph(g, VX_GRAPH_ATTRIBUTE_NUMNODES, &value, sizeof(value));
+        vx_status status = vxQueryGraph(g, VX_GRAPH_NUMNODES, &value, sizeof(value));
         if (status != VX_SUCCESS)
             value = 0;
         return value;

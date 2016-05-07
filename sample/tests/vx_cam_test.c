@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2014 The Khronos Group Inc.
+ * Copyright (c) 2011-2016 The Khronos Group Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and/or associated documentation files (the
@@ -50,8 +50,8 @@ vx_graph vxPyramidIntegral(vx_context context, vx_image image, vx_threshold thre
 {
     vx_graph graph = vxCreateGraph(context);
     vx_uint32 width, height, i;
-    vxQueryImage(image, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-    vxQueryImage(image, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+    vxQueryImage(image, VX_IMAGE_WIDTH, &width, sizeof(width));
+    vxQueryImage(image, VX_IMAGE_HEIGHT, &height, sizeof(height));
     if (vxGetStatus((vx_reference)graph) == VX_SUCCESS)
     {
         vx_pyramid pyr = vxCreatePyramid(context, 4, 0.5f, width, height, VX_DF_IMAGE_U8);
@@ -346,7 +346,7 @@ int32_t vxCreateV4L2Images(vx_context context, vx_uint32 count, vx_image images[
                     .step_y = 1,
                 };
                 images[i] = vxCreateImageFromHandle(context, format, &addr, &ptrs[i], VX_IMPORT_TYPE_HOST);
-                vxSetImageAttribute(images[i], VX_IMAGE_ATTRIBUTE_SPACE, &codes[c].space, sizeof(codes[c].space));
+                vxSetImageAttribute(images[i], VX_IMAGE_SPACE, &codes[c].space, sizeof(codes[c].space));
                 if (vxGetStatus((vx_reference)images[i]) != VX_SUCCESS)
                     vxReleaseImage(&images[i]);
                 buffers[i].bytesused = 0;
@@ -465,8 +465,8 @@ int main(int argc, char *argv[])
         assert(i == (dimof(backplanes)+dimof(captures)));
         {
             vx_int32 bounds[2] = {20, 180};
-            vxSetThresholdAttribute(thresh, VX_THRESHOLD_ATTRIBUTE_THRESHOLD_LOWER, &bounds[0], sizeof(bounds[0]));
-            vxSetThresholdAttribute(thresh, VX_THRESHOLD_ATTRIBUTE_THRESHOLD_UPPER, &bounds[1], sizeof(bounds[1]));
+            vxSetThresholdAttribute(thresh, VX_THRESHOLD_THRESHOLD_LOWER, &bounds[0], sizeof(bounds[0]));
+            vxSetThresholdAttribute(thresh, VX_THRESHOLD_THRESHOLD_UPPER, &bounds[1], sizeof(bounds[1]));
             // input is the YUYV image.
             // output is the RGB image
             graph = vxPseudoCannyGraph(context, images[0], thresh, images[dimof(captures)]);
@@ -537,6 +537,9 @@ int main(int argc, char *argv[])
         vxReleaseThreshold(&thresh);
         vxReleaseGraph(&graph);
         v4l2_close(cam);
+
+        vxUnloadKernels(context, "openvx-extras");
+        vxUnloadKernels(context, "openvx-debug");
         vxReleaseContext(&context);
     }
     SDL_Quit();

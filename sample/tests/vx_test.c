@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014 The Khronos Group Inc.
+ * Copyright (c) 2012-2016 The Khronos Group Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and/or associated documentation files (the
@@ -29,6 +29,8 @@
 
 #include <VX/vx.h>
 #include <VX/vxu.h>
+/* TODO: remove vx_compatibility.h after transition period */
+#include <VX/vx_compatibility.h>
 
 #include <VX/vx_lib_debug.h>
 #include <VX/vx_lib_extras.h>
@@ -162,16 +164,17 @@ vx_status vx_test_framework_load_extension(int argc, char *argv[])
                 vx_uint32 num_modules = 0;
                 vx_uint32 num_references = 0;
                 status = VX_SUCCESS;
-                if (vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_UNIQUE_KERNELS, &num_kernels, sizeof(vx_uint32)) != VX_SUCCESS)
+                if (vxQueryContext(context, VX_CONTEXT_UNIQUE_KERNELS, &num_kernels, sizeof(vx_uint32)) != VX_SUCCESS)
                     status = VX_ERROR_NOT_SUFFICIENT;
-                if (vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_MODULES, &num_modules, sizeof(vx_uint32)) != VX_SUCCESS)
+                if (vxQueryContext(context, VX_CONTEXT_MODULES, &num_modules, sizeof(vx_uint32)) != VX_SUCCESS)
                     status = VX_ERROR_NOT_SUFFICIENT;
-                if (vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_REFERENCES, &num_references, sizeof(vx_uint32)) != VX_SUCCESS)
+                if (vxQueryContext(context, VX_CONTEXT_REFERENCES, &num_references, sizeof(vx_uint32)) != VX_SUCCESS)
                     status = VX_ERROR_NOT_SUFFICIENT;
                 printf("[VX_TEST] Kernels:%u Modules:%u Refs:%u\n", num_kernels, num_modules, num_references);
                 vxReleaseKernel(&kernel);
                 status = VX_SUCCESS;
             }
+            status = vxUnloadKernels(context, "xyz");
         }
         vxReleaseContext(&context);
     }
@@ -204,8 +207,8 @@ vx_status vx_test_framework_load_kernel_node(int argc, char *argv[])
                     {
                         vx_size size = 0;
                         void *ptr = NULL;
-                        status = vxQueryNode(xyz, VX_NODE_ATTRIBUTE_LOCAL_DATA_SIZE, &size, sizeof(size));
-                        status = vxQueryNode(xyz, VX_NODE_ATTRIBUTE_LOCAL_DATA_PTR, &ptr, sizeof(ptr));
+                        status = vxQueryNode(xyz, VX_NODE_LOCAL_DATA_SIZE, &size, sizeof(size));
+                        status = vxQueryNode(xyz, VX_NODE_LOCAL_DATA_PTR, &ptr, sizeof(ptr));
                         if (status == VX_SUCCESS && size == XYZ_DATA_AREA && ptr != NULL)
                         {
                             printf("Node private size="VX_FMT_SIZE" ptr=%p\n",size,ptr);
@@ -218,6 +221,7 @@ vx_status vx_test_framework_load_kernel_node(int argc, char *argv[])
                 }
                 vxReleaseKernel(&kernel);
             }
+            status = vxUnloadKernels(context, "xyz");
         }
         vxReleaseContext(&context);
     }
@@ -253,7 +257,7 @@ vx_status vx_test_framework_copy(int argc, char *argv[])
             if (node)
             {
                 vx_uint32 numNodes = 0;
-                if (vxQueryGraph(graph, VX_GRAPH_ATTRIBUTE_NUMNODES, &numNodes, sizeof(numNodes)) != VX_SUCCESS)
+                if (vxQueryGraph(graph, VX_GRAPH_NUMNODES, &numNodes, sizeof(numNodes)) != VX_SUCCESS)
                 {
                     status = VX_ERROR_NOT_SUFFICIENT;
                 }
@@ -301,6 +305,7 @@ vx_status vx_test_framework_copy(int argc, char *argv[])
             }
             vx_print_log((vx_reference)graph);
             vxReleaseGraph(&graph);
+            status |= vxUnloadKernels(context, "openvx-debug");
         }
         else
         {
@@ -342,7 +347,7 @@ vx_status vx_test_framework_copy_virtual(int argc, char *argv[])
                 vxCopyImageNode(graph, virt, images[1]),
             };
             vx_uint32 numNodes = 0;
-            if (vxQueryGraph(graph, VX_GRAPH_ATTRIBUTE_NUMNODES, &numNodes, sizeof(numNodes)) != VX_SUCCESS)
+            if (vxQueryGraph(graph, VX_GRAPH_NUMNODES, &numNodes, sizeof(numNodes)) != VX_SUCCESS)
             {
                 status = VX_ERROR_NOT_SUFFICIENT;
             }
@@ -396,6 +401,7 @@ vx_status vx_test_framework_copy_virtual(int argc, char *argv[])
         for (n = 0; n < dimof(images); n++) {
             vxReleaseImage(&images[n]);
         }
+        status |= vxUnloadKernels(context, "openvx-debug");
 exit:
         vxReleaseContext(&context);
     }
@@ -488,6 +494,8 @@ vx_status vx_test_framework_virtualimage(int argc, char *argv[])
             }
             vx_print_log((vx_reference)graph);
             vxReleaseGraph(&graph);
+
+            status |= vxUnloadKernels(context, "openvx-debug");
         }
         else
         {
@@ -553,6 +561,8 @@ vx_status vx_test_framework_heads(int argc, char *argv[])
             }
             vx_print_log((vx_reference)graph);
             vxReleaseGraph(&graph);
+
+            status |= vxUnloadKernels(context, "openvx-debug");
         }
         else
         {
@@ -622,6 +632,8 @@ vx_status vx_test_framework_unvisited(int argc, char *argv[])
             }
             vx_print_log((vx_reference)graph);
             vxReleaseGraph(&graph);
+
+            status |= vxUnloadKernels(context, "openvx-debug");
         }
         else
         {
@@ -645,7 +657,7 @@ vx_status vx_test_framework_targets(int argc, char *argv[])
         vx_uint32 numTargets = 0;
         vx_char implementation[VX_MAX_IMPLEMENTATION_NAME];
 
-        status = vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_IMPLEMENTATION, implementation, sizeof(implementation));
+        status = vxQueryContext(context, VX_CONTEXT_IMPLEMENTATION, implementation, sizeof(implementation));
         if (status == VX_SUCCESS)
         {
             printf("[VX_TEST] Implementation: %s\n", implementation);
@@ -660,7 +672,7 @@ vx_status vx_test_framework_targets(int argc, char *argv[])
         {
             return status;
         }
-        status = vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_TARGETS, &numTargets, sizeof(numTargets));
+        status = vxQueryContext(context, VX_CONTEXT_TARGETS, &numTargets, sizeof(numTargets));
         if (status == VX_SUCCESS && numTargets > 0)
         {
             vx_uint32 t = 0;
@@ -703,6 +715,7 @@ vx_status vx_test_framework_targets(int argc, char *argv[])
                 }
             }
         }
+        status |= vxUnloadKernels(context, "openvx-debug");
         vxReleaseContext(&context);
     }
     return status;
@@ -716,13 +729,13 @@ vx_status vx_test_framework_kernels(int argc, char *argv[])
     if (vxGetStatus((vx_reference)context) == VX_SUCCESS)
     {
 #if defined(EXPERIMENTAL_USE_TARGET) && defined(EXPERIMENTAL_USE_VARIANTS)
-        char kernelName[] = "khronos.c_model:org.khronos.openvx.box3x3:duplicate";
+        char kernelName[] = "khronos.any:org.khronos.openvx.box_3x3:duplicate";
 #elif defined(EXPERIMENTAL_USE_TARGET)
-        char kernelName[] = "khronos.c_model:org.khronos.openvx.box3x3";
+        char kernelName[] = "khronos.any:org.khronos.openvx.box_3x3";
 #elif defined(EXPERIMENTAL_USE_VARIANTS)
-        char kernelName[] = "org.khronos.openvx.box3x3:duplicate";
+        char kernelName[] = "org.khronos.openvx.box_3x3:duplicate";
 #else
-        char kernelName[] = "org.khronos.openvx.box3x3";
+        char kernelName[] = "org.khronos.openvx.box_3x3";
 #endif
         vx_kernel boxdup = vxGetKernelByName(context, kernelName);
         status = vxGetStatus((vx_reference)boxdup);
@@ -866,6 +879,8 @@ vx_status vx_test_framework_delay_graph(int argc, char *argv[])
                     }
                 }
             }
+
+            status |= vxUnloadKernels(context, "openvx-debug");
 exit:
             for (i = 0; i < DEPTH_TEST; i++)
             {
@@ -948,6 +963,8 @@ exit:
             vxReleaseGraph(&g1);
             vxReleaseGraph(&g2);
         }
+
+        status |= vxUnloadKernels(context, "openvx-debug");
         vxReleaseContext(&context);
     }
     return status;
@@ -976,8 +993,8 @@ vx_status vx_test_direct_copy_image(int argc, char *argv[])
                             &images[1][1][0][0][0],
                             &images[1][2][0][0][0]
         };
-        vx_image input = vxCreateImageFromHandle(context, VX_DF_IMAGE_YUV4, addrs, src_ptrs, VX_IMPORT_TYPE_HOST);
-        vx_image output = vxCreateImageFromHandle(context, VX_DF_IMAGE_YUV4, addrs, dst_ptrs, VX_IMPORT_TYPE_HOST);
+        vx_image input = vxCreateImageFromHandle(context, VX_DF_IMAGE_YUV4, addrs, src_ptrs, VX_MEMORY_TYPE_HOST);
+        vx_image output = vxCreateImageFromHandle(context, VX_DF_IMAGE_YUV4, addrs, dst_ptrs, VX_MEMORY_TYPE_HOST);
         if (input && output)
         {
             vx_uint32 numDiffs = 0;
@@ -993,6 +1010,8 @@ vx_status vx_test_direct_copy_image(int argc, char *argv[])
                 status = vxuCompareImages(context, input, output, &numDiffs);
             vxReleaseImage(&input);
             vxReleaseImage(&output);
+            status = vxUnloadKernels(context, "openvx-debug");
+            assert(status == VX_SUCCESS);
         }
         vxReleaseContext(&context);
     }
@@ -1032,6 +1051,8 @@ vx_status vx_test_direct_copy_external_image(int argc, char *argv[])
             }
             vxReleaseImage(&input);
             vxReleaseImage(&output);
+            status = vxUnloadKernels(context, "openvx-debug");
+            assert(status == VX_SUCCESS);
         }
         vxReleaseContext(&context);
     }
@@ -1085,6 +1106,7 @@ vx_status vx_test_graph_channels_yuv(int argc, char *argv[])
                 }
                 vxReleaseGraph(&graph);
             }
+            status |= vxUnloadKernels(context, "openvx-debug");
         }
         for (i = 0; i < dimof(images); i++)
         {
@@ -1176,9 +1198,9 @@ vx_status vx_test_graph_bikegray(int argc, char *argv[])
             }
         }
 
-        status |= vxSetThresholdAttribute(thresh, VX_THRESHOLD_ATTRIBUTE_THRESHOLD_VALUE, &lo, sizeof(lo));
-        status |= vxSetThresholdAttribute(hyst, VX_THRESHOLD_ATTRIBUTE_THRESHOLD_LOWER, &lower, sizeof(lower));
-        status |= vxSetThresholdAttribute(hyst, VX_THRESHOLD_ATTRIBUTE_THRESHOLD_UPPER, &upper, sizeof(upper));
+        status |= vxSetThresholdAttribute(thresh, VX_THRESHOLD_THRESHOLD_VALUE, &lo, sizeof(lo));
+        status |= vxSetThresholdAttribute(hyst, VX_THRESHOLD_THRESHOLD_LOWER, &lower, sizeof(lower));
+        status |= vxSetThresholdAttribute(hyst, VX_THRESHOLD_THRESHOLD_UPPER, &upper, sizeof(upper));
         status |= vxLoadKernels(context, "openvx-debug");
         if (status == VX_SUCCESS)
         {
@@ -1189,7 +1211,7 @@ vx_status vx_test_graph_bikegray(int argc, char *argv[])
                     vxFReadImageNode(graph, "bikegray_640x480.pgm", images[0]),
                     vxMedian3x3Node(graph, images[0], images[12]),
                     vxBox3x3Node(graph, images[0], images[13]),
-                    vxScaleImageNode(graph, images[0], images[1], VX_INTERPOLATION_TYPE_AREA),
+                    vxScaleImageNode(graph, images[0], images[1], VX_INTERPOLATION_AREA),
                     vxTableLookupNode(graph, images[1], lut, images[6]),
                     vxHistogramNode(graph, images[6], dist),
                     vxSobel3x3Node(graph, images[1], images[2], images[3]),
@@ -1206,8 +1228,8 @@ vx_status vx_test_graph_bikegray(int argc, char *argv[])
                     vxCannyEdgeDetectorNode(graph, images[0], hyst, 3, VX_NORM_L1, images[15]),
                     vxEqualizeHistNode(graph, images[0], images[16]),
                     vxConvertDepthNode(graph, images[3], images[17], policy, snoshift),
-                    vxRemapNode(graph, images[0], table, VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR, images[18]),
-                    vxRemapNode(graph, images[0], table, VX_INTERPOLATION_TYPE_BILINEAR, images[19]),
+                    vxRemapNode(graph, images[0], table, VX_INTERPOLATION_NEAREST_NEIGHBOR, images[18]),
+                    vxRemapNode(graph, images[0], table, VX_INTERPOLATION_BILINEAR, images[19]),
                     vxAbsDiffNode(graph, images[18], images[19], images[20]),
 
                     vxFWriteImageNode(graph, images[0], "obikegray_640x480_P400.pgm"),
@@ -1254,28 +1276,31 @@ vx_status vx_test_graph_bikegray(int argc, char *argv[])
                         vx_size stride = 0;
                         vx_uint8 min_v = 255;
                         vx_uint8 max_v = 0;
+                        vx_map_id map_id = 0;
 
                         vxAccessArrayRange(minLoc, 0, 1, &stride, (void **)&p_min_l, VX_READ_ONLY);
                         vxCommitArrayRange(minLoc, 0, 0, p_min_l);
                         vxAccessArrayRange(maxLoc, 0, 1, &stride, (void **)&p_max_l, VX_READ_ONLY);
                         vxCommitArrayRange(maxLoc, 0, 0, p_max_l);
 
-                        vxReadScalarValue(minVal, &min_v);
-                        vxReadScalarValue(maxVal, &max_v);
+                        vxCopyScalar(minVal, &min_v, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+                        vxCopyScalar(maxVal, &max_v, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
 
                         printf("Min Value in AbsDiff = %u, at %d,%d\n", min_v, min_l.x, min_l.y);
                         printf("Max Value in AbsDiff = %u, at %d,%d\n", max_v, max_l.x, max_l.y);
 
-                        vxAccessDistribution(dist, (void **)&histogram, VX_READ_ONLY);
+                        vxCopyScalar(s_mean, &mean, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+                        vxCopyScalar(s_stddev, &stddev, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+
+                        printf("AbsDiff Mean = %lf\n", mean);
+                        printf("AbsDiff Stddev = %lf\n", stddev);
+
+                        vxMapDistribution(dist, &map_id, (void**)&histogram, VX_READ_ONLY, VX_MEMORY_TYPE_HOST, 0);
                         for (i = 0; i < windows; i++)
                         {
                             printf("histogram[%u] = %d\n", i, histogram[i]);
                         }
-                        vxReadScalarValue(s_mean, &mean);
-                        vxReadScalarValue(s_stddev, &stddev);
-                        printf("AbsDiff Mean = %lf\n", mean);
-                        printf("AbsDiff Stddev = %lf\n", stddev);
-                        vxCommitDistribution(dist, histogram);
+                        vxUnmapDistribution(dist, map_id);
                     }
                     else
                     {
@@ -1283,7 +1308,7 @@ vx_status vx_test_graph_bikegray(int argc, char *argv[])
                         for (i = 0; i < dimof(nodes); i++)
                         {
                             status = VX_SUCCESS;
-                            vxQueryNode(nodes[i], VX_NODE_ATTRIBUTE_STATUS, &status, sizeof(status));
+                            vxQueryNode(nodes[i], VX_NODE_STATUS, &status, sizeof(status));
                             if (status != VX_SUCCESS)
                             {
                                 printf("nodes[%u] failed with %d\n", i, status);
@@ -1298,6 +1323,7 @@ vx_status vx_test_graph_bikegray(int argc, char *argv[])
                 }
                 vxReleaseGraph(&graph);
             }
+            status |= vxUnloadKernels(context, "openvx-debug");
         }
         for (i = 0; i < dimof(images); i++)
         {
@@ -1375,7 +1401,7 @@ vx_status vx_test_graph_opencl(int argc, char *argv[])
                             for (i = 0; i < dimof(nodes); i++)
                             {
                                 status = VX_SUCCESS;
-                                vxQueryNode(nodes[i], VX_NODE_ATTRIBUTE_STATUS, &status, sizeof(status));
+                                vxQueryNode(nodes[i], VX_NODE_STATUS, &status, sizeof(status));
                                 if (status != VX_SUCCESS)
                                 {
                                     printf("nodes[%u] failed with %d\n", i, status);
@@ -1390,6 +1416,7 @@ vx_status vx_test_graph_opencl(int argc, char *argv[])
                     }
                     vxReleaseGraph(&graph);
                 }
+                status |= vxUnloadKernels(context, "openvx-debug");
             }
             for (i = 0; i < dimof(images); i++)
             {
@@ -1455,10 +1482,10 @@ vx_status vx_test_graph_lena(int argc, char *argv[])
         };
 
         CHECK_ALL_ITEMS(images, i, status, exit);
-        vxWriteConvolutionCoefficients(conv[0], (vx_int16 *)mat1);
-        vxWriteConvolutionCoefficients(conv[1], (vx_int16 *)mat2);
+        vxCopyConvolutionCoefficients(conv[0], (vx_int16 *)mat1, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
+        vxCopyConvolutionCoefficients(conv[1], (vx_int16 *)mat2, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         vxSetAffineRotationMatrix(affine, 45.0, 0.5, (vx_float32)w/2, (vx_float32)h/2);
-        vxWriteMatrix(perspective, mat4);
+        vxCopyMatrix(perspective, mat4, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
 
         status |= vxLoadKernels(context, "openvx-debug");
         status |= vxLoadKernels(context, "openvx-extras");
@@ -1479,8 +1506,8 @@ vx_status vx_test_graph_lena(int argc, char *argv[])
                     vxMagnitudeNode(graph, images[4], images[5], images[6]),
                     vxLaplacian3x3Node(graph, images[0], images[7]),
                     vxGaussianPyramidNode(graph, images[0], pyramid),
-                    vxWarpAffineNode(graph, images[0], affine, VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR, images[8]),
-                    vxWarpPerspectiveNode(graph, images[0], perspective, VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR, images[9]),
+                    vxWarpAffineNode(graph, images[0], affine, VX_INTERPOLATION_NEAREST_NEIGHBOR, images[8]),
+                    vxWarpPerspectiveNode(graph, images[0], perspective, VX_INTERPOLATION_NEAREST_NEIGHBOR, images[9]),
                     vxFWriteImageNode(graph, images[1], "olenamed_512x512_P400.bw"),
                     vxFWriteImageNode(graph, images[2], "olenaavg_512x512_P400.bw"),
                     vxFWriteImageNode(graph, images[3], "olenagau_512x512_P400.bw"),
@@ -1517,7 +1544,7 @@ vx_status vx_test_graph_lena(int argc, char *argv[])
                         for (i = 0; i < dimof(nodes); i++)
                         {
                             status = VX_SUCCESS;
-                            vxQueryNode(nodes[i], VX_NODE_ATTRIBUTE_STATUS, &status, sizeof(status));
+                            vxQueryNode(nodes[i], VX_NODE_STATUS, &status, sizeof(status));
                             if (status != VX_SUCCESS)
                             {
                                 printf("nodes[%u] failed with %d\n", i, status);
@@ -1527,15 +1554,17 @@ vx_status vx_test_graph_lena(int argc, char *argv[])
                     }
                     for (i = 0; i < dimof(nodes); i++)
                     {
-                        vxQueryNode(nodes[i], VX_NODE_ATTRIBUTE_PERFORMANCE, &perf, sizeof(perf));
+                        vxQueryNode(nodes[i], VX_NODE_PERFORMANCE, &perf, sizeof(perf));
                         printf("Nodes[%u] average exec: %0.3lfms\n", i, (vx_float32)perf.avg/10000000.0f);
                         vxReleaseNode(&nodes[i]);
                     }
                 }
-                vxQueryGraph(graph, VX_GRAPH_ATTRIBUTE_PERFORMANCE, &perf, sizeof(perf));
+                vxQueryGraph(graph, VX_GRAPH_PERFORMANCE, &perf, sizeof(perf));
                 printf("Graph average exec: %0.3lfms\n", (vx_float32)perf.avg/10000000.0f);
                 vxReleaseGraph(&graph);
             }
+            status |= vxUnloadKernels(context, "openvx-extras");
+            status |= vxUnloadKernels(context, "openvx-debug");
         }
         vxReleasePyramid(&pyramid);
         vxReleaseMatrix(&affine);
@@ -1613,6 +1642,7 @@ vx_status vx_test_graph_channels_rgb(int argc, char *argv[])
                 }
                 vxReleaseGraph(&graph);
             }
+            status |= vxUnloadKernels(context, "openvx-debug");
         }
         for (i = 0; i < dimof(images); i++)
         {
@@ -1703,6 +1733,7 @@ vx_status vx_test_graph_accum(int argc, char *argv[])
                 }
                 vxReleaseGraph(&graph);
             }
+            status |= vxUnloadKernels(context, "openvx-debug");
         }
         for (i = 0; i < dimof(images); i++)
         {
@@ -1889,6 +1920,8 @@ release_graph:
         }
         for (i = 0; i < dimof(images); i++)
             vxReleaseImage(&images[i]);
+
+        status |= vxUnloadKernels(context, "openvx-debug");
 
 release_context:
         vxReleaseContext(&context);
@@ -2221,6 +2254,8 @@ vx_status vx_test_graph_arit(int argc, char *argv[])
         }
     }
 
+    status |= vxUnloadKernels(context, "openvx-debug");
+
     /*
      * If we got here, everything checked out. We've already released
      * the node, the graph and the images, so skip those parts.
@@ -2289,9 +2324,9 @@ vx_status vx_test_graph_corners(int argc, char *argv[])
                 status = vxProcessGraph(graph);
 
                 vxGetValidRegionImage(images[1], &rect);
-                vxQueryArray(harris_arr, VX_ARRAY_ATTRIBUTE_NUMITEMS, &num_items, sizeof(num_items));
+                vxQueryArray(harris_arr, VX_ARRAY_NUMITEMS, &num_items, sizeof(num_items));
                 printf("There are "VX_FMT_SIZE" number of points in the harris array!\n", num_items);
-                vxQueryArray(fast_arr, VX_ARRAY_ATTRIBUTE_NUMITEMS, &num_items, sizeof(num_items));
+                vxQueryArray(fast_arr, VX_ARRAY_NUMITEMS, &num_items, sizeof(num_items));
                 printf("There are "VX_FMT_SIZE" number of points in the fast array!\n", num_items);
                 printf("Rectangle from Gaussian is {%d, %d, %d, %d}\n", rect.start_x, rect.start_y, rect.end_x, rect.end_y);
             }
@@ -2302,6 +2337,7 @@ exit:
             }
             vxReleaseGraph(&graph);
         }
+        status |= vxUnloadKernels(context, "openvx-debug");
         for (n = 0; n < dimof(images); n++)
         {
             vxReleaseImage(&images[n]);
@@ -2460,6 +2496,7 @@ vx_status vx_test_graph_dot_export(int argc, char *argv[])
             }
             vxReleaseGraph(&graph);
         }
+        status |= vxUnloadKernels(context, "openvx-debug");
 exit:
         vxReleaseContext(&context);
     }
@@ -2487,14 +2524,14 @@ vx_status vx_xml_fullimport(int argc, char *argv[])
         vx_uint32 num_kernels_added = 0;
         vx_uint32 num_nonkern_added = 0;
         vx_status import_status = VX_FAILURE;
-        vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_REFERENCES, &num_refs_orig, sizeof(num_refs_orig));
-        vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_UNIQUE_KERNELS, &num_kernels_orig, sizeof(num_kernels_orig));
+        vxQueryContext(context, VX_CONTEXT_REFERENCES, &num_refs_orig, sizeof(num_refs_orig));
+        vxQueryContext(context, VX_CONTEXT_UNIQUE_KERNELS, &num_kernels_orig, sizeof(num_kernels_orig));
 
         xml_import = vxImportFromXML(context, filename);
         if(xml_import && (import_status = vxGetStatus((vx_reference)xml_import)) == VX_SUCCESS) {
 
-            vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_REFERENCES, &num_refs, sizeof(num_refs));
-            vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_UNIQUE_KERNELS, &num_kernels, sizeof(num_kernels));
+            vxQueryContext(context, VX_CONTEXT_REFERENCES, &num_refs, sizeof(num_refs));
+            vxQueryContext(context, VX_CONTEXT_UNIQUE_KERNELS, &num_kernels, sizeof(num_kernels));
             num_refs_added = num_refs - num_refs_orig;
             num_kernels_added = num_kernels - num_kernels_orig;
             num_nonkern_added = num_refs_added-num_kernels_added;
@@ -2528,7 +2565,7 @@ vx_status vx_xml_fullimport(int argc, char *argv[])
                         if(type == VX_TYPE_GRAPH) {
                             vx_perf_t perf;
                             graphStatus |= vxProcessGraph((vx_graph)ref);
-                            vxQueryGraph((vx_graph)ref, VX_GRAPH_ATTRIBUTE_PERFORMANCE, &perf, sizeof(perf));
+                            vxQueryGraph((vx_graph)ref, VX_GRAPH_PERFORMANCE, &perf, sizeof(perf));
                             printf("Graph "VX_FMT_SIZE" avg time: %lu\n", (vx_size)ref, perf.avg);
                         }
                         vxReleaseReference(&ref);
@@ -2546,7 +2583,7 @@ vx_status vx_xml_fullimport(int argc, char *argv[])
                     if(refs[i]) {
                         vx_perf_t perf;
                         graphStatus |= vxProcessGraph((vx_graph)refs[i]);
-                        vxQueryGraph((vx_graph)refs[i], VX_GRAPH_ATTRIBUTE_PERFORMANCE, &perf, sizeof(perf));
+                        vxQueryGraph((vx_graph)refs[i], VX_GRAPH_PERFORMANCE, &perf, sizeof(perf));
                         printf("Graph "VX_FMT_SIZE" avg time: %lu\n", (vx_size)refs[i], perf.avg);
                         vxReleaseReference(&refs[i]);
                     }
@@ -2561,7 +2598,7 @@ vx_status vx_xml_fullimport(int argc, char *argv[])
                     if(refs[i]) {
                         vx_perf_t perf;
                         graphStatus |= vxProcessGraph((vx_graph)refs[i]);
-                        vxQueryGraph((vx_graph)refs[i], VX_GRAPH_ATTRIBUTE_PERFORMANCE, &perf, sizeof(perf));
+                        vxQueryGraph((vx_graph)refs[i], VX_GRAPH_PERFORMANCE, &perf, sizeof(perf));
                         printf("Graph "VX_FMT_SIZE" avg time: %lu\n", (vx_size)refs[i], perf.avg);
                         vxReleaseReference(&refs[i]);
                     }
@@ -2641,6 +2678,13 @@ vx_status vx_xml_fullexport(int argc, char *argv[])
         vx_remap remap = vxCreateRemap(context, w, h, w, h);
         vx_distribution dist = vxCreateDistribution(context, 16, 0, 256);
         vx_pyramid pyr = vxCreatePyramid(context, 4, VX_SCALE_PYRAMID_HALF, w*4, h*4, VX_DF_IMAGE_U8);
+        vx_pyramid pyr2 = vxCreatePyramid(context, 4, VX_SCALE_PYRAMID_HALF, w*4, h*4, VX_DF_IMAGE_U8);
+        vx_pyramid pyr3 = vxCreatePyramid(context, 4, VX_SCALE_PYRAMID_HALF, w*4, h*4, VX_DF_IMAGE_U8);
+        vx_image fromPyr[] = {
+            vxGetPyramidLevel(pyr, 0),
+            vxGetPyramidLevel(pyr2, 0),
+            vxGetPyramidLevel(pyr3, 0),
+        };
         vx_graph graph = vxCreateGraph(context);
         if (vxGetStatus((vx_reference)graph) == VX_SUCCESS)
         {
@@ -2687,6 +2731,14 @@ vx_status vx_xml_fullexport(int argc, char *argv[])
 
             vx_node sobelNode = vxSobel3x3Node(graph, images[0], virts[0], virts[1]);
             vx_node convNode = vxConvertDepthNode(graph, virts[0], images[1], policy, sshift);
+            vx_node addNode = vxAddNode(graph, fromPyr[0], fromPyr[1], policy, fromPyr[2]);
+            vx_bool replicate[] = { vx_true_e, vx_true_e, vx_false_e, vx_true_e};
+            vxReplicateNode(graph, addNode, replicate, 4);
+
+            vx_border_t border;
+            border.mode = VX_BORDER_MODE_CONSTANT;
+            border.constant_value = 5;
+            vxSetNodeAttribute(sobelNode, VX_NODE_BORDER, &border, sizeof(border));
 
             vx_parameter parameters[] = {
                 vxGetParameterByIndex(sobelNode, 0),
@@ -2708,83 +2760,83 @@ vx_status vx_xml_fullexport(int argc, char *argv[])
 
             vx_array array1 = vxCreateArray(context, VX_TYPE_UINT8, 10);
             vx_uint8 ary1[] = {2,3,4,5,6,7,8,9,10,11};
-            vxAddArrayItems(array1, 10, &ary1, 0);
+            vxAddArrayItems(array1, 10, &ary1, sizeof(vx_uint8));
 
             vx_array array2 = vxCreateArray(context, VX_TYPE_CHAR, 20);
             vx_char ary2[] = "a 13,.;^-";
-            vxAddArrayItems(array2, 9, &ary2, 0);
+            vxAddArrayItems(array2, 9, &ary2, sizeof(vx_char));
 
             vx_array array3 = vxCreateArray(context, VX_TYPE_ENUM, 4);
             vx_enum ary3[] = {VX_FAILURE, VX_SUCCESS, VX_THRESHOLD_TYPE_RANGE};
-            vxAddArrayItems(array3, 3, &ary3, 0);
+            vxAddArrayItems(array3, 3, &ary3, sizeof(vx_enum));
 
             vx_array array4 = vxCreateArray(context, VX_TYPE_DF_IMAGE, 4);
             vx_df_image ary4[] = {VX_DF_IMAGE_RGB, VX_DF_IMAGE_U8, VX_DF_IMAGE_VIRT};
-            vxAddArrayItems(array4, 3, &ary4, 0);
+            vxAddArrayItems(array4, 3, &ary4, sizeof(vx_df_image));
 
             vx_array array5 = vxCreateArray(context, VX_TYPE_KEYPOINT, 3);
             vx_keypoint_t ary5[] = {{0,0,2.3,6.55555,0.9059,5,3.5455 },{400,235,5.2222,1.221,0.5695,8,462.5 }};
-            vxAddArrayItems(array5, 2, &ary5, 0);
+            vxAddArrayItems(array5, 2, &ary5, sizeof(vx_keypoint_t));
 
             vx_array array6 = vxCreateArray(context, VX_TYPE_RECTANGLE, 5);
             vx_rectangle_t ary6[] = {{0,0,640,320},{65,32,128,362}};
-            vxAddArrayItems(array6, 2, &ary6, 0);
+            vxAddArrayItems(array6, 2, &ary6, sizeof(vx_rectangle_t));
 
             vx_array array7 = vxCreateArray(context, VX_TYPE_COORDINATES2D, 6);
-            vx_coordinates3d_t ary7[] = {{1,2},{55,66}};
-            vxAddArrayItems(array7, 2, &ary7, 0);
+            vx_coordinates2d_t ary7[] = {{1,2},{55,66}};
+            vxAddArrayItems(array7, 2, &ary7, sizeof(vx_coordinates2d_t));
 
             vx_array array8 = vxCreateArray(context, VX_TYPE_COORDINATES3D, 6);
             vx_coordinates3d_t ary8[] = {{1,2,3},{55,66,77}};
-            vxAddArrayItems(array8, 2, &ary8, 0);
+            vxAddArrayItems(array8, 2, &ary8, sizeof(vx_coordinates_3d_t));
 
             vx_array array9 = vxCreateArray(context, VX_TYPE_INT8, 8);
             vx_int8 ary9[] = {5, 0, -3, -8};
-            vxAddArrayItems(array9, 4, &ary9, 0);
+            vxAddArrayItems(array9, 4, &ary9, sizeof(vx_int8));
 
             vx_array array10 = vxCreateArray(context, VX_TYPE_INT16, 6);
             vx_int16 ary10[] = {200, 100, 0, -100, -200};
-            vxAddArrayItems(array10, 5, &ary10, 0);
+            vxAddArrayItems(array10, 5, &ary10, sizeof(vx_int16));
 
             vx_array array11 = vxCreateArray(context, VX_TYPE_INT32, 6);
             vx_int32 ary11[] = {200000, 100000, 0, -100000, -200000};
-            vxAddArrayItems(array11, 5, &ary11, 0);
+            vxAddArrayItems(array11, 5, &ary11, sizeof(vx_int32));
 
             vx_array array12 = vxCreateArray(context, VX_TYPE_BOOL, 3);
             vx_bool ary12[] = {vx_true_e, vx_false_e, vx_true_e};
-            vxAddArrayItems(array12, 3, &ary12, 0);
+            vxAddArrayItems(array12, 3, &ary12, sizeof(vx_bool));
 
             vx_array array13 = vxCreateArray(context, VX_TYPE_SIZE, 4);
             vx_size ary13[] = {8000, 24000};
-            vxAddArrayItems(array13, 2, &ary13, 0);
+            vxAddArrayItems(array13, 2, &ary13, sizeof(vx_size));
 
             vx_array array14 = vxCreateArray(context, VX_TYPE_FLOAT64, 2);
             vx_float64 ary14[] = {1235.25566, -563.2567};
-            vxAddArrayItems(array14, 2, &ary14, 0);
+            vxAddArrayItems(array14, 2, &ary14, sizeof(vx_float64));
 
             vx_array array15 = vxCreateArray(context, VX_TYPE_UINT64, 8);
             vx_uint64 ary15[] = {9000000000, 8000000000, 7000000000, 6000000000};
-            vxAddArrayItems(array15, 4, &ary15, 0);
+            vxAddArrayItems(array15, 4, &ary15, sizeof(vx_uint64));
 
             vx_array array16 = vxCreateArray(context, VX_TYPE_UINT16, 6);
             vx_uint16 ary16[] = {290, 100, 0, 100, 260};
-            vxAddArrayItems(array16, 5, &ary16, 0);
+            vxAddArrayItems(array16, 5, &ary16, sizeof(vx_uint16));
 
             vx_array array17 = vxCreateArray(context, VX_TYPE_UINT32, 6);
             vx_uint32 ary17[] = {200000, 100000, 0, 100000, 200000};
-            vxAddArrayItems(array17, 5, &ary17, 0);
+            vxAddArrayItems(array17, 5, &ary17, sizeof(vx_uint32));
 
             vx_array array18 = vxCreateArray(context, VX_TYPE_FLOAT32, 2);
             vx_float32 ary18[] = {1235.25566, -563.2567};
-            vxAddArrayItems(array18, 2, &ary18, 0);
+            vxAddArrayItems(array18, 2, &ary18, sizeof(vx_float32));
 
             vx_array array19 = vxCreateArray(context, VX_TYPE_INT64, 8);
             vx_int64 ary19[] = {9000000000, 8000000000, -7000000000, -6000000000};
-            vxAddArrayItems(array19, 4, &ary19, 0);
+            vxAddArrayItems(array19, 4, &ary19, sizeof(vx_int64));
 
             vx_delay delayArr = vxCreateDelay(context, (vx_reference)array7, 4);
             vx_array  ary7_3 = (vx_array)vxGetReferenceFromDelay(delayArr, -3);
-            vxAddArrayItems(ary7_3, 2, &ary7, 0);
+            vxAddArrayItems(ary7_3, 2, &ary7, sizeof(vx_array));
 
             typedef struct _mystruct {
                 vx_uint32 some_uint;
@@ -2793,7 +2845,7 @@ vx_status vx_xml_fullexport(int argc, char *argv[])
             vx_enum mytype = vxRegisterUserStruct(context, sizeof(mystruct));
             vx_array structArray = vxCreateArray(context, mytype, 4);
             mystruct mystructdata[2] = {{32, 3.2},{64, 6.4}};
-            vxAddArrayItems(structArray, 2, &mystructdata, 0);
+            vxAddArrayItems(structArray, 2, &mystructdata, sizeof(mystruct));
 
             vxCreateDelay(context, (vx_reference)structArray, 2);
 
@@ -2951,26 +3003,46 @@ vx_status vx_xml_fullexport(int argc, char *argv[])
             for (x = 0u; x < 256; x++)
                 mylut[x] = (vx_uint8)((x-1)&0xFF);
             vxCommitLUT(lut, mylut);
-            vxWriteMatrix(matf, fmat);
-            vxWriteMatrix(mati, imat);
-            vxSetConvolutionAttribute(conv, VX_CONVOLUTION_ATTRIBUTE_SCALE, &cscale, sizeof(cscale));
-            vxWriteConvolutionCoefficients(conv, (vx_int16 *)sobel_x);
-            vxSetThresholdAttribute(thresh, VX_THRESHOLD_ATTRIBUTE_THRESHOLD_VALUE, &th, sizeof(th));
-            vxSetThresholdAttribute(dblthr, VX_THRESHOLD_ATTRIBUTE_THRESHOLD_LOWER, &lwr, sizeof(lwr));
-            vxSetThresholdAttribute(dblthr, VX_THRESHOLD_ATTRIBUTE_THRESHOLD_UPPER, &th, sizeof(th));
-            vxAccessDistribution(dist, (void **)&histo, VX_WRITE_ONLY);
-            for (x = 0; x < dimof(histogram); x++)
+            vxCopyMatrix(matf, fmat, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
+            vxCopyMatrix(mati, imat, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
+            vxSetConvolutionAttribute(conv, VX_CONVOLUTION_SCALE, &cscale, sizeof(cscale));
+            vxCopyConvolutionCoefficients(conv, (vx_int16 *)sobel_x, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
+            vxSetThresholdAttribute(thresh, VX_THRESHOLD_THRESHOLD_VALUE, &th, sizeof(th));
+            vxSetThresholdAttribute(dblthr, VX_THRESHOLD_THRESHOLD_LOWER, &lwr, sizeof(lwr));
+            vxSetThresholdAttribute(dblthr, VX_THRESHOLD_THRESHOLD_UPPER, &th, sizeof(th));
             {
-                vx_size h = dimof(histogram) / 2;
-                if (x > h)
-                    histogram[x] = h - (x - h);
-                else
-                    histogram[x] = x;
+                vx_map_id map_id = 0;
+                vx_uint32 ptr = 0;
+                vx_size nbins = 0;
+                vxQueryDistribution(dist, VX_DISTRIBUTION_BINS, &nbins, sizeof(nbins));
+                vxMapDistribution(dist, &map_id, (void**)&ptr, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST, 0);
+                for (x = 0; x < (vx_uint32)nbins; x++)
+                {
+                    vx_size h = nbins / 2;
+                    if (x > (vx_uint32)h)
+                        histogram[x] = (vx_uint32)(h - (x - h));
+                    else
+                        histogram[x] = x;
+                }
+                vxUnmapDistribution(dist, map_id);
             }
-            vxCommitDistribution(dist, histo);
+            rect.start_x = 2;
+            rect.start_y = 1;
+            rect.end_x = 4;
+            rect.end_y = 2;
+            vx_image roi = vxCreateImageFromROI(images[0], &rect);
+            vxCreateImageFromROI(images[0], &rect);
+            rect.start_x = 0;
+            rect.start_y = 0;
+            rect.end_x = 1;
+            rect.end_y = 1;
+            vxCreateImageFromROI(roi, &rect);
+            vx_uint8 rgbPixel[] = { 0, 255, 128 };
+            vxCreateUniformImage(context, 64, 32, VX_DF_IMAGE_RGB, &rgbPixel);
             status = vxExportToXML(context, xmlfile);
             vxReleaseGraph(&graph);
         }
+        status |= vxUnloadKernels(context, "openvx-debug");
         vxReleaseContext(&context);
     }
     return status;

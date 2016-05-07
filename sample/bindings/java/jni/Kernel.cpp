@@ -62,7 +62,7 @@ namespace android
     {
         vx_kernel k = (vx_kernel)GetHandle(env, obj, KernelClass, handleName);
         jint value = 0;
-        vx_status status = vxQueryKernel(k, VX_KERNEL_ATTRIBUTE_PARAMETERS, &value, sizeof(value));
+        vx_status status = vxQueryKernel(k, VX_KERNEL_PARAMETERS, &value, sizeof(value));
         if (status != VX_SUCCESS)
             value = 0;
         return value;
@@ -72,7 +72,7 @@ namespace android
     {
         vx_kernel k = (vx_kernel)GetHandle(env, obj, KernelClass, handleName);
         vx_char name[VX_MAX_KERNEL_NAME];
-        vx_status status = vxQueryKernel(k, VX_KERNEL_ATTRIBUTE_NAME, name, sizeof(name));
+        vx_status status = vxQueryKernel(k, VX_KERNEL_NAME, name, sizeof(name));
         if (status == VX_SUCCESS)
             return env->NewStringUTF(name);
         else

@@ -62,7 +62,7 @@ namespace android
     {
         vx_context context = (vx_context)GetHandle(env, obj, ContextClass, handleName);
         jint value = 0;
-        vx_status status = vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_UNIQUE_KERNELS, &value, sizeof(value));
+        vx_status status = vxQueryContext(context, VX_CONTEXT_UNIQUE_KERNELS, &value, sizeof(value));
         if (status != VX_SUCCESS)
             value = 0;
         return value;
@@ -72,7 +72,7 @@ namespace android
     {
         vx_context context = (vx_context)GetHandle(env, obj, ContextClass, handleName);
         jint value = 0;
-        vx_status status = vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_MODULES, &value, sizeof(value));
+        vx_status status = vxQueryContext(context, VX_CONTEXT_MODULES, &value, sizeof(value));
         if (status != VX_SUCCESS)
             value = 0;
         return value;
@@ -82,7 +82,7 @@ namespace android
     {
         vx_context context = (vx_context)GetHandle(env, obj, ContextClass, handleName);
         jint value = 0;
-        vx_status status = vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_REFERENCES, &value, sizeof(value));
+        vx_status status = vxQueryContext(context, VX_CONTEXT_REFERENCES, &value, sizeof(value));
         if (status != VX_SUCCESS)
             value = 0;
         return value;
@@ -92,7 +92,7 @@ namespace android
     {
         vx_context context = (vx_context)GetHandle(env, obj, ContextClass, handleName);
         jint value = 0;
-        vx_status status = vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_TARGETS, &value, sizeof(value));
+        vx_status status = vxQueryContext(context, VX_CONTEXT_TARGETS, &value, sizeof(value));
         if (status != VX_SUCCESS)
             value = 0;
         return value;

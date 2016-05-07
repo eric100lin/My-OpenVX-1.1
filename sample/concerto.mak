@@ -19,8 +19,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 
-# Make a bzip2 tarball containing just the standard headers
-# (no extensions).
+# Make a bzip2 tarball containing just the sample implementation.
 
 OPENVX_SAMPLE_DIR_NAMES = \
  cmake_utils concerto debug examples helper include kernels libraries raw sample scripts tools \
@@ -41,9 +40,12 @@ ifneq ($(filter $(HOST_OS),LINUX CYGWIN DARWIN),)
 openvx_sample_package: \
  $(OPENVX_SAMPLE_DESTDIR)/$(OPENVX_SAMPLE_PACKAGE_NAME)
 
+# The exclusion of .svn directories is there for the benefit of
+# svn clients before 1.7, where there's a .svn directory in
+# every directory in the working copy.
 $(OPENVX_SAMPLE_DESTDIR)/$(OPENVX_SAMPLE_PACKAGE_NAME): \
  $(patsubst %, $(HOST_ROOT)/%, $(OPENVX_SAMPLE_DIRS))
 	@$(MKDIR) $(OPENVX_SAMPLE_DESTDIR)
-	@tar -cjf $@ -C $(HOST_ROOT) $(OPENVX_SAMPLE_DIRS)
+	@tar --exclude=.svn -cjf $@ -C $(HOST_ROOT) $(OPENVX_SAMPLE_DIRS)
 
 endif # Host environments.

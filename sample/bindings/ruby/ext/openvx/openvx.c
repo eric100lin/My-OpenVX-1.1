@@ -198,7 +198,7 @@ static rext_module_t modules[] = {
 void Init_openvx()
 {
     context = vxCreateContext();
-    vx_status status = vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_IMPLEMENTATION, implementation, sizeof(implementation));
+    vx_status status = vxQueryContext(context, VX_CONTEXT_IMPLEMENTATION, implementation, sizeof(implementation));
     if (status != VX_SUCCESS)
     {
         REXT_PRINT("context = "VX_FMT_REF" status = %d\n", context, status);
@@ -217,7 +217,7 @@ static VALUE OpenVX_kernels(VALUE self)
 {
     vx_uint32 value = 0;
     vx_status status = VX_FAILURE;
-    status = vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_UNIQUE_KERNELS, &value, sizeof(value));
+    status = vxQueryContext(context, VX_CONTEXT_UNIQUE_KERNELS, &value, sizeof(value));
     REXT_PRINT("status = %d, numkernels = %d\n", status, value);
     if (status == VX_SUCCESS)
         return INT2FIX(value);
@@ -230,7 +230,7 @@ static VALUE OpenVX_modules(VALUE self)
 {
     vx_uint32 value = 0;
     vx_status status = VX_FAILURE;
-    status = vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_MODULES, &value, sizeof(value));
+    status = vxQueryContext(context, VX_CONTEXT_MODULES, &value, sizeof(value));
     REXT_PRINT("status = %d, modules = %d\n", status, value);
     if (status == VX_SUCCESS)
         return INT2FIX(value);
@@ -242,7 +242,7 @@ static VALUE OpenVX_targets(VALUE self)
 {
     vx_uint32 value = 0;
     vx_status status = VX_FAILURE;
-    status = vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_TARGETS, &value, sizeof(value));
+    status = vxQueryContext(context, VX_CONTEXT_TARGETS, &value, sizeof(value));
     REXT_PRINT("status = %d, targets = %d\n", status, value);
     if (status == VX_SUCCESS)
         return INT2FIX(value);
@@ -257,7 +257,7 @@ static VALUE OpenVX_targets_list(VALUE self)
     vx_char targetname[VX_MAX_TARGET_NAME];
     vx_target target = 0;
     VALUE array;
-    status = vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_TARGETS, &value, sizeof(value));
+    status = vxQueryContext(context, VX_CONTEXT_TARGETS, &value, sizeof(value));
     REXT_PRINT("status = %d, targets = %d\n", status, value);
     if (status == VX_SUCCESS)
     {
@@ -281,7 +281,7 @@ static VALUE OpenVX_references(VALUE self)
 {
     vx_uint32 value = 0;
     vx_status status = VX_FAILURE;
-    status = vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_REFERENCES, &value, sizeof(value));
+    status = vxQueryContext(context, VX_CONTEXT_REFERENCES, &value, sizeof(value));
     REXT_PRINT("status = %d, references = %d\n", status, value);
     if (status == VX_SUCCESS)
         return INT2FIX(value);
@@ -359,7 +359,7 @@ static VALUE Graph_nodes(VALUE self)
     vx_status status;
     Check_Type(self, T_DATA);
     graph = (vx_graph)DATA_PTR(self);
-    status = vxQueryGraph(graph, VX_GRAPH_ATTRIBUTE_NUMNODES, &numNodes, sizeof(numNodes));
+    status = vxQueryGraph(graph, VX_GRAPH_NUMNODES, &numNodes, sizeof(numNodes));
     REXT_PRINT("status = %d, numNodes = %u\n", status, numNodes);
     return INT2FIX(numNodes);
 }
@@ -442,7 +442,7 @@ static VALUE Kernel_params(VALUE self)
     vx_status status = VX_FAILURE;
     Check_Type(self, T_DATA);
     kernel = (vx_kernel)DATA_PTR(self);
-    status = vxQueryKernel(kernel, VX_KERNEL_ATTRIBUTE_PARAMETERS, &numParams, sizeof(numParams));
+    status = vxQueryKernel(kernel, VX_KERNEL_PARAMETERS, &numParams, sizeof(numParams));
     REXT_PRINT("status = %d, numParams = %u\n", status, numParams);
     return INT2FIX(numParams);
 }
@@ -451,7 +451,7 @@ static VALUE Kernel_name(VALUE self)
 {
     vx_kernel kernel  = (vx_kernel)DATA_PTR(self);
     const char name[VX_MAX_KERNEL_NAME];
-    vxQueryKernel(kernel, VX_KERNEL_ATTRIBUTE_NAME, (void *)name, sizeof(name));
+    vxQueryKernel(kernel, VX_KERNEL_NAME, (void *)name, sizeof(name));
     return rb_str_new2(name);
 }
 
@@ -459,7 +459,7 @@ static VALUE Kernel_enum(VALUE self)
 {
     vx_kernel kernel  = (vx_kernel)DATA_PTR(self);
     vx_enum kenum = VX_KERNEL_INVALID;
-    vxQueryKernel(kernel, VX_KERNEL_ATTRIBUTE_ENUM, (void *)&kenum, sizeof(kenum));
+    vxQueryKernel(kernel, VX_KERNEL_ENUM, (void *)&kenum, sizeof(kenum));
     return INT2FIX(kenum);
 }
 
@@ -716,7 +716,7 @@ static VALUE Parameter_dir(VALUE self)
     Check_Type(self, T_DATA);
     vx_enum dir;
     vx_parameter param = (vx_parameter)DATA_PTR(self);
-    vx_status status = vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_DIRECTION, &dir, sizeof(dir));
+    vx_status status = vxQueryParameter(param, VX_PARAMETER_DIRECTION, &dir, sizeof(dir));
     if (status == VX_SUCCESS)
         return INT2FIX(dir);
     else
@@ -728,7 +728,7 @@ static VALUE Parameter_value(VALUE self)
     Check_Type(self, T_DATA);
     vx_reference ref;
     vx_parameter param = (vx_parameter)DATA_PTR(self);
-    vx_status status = vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &ref, sizeof(ref));
+    vx_status status = vxQueryParameter(param, VX_PARAMETER_REF, &ref, sizeof(ref));
     if (status == VX_SUCCESS)
         return INT2FIX(ref);
     else

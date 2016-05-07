@@ -9,9 +9,10 @@
 #include <stdlib.h>
 #include <VX/vx.h>
 
-int main(void) {
-vx_context context = vxCreateContext();
-   vx_uint8 value = 8;
+int main(void)
+{
+   vx_context context = vxCreateContext();
+   vx_pixel_value_t value = {{ 8 }};
    vx_graph graph = vxCreateGraph(context);
    vx_image images[] = {
      vxCreateUniformImage(context, 640, 480, VX_DF_IMAGE_U8, &value),

@@ -10,7 +10,7 @@
 
 int main(void) {
     vx_context context = vxCreateContext();
-    vx_uint8 value = 8;
+    vx_pixel_value_t value = {{ 8 }};
     vx_image images[] = {
       vxCreateUniformImage(context, 320, 240, VX_DF_IMAGE_U8, &value),
       vxCreateImage(context, 80, 60, VX_DF_IMAGE_U8),

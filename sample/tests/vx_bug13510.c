@@ -30,10 +30,10 @@ static vx_status execute_and_change_int32_parameter(vx_graph graph, vx_node node
     /* Also verify that we get the correct value when reading it back. */
     vx_scalar scalar_out;
     vx_parameter par_out = vxGetParameterByIndex(node, paramno);
-    vxQueryParameter(par_out, VX_PARAMETER_ATTRIBUTE_REF, &scalar_out, sizeof(scalar_out));
+    vxQueryParameter(par_out, VX_PARAMETER_REF, &scalar_out, sizeof(scalar_out));
 
     vx_uint32 value_out;
-    vxReadScalarValue(scalar_out, &value_out);
+    vxCopyScalar(scalar_out, &value_out, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
 
     if (value_out != newval) {
         fprintf(stderr, "got %d, expected %d\n", value_out, newval);
@@ -48,8 +48,8 @@ static vx_status execute_and_change_int32_parameter(vx_graph graph, vx_node node
 int main(void) {
     /* Create the graph */
     vx_context context = vxCreateContext();
-    vx_uint8 value = 8;
-    vx_int16 value2 = 16;
+    vx_pixel_value_t value = {{ 8 }};
+    vx_pixel_value_t value2 = {{ 16 }};
     vx_status status;
 
     vx_image images[] = {
