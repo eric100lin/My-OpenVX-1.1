@@ -34,19 +34,19 @@ void example_explore_parameters(vx_context context, vx_kernel kernel)
     vx_uint32 p, numParams = 0;
     vx_graph graph = vxCreateGraph(context);
     vx_node node = vxCreateGenericNode(graph, kernel);
-    vxQueryKernel(kernel, VX_KERNEL_ATTRIBUTE_PARAMETERS, &numParams, sizeof(numParams));
+    vxQueryKernel(kernel, VX_KERNEL_PARAMETERS, &numParams, sizeof(numParams));
     for (p = 0; p < numParams; p++)
     {
         //! [Getting the ref]
         vx_parameter param = vxGetParameterByIndex(node, p);
         vx_reference ref;
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &ref, sizeof(ref));
+        vxQueryParameter(param, VX_PARAMETER_REF, &ref, sizeof(ref));
         //! [Getting the ref]
         if (ref)
         {
             //! [Getting the type]
             vx_enum type;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_TYPE, &type, sizeof(type));
+            vxQueryParameter(param, VX_PARAMETER_TYPE, &type, sizeof(type));
             /* cast the ref to the correct vx_<type>. Atomics are now vx_scalar */
             //! [Getting the type]
         }

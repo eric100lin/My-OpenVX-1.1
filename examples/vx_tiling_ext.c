@@ -45,11 +45,11 @@ static vx_status VX_CALLBACK vxFilterInputValidator(vx_node node, vx_uint32 inde
         if (param)
         {
             vx_image input = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+            vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
             if (input)
             {
                 vx_df_image format = 0;
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
                 if (format == VX_DF_IMAGE_U8)
                 {
                     status = VX_SUCCESS;
@@ -70,18 +70,18 @@ static vx_status VX_CALLBACK vxFilterOutputValidator(vx_node node, vx_uint32 ind
         if (param)
         {
             vx_image input = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+            vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
             if (input)
             {
                 vx_uint32 width = 0, height = 0;
                 vx_df_image format = VX_DF_IMAGE_U8;
 
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+                vxQueryImage(input, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxQueryImage(input, VX_IMAGE_HEIGHT, &height, sizeof(height));
 
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_HEIGHT, &height, sizeof(height));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_FORMAT, &format, sizeof(format));
 
                 vxReleaseImage(&input);
 
@@ -102,11 +102,11 @@ static vx_status VX_CALLBACK vxAddInputValidator(vx_node node, vx_uint32 index)
         if (param)
         {
             vx_image input = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+            vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
             if (input)
             {
                 vx_df_image format = 0;
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
                 if (format == VX_DF_IMAGE_U8)
                 {
                     status = VX_SUCCESS;
@@ -127,18 +127,18 @@ static vx_status VX_CALLBACK vxAddOutputValidator(vx_node node, vx_uint32 index,
         if (param)
         {
             vx_image input = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+            vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
             if (input)
             {
                 vx_uint32 width = 0, height = 0;
                 vx_df_image format = VX_DF_IMAGE_S16;
 
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+                vxQueryImage(input, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxQueryImage(input, VX_IMAGE_HEIGHT, &height, sizeof(height));
 
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_HEIGHT, &height, sizeof(height));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_FORMAT, &format, sizeof(format));
 
                 vxReleaseImage(&input);
 
@@ -159,11 +159,11 @@ static vx_status VX_CALLBACK vxAlphaInputValidator(vx_node node, vx_uint32 index
         if (param)
         {
             vx_image input = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+            vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
             if (input)
             {
                 vx_df_image format = 0;
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
                 if (format == VX_DF_IMAGE_U8)
                 {
                     status = VX_SUCCESS;
@@ -178,11 +178,11 @@ static vx_status VX_CALLBACK vxAlphaInputValidator(vx_node node, vx_uint32 index
         if (param)
         {
             vx_scalar scalar = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &scalar, sizeof(scalar));
+            vxQueryParameter(param, VX_PARAMETER_REF, &scalar, sizeof(scalar));
             if (scalar)
             {
                 vx_enum type = 0;
-                vxQueryScalar(scalar, VX_SCALAR_ATTRIBUTE_TYPE, &type, sizeof(type));
+                vxQueryScalar(scalar, VX_SCALAR_TYPE, &type, sizeof(type));
                 if (type == VX_TYPE_FLOAT32)
                 {
                     status = VX_SUCCESS;
@@ -203,18 +203,18 @@ static vx_status VX_CALLBACK vxAlphaOutputValidator(vx_node node, vx_uint32 inde
         if (param)
         {
             vx_image input = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+            vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
             if (input)
             {
                 vx_uint32 width = 0, height = 0;
                 vx_df_image format = VX_DF_IMAGE_U8;
 
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+                vxQueryImage(input, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxQueryImage(input, VX_IMAGE_HEIGHT, &height, sizeof(height));
 
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_HEIGHT, &height, sizeof(height));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_FORMAT, &format, sizeof(format));
 
                 vxReleaseImage(&input);
 
@@ -250,7 +250,7 @@ typedef struct _vx_tiling_kernel_t {
     /*! neighborhood around block */
     vx_neighborhood_size_t nbhd;
     /*! border information. */
-    vx_border_mode_t border;
+    vx_border_t border;
 } vx_tiling_kernel_t;
 
 static vx_tiling_kernel_t tiling_kernels[] = {
@@ -339,7 +339,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxPublishKernels(vx_context context)
             }
             status |= vxSetKernelAttribute(kernel, VX_KERNEL_ATTRIBUTE_INPUT_NEIGHBORHOOD, &tiling_kernels[k].nbhd, sizeof(vx_neighborhood_size_t));
             status |= vxSetKernelAttribute(kernel, VX_KERNEL_ATTRIBUTE_OUTPUT_TILE_BLOCK_SIZE, &tiling_kernels[k].block, sizeof(vx_tile_block_size_t));
-            status |= vxSetKernelAttribute(kernel, VX_KERNEL_ATTRIBUTE_BORDER, &tiling_kernels[k].border, sizeof(vx_border_mode_t));
+            status |= vxSetKernelAttribute(kernel, VX_KERNEL_ATTRIBUTE_BORDER, &tiling_kernels[k].border, sizeof(vx_border_t));
             if (status != VX_SUCCESS)
             {
                 vxRemoveKernel(kernel);

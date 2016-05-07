@@ -30,9 +30,9 @@ vx_status vx_example_extensions(vx_context context) {
 //! [extensions]
     vx_char *tmp, *extensions = NULL;
     vx_size size = 0;
-    vxQueryContext(context,VX_CONTEXT_ATTRIBUTE_EXTENSIONS_SIZE,&size,sizeof(size));
+    vxQueryContext(context,VX_CONTEXT_EXTENSIONS_SIZE,&size,sizeof(size));
     extensions = malloc(size);
-    vxQueryContext(context,VX_CONTEXT_ATTRIBUTE_EXTENSIONS,
+    vxQueryContext(context,VX_CONTEXT_EXTENSIONS,
                    extensions, size);
 //! [extensions]
     tmp = strtok(extensions, " ");

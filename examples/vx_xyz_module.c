@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 The Khronos Group Inc.
+ * Copyright (c) 2013-2016 The Khronos Group Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and/or associated documentation files (the
@@ -42,6 +42,8 @@
  */
 
 #include <VX/vx.h>
+/* TODO: remove vx_compatibility.h after transition period */
+#include <VX/vx_compatibility.h>
 #include <VX/vx_lib_xyz.h>
 #include <stdarg.h>
 
@@ -71,8 +73,8 @@ vx_status VX_CALLBACK XYZInputValidator(vx_node node, vx_uint32 index)
     {
         vx_image image;
         vx_df_image df_image = 0;
-        if (vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &image, sizeof(vx_image)) == VX_SUCCESS &&
-            vxQueryImage(image, VX_IMAGE_ATTRIBUTE_FORMAT, &df_image, sizeof(df_image)) == VX_SUCCESS)
+        if (vxQueryParameter(param, VX_PARAMETER_REF, &image, sizeof(vx_image)) == VX_SUCCESS &&
+            vxQueryImage(image, VX_IMAGE_FORMAT, &df_image, sizeof(df_image)) == VX_SUCCESS)
         {
             if (df_image == VX_DF_IMAGE_U8)
                 status = VX_SUCCESS;
@@ -85,10 +87,10 @@ vx_status VX_CALLBACK XYZInputValidator(vx_node node, vx_uint32 index)
         vx_scalar scalar = 0;
         vx_enum type = 0;
         vx_int32 value = 0;
-        if (vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &scalar, sizeof(scalar)) == VX_SUCCESS &&
-            vxQueryScalar(scalar, VX_SCALAR_ATTRIBUTE_TYPE, &type, sizeof(type)) == VX_SUCCESS &&
+        if (vxQueryParameter(param, VX_PARAMETER_REF, &scalar, sizeof(scalar)) == VX_SUCCESS &&
+            vxQueryScalar(scalar, VX_SCALAR_TYPE, &type, sizeof(type)) == VX_SUCCESS &&
             type == VX_TYPE_INT32 &&
-            vxReadScalarValue(scalar, &value) == VX_SUCCESS)
+            vxCopyScalar(scalar, &value, VX_READ_ONLY, VX_MEMORY_TYPE_HOST) == VX_SUCCESS)
         {
             if (XYZ_VALUE_MIN < value && value < XYZ_VALUE_MAX)
             {
@@ -104,8 +106,8 @@ vx_status VX_CALLBACK XYZInputValidator(vx_node node, vx_uint32 index)
     {
         vx_array temp;
         vx_size num_items = 0;
-        if (vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &temp, sizeof(temp)) == VX_SUCCESS &&
-            vxQueryArray(temp, VX_ARRAY_ATTRIBUTE_NUMITEMS, &num_items, sizeof(num_items)) == VX_SUCCESS)
+        if (vxQueryParameter(param, VX_PARAMETER_REF, &temp, sizeof(temp)) == VX_SUCCESS &&
+            vxQueryArray(temp, VX_ARRAY_NUMITEMS, &num_items, sizeof(num_items)) == VX_SUCCESS)
         {
             if (num_items >= XYZ_TEMP_NUMITEMS)
                 status = VX_SUCCESS;
@@ -131,18 +133,18 @@ vx_status VX_CALLBACK XYZOutputValidator(vx_node node, vx_uint32 index, vx_meta_
     {
         vx_parameter in0 = vxGetParameterByIndex(node, XYZ_PARAM_INPUT);
         vx_image input;
-        if (vxQueryParameter(in0, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(vx_image)) == VX_SUCCESS)
+        if (vxQueryParameter(in0, VX_PARAMETER_REF, &input, sizeof(vx_image)) == VX_SUCCESS)
         {
             vx_uint32 width = 0, height = 0;
             vx_df_image format = VX_DF_IMAGE_VIRT;
 
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
+            vxQueryImage(input, VX_IMAGE_WIDTH, &width, sizeof(width));
+            vxQueryImage(input, VX_IMAGE_HEIGHT, &height, sizeof(height));
 
-            vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-            vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-            vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxSetMetaFormatAttribute(meta, VX_IMAGE_WIDTH, &width, sizeof(width));
+            vxSetMetaFormatAttribute(meta, VX_IMAGE_HEIGHT, &height, sizeof(height));
+            vxSetMetaFormatAttribute(meta, VX_IMAGE_FORMAT, &format, sizeof(format));
 
             vxReleaseImage(&input);
 
@@ -183,17 +185,18 @@ vx_status VX_CALLBACK XYZKernel(vx_node node, const vx_reference *parameters, vx
         vx_enum item_type = VX_TYPE_INVALID;
         vx_size num_items = 0, capacity = 0;
         vx_size stride = 0;
+        vx_map_id map_id_input, map_id_output, map_id_array;
 
         status = VX_SUCCESS;
 
-        status |= vxReadScalarValue(scalar, &value);
+        status |= vxCopyScalar(scalar, &value, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
         status |= vxGetValidRegionImage(input, &rect);
-        status |= vxAccessImagePatch(input, &rect, 0, &addr1, &in, VX_READ_ONLY);
-        status |= vxAccessImagePatch(output, &rect, 0, &addr2, &out, VX_WRITE_ONLY);
-        status |= vxQueryArray(temp, VX_ARRAY_ATTRIBUTE_ITEMTYPE, &item_type, sizeof(item_type));
-        status |= vxQueryArray(temp, VX_ARRAY_ATTRIBUTE_NUMITEMS, &num_items, sizeof(num_items));
-        status |= vxQueryArray(temp, VX_ARRAY_ATTRIBUTE_CAPACITY, &capacity, sizeof(capacity));
-        status |= vxAccessArrayRange(temp, 0, num_items, &stride, &buf, VX_READ_AND_WRITE);
+        status |= vxMapImagePatch(input, &rect, 0, &map_id_input, &addr1, &in, VX_READ_ONLY, VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
+        status |= vxMapImagePatch(output, &rect, 0, &map_id_output, &addr2, &out, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
+        status |= vxQueryArray(temp, VX_ARRAY_ITEMTYPE, &item_type, sizeof(item_type));
+        status |= vxQueryArray(temp, VX_ARRAY_NUMITEMS, &num_items, sizeof(num_items));
+        status |= vxQueryArray(temp, VX_ARRAY_CAPACITY, &capacity, sizeof(capacity));
+        status |= vxMapArrayRange(temp, 0, num_items, &map_id_array, &stride, &buf, VX_READ_AND_WRITE, VX_MEMORY_TYPE_HOST, 0);
         for (y = 0; y < addr1.dim_y; y+=addr1.step_y)
         {
             for (x = 0; x < addr1.dim_x; x+=addr1.step_x)
@@ -201,10 +204,9 @@ vx_status VX_CALLBACK XYZKernel(vx_node node, const vx_reference *parameters, vx
                 // do some operation...
             }
         }
-        // write back and release
-        status |= vxCommitArrayRange(temp, 0, num_items, buf);
-        status |= vxCommitImagePatch(output, &rect, 0, &addr2, out);
-        status |= vxCommitImagePatch(input, NULL, 0, &addr1, in); // don't write back into the input
+        status |= vxUnmapArrayRange(temp, map_id_array);
+        status |= vxUnmapImagePatch(output, map_id_output);
+        status |= vxUnmapImagePatch(input, map_id_input);
     }
     return status;
 }
@@ -278,7 +280,7 @@ vx_status VX_CALLBACK XYZDeinitialize(vx_node node, const vx_reference *paramete
         if (status != VX_SUCCESS) goto exit;
         status = vxAddParameterToKernel(kernel, 3, VX_OUTPUT, VX_TYPE_ARRAY, VX_PARAMETER_STATE_REQUIRED);
         if (status != VX_SUCCESS) goto exit;
-        status = vxSetKernelAttribute(kernel, VX_KERNEL_ATTRIBUTE_LOCAL_DATA_SIZE, &size, sizeof(size));
+        status = vxSetKernelAttribute(kernel, VX_KERNEL_LOCAL_DATA_SIZE, &size, sizeof(size));
         if (status != VX_SUCCESS) goto exit;
         status = vxFinalizeKernel(kernel);
         if (status != VX_SUCCESS) goto exit;
@@ -290,3 +292,27 @@ exit:
     return status;
 }
 
+/*! \brief The destructor to remove a user loaded module from OpenVX.
+ * \param [in] context The handle to the implementation context.
+ * \return A \ref vx_status_e enumeration. Returns errors if some or all kernels were not added
+ * correctly.
+ * \note This follows the function pointer definition of a \ref vx_unpublish_kernels_f
+ * and uses the predefined name for the entry point, "vxUnpublishKernels".
+ * \ingroup group_example_kernel
+ */
+/*VX_API_ENTRY*/ vx_status VX_API_CALL vxUnpublishKernels(vx_context context)
+{
+    vx_status status = VX_SUCCESS;
+    vx_kernel kernel = vxGetKernelByName(context, "org.khronos.example.xyz");
+    vx_kernel kernelcpy = kernel;
+
+    if (kernel)
+    {
+        status = vxReleaseKernel(&kernelcpy);
+        if (status == VX_SUCCESS)
+        {
+            status = vxRemoveKernel(kernel);
+        }
+    }
+    return status;
+}

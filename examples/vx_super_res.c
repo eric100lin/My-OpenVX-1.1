@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 The Khronos Group Inc.
+ * Copyright (c) 2013-2016 The Khronos Group Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and/or associated documentation files (the
@@ -41,17 +41,18 @@ void userCalculatePerspectiveTransformFromLK(vx_matrix matrix_forward, vx_matrix
     vx_size old_features_stride = 0;
     vx_size new_features_stride = 0;
     vx_uint32 ind;
+    vx_map_id map_id_old, map_id_new;
     //vx_float32 *A = malloc(olen+nlen);
     //vx_float32 *b = malloc(olen+nlen);
 
-    vxQueryArray(old_features, VX_ARRAY_ATTRIBUTE_NUMITEMS, &olen, sizeof(olen));
-    vxQueryArray(new_features, VX_ARRAY_ATTRIBUTE_NUMITEMS, &nlen, sizeof(nlen));
+    vxQueryArray(old_features, VX_ARRAY_NUMITEMS, &olen, sizeof(olen));
+    vxQueryArray(new_features, VX_ARRAY_NUMITEMS, &nlen, sizeof(nlen));
 
     if (olen != nlen)
         return;
 
-    vxAccessArrayRange(old_features, 0, olen, &old_features_stride, (void **) &old_features_ptr, VX_READ_ONLY);
-    vxAccessArrayRange(new_features, 0, nlen, &new_features_stride, (void **) &new_features_ptr, VX_READ_ONLY);
+    vxMapArrayRange(old_features, 0, olen, &map_id_old, &old_features_stride, (void **) &old_features_ptr, VX_READ_ONLY, VX_MEMORY_TYPE_HOST, 0);
+    vxMapArrayRange(new_features, 0, nlen, &map_id_new, &new_features_stride, (void **) &new_features_ptr, VX_READ_ONLY, VX_MEMORY_TYPE_HOST, 0);
 
     /*! \internal do least square algorithm that find perspective transform */
     /*! \see "Computer Vision Algorithm and Application by Richard Szeliski section 6.1.3 */
@@ -83,11 +84,11 @@ void userCalculatePerspectiveTransformFromLK(vx_matrix matrix_forward, vx_matrix
     //least_square_divide(A,b, mat1);
     //inverse_matrix(mat1, mat2);
 
-    vxCommitArrayRange(old_features, 0, 0, old_features_ptr);
-    vxCommitArrayRange(new_features, 0, 0, new_features_ptr);
+    vxUnmapArrayRange(old_features, map_id_old);
+    vxUnmapArrayRange(new_features, map_id_new);
 
-    vxWriteMatrix(matrix_forward, mat1);
-    vxWriteMatrix(matrix_backward, mat2);
+    vxCopyMatrix(matrix_forward, mat1, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
+    vxCopyMatrix(matrix_backward, mat2, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
 }
 
 /*!
@@ -106,11 +107,11 @@ int example_super_resolution(int argc, char *argv[])
     vx_float32 alpha = 0.2f;
     vx_float32 tau = 0.5f;
     vx_enum criteria = VX_TERM_CRITERIA_BOTH;    // lk params
-    vx_float32 epsilon = 0.01;
+    vx_float32 epsilon = 0.01f;
     vx_int32 num_iterations = 10;
     vx_bool use_initial_estimate = vx_true_e;
     vx_int32 min_distance = 5;    // harris params
-    vx_float32 sensitivity = 0.04;
+    vx_float32 sensitivity = 0.04f;
     vx_int32 gradient_size = 3;
     vx_int32 block_size = 3;
     vx_context context = vxCreateContext();
@@ -159,12 +160,12 @@ int example_super_resolution(int argc, char *argv[])
         if (vxGetStatus((vx_reference)graphs[0]) == VX_SUCCESS)
         {
             vxChannelExtractNode(graphs[0], images[0], VX_CHANNEL_Y, images[1]); // One iteration of super resolution calculation
-            vxScaleImageNode(graphs[0], images[1], images[2], VX_INTERPOLATION_TYPE_BILINEAR);
+            vxScaleImageNode(graphs[0], images[1], images[2], VX_INTERPOLATION_BILINEAR);
             vxWarpPerspectiveNode(graphs[0], images[2], matrix_forward, 0, images[3]);
             vxGaussian3x3Node(graphs[0], images[3], images[4]);
-            vxScaleImageNode(graphs[0], images[4], images[5], VX_INTERPOLATION_TYPE_BILINEAR);
+            vxScaleImageNode(graphs[0], images[4], images[5], VX_INTERPOLATION_BILINEAR);
             vxSubtractNode(graphs[0], images[5], images[16], VX_CONVERT_POLICY_SATURATE, images[6]);
-            vxScaleImageNode(graphs[0], images[6], images[7], VX_INTERPOLATION_TYPE_BILINEAR);
+            vxScaleImageNode(graphs[0], images[6], images[7], VX_INTERPOLATION_BILINEAR);
             vxGaussian3x3Node(graphs[0], images[7], images[8]);
             vxWarpPerspectiveNode(graphs[0], images[8], matrix_backwords, 0, images[9]);
             vxAccumulateWeightedImageNode(graphs[0], images[9], alpha_s, images[10]);
@@ -185,16 +186,16 @@ int example_super_resolution(int argc, char *argv[])
             vxHarrisCornersNode(graphs[2], images[1], sens_thresh_s, min_distance_s, sensitivity_s, gradient_size,
                     block_size, old_features, num_corners);
             vxGaussianPyramidNode(graphs[2], images[1], pyramid_old);
-            vxScaleImageNode(graphs[2], images[1], images[16], VX_INTERPOLATION_TYPE_BILINEAR);
+            vxScaleImageNode(graphs[2], images[1], images[16], VX_INTERPOLATION_BILINEAR);
         }
         if (vxGetStatus((vx_reference)graphs[3]) == VX_SUCCESS)
         {
             vxSubtractNode(graphs[3], images[10], images[16], VX_CONVERT_POLICY_SATURATE, images[17]);
             vxAccumulateWeightedImageNode(graphs[3], images[17], tau_s, images[16]);
             vxChannelExtractNode(graphs[3], images[16], VX_CHANNEL_U, images[11]);
-            vxScaleImageNode(graphs[3], images[11], images[12], VX_INTERPOLATION_TYPE_BILINEAR); // upscale the u channel
+            vxScaleImageNode(graphs[3], images[11], images[12], VX_INTERPOLATION_BILINEAR); // upscale the u channel
             vxChannelExtractNode(graphs[3], images[0], VX_CHANNEL_V, images[13]);
-            vxScaleImageNode(graphs[3], images[13], images[14], VX_INTERPOLATION_TYPE_BILINEAR); // upscale the v channel
+            vxScaleImageNode(graphs[3], images[13], images[14], VX_INTERPOLATION_BILINEAR); // upscale the v channel
             vxChannelCombineNode(graphs[3], images[10], images[12], images[14], 0, images[15]); // recombine the channels
 
         }
@@ -237,6 +238,8 @@ int example_super_resolution(int argc, char *argv[])
         }
         vxReleasePyramid(&pyramid_new);
         vxReleasePyramid(&pyramid_old);
+
+        vxUnloadKernels(context, "openvx-debug");
     }
     vxReleaseMatrix(&matrix_forward);
     vxReleaseMatrix(&matrix_backwords);

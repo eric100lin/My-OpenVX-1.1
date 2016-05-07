@@ -36,20 +36,21 @@ vx_array example_array_of_custom_type_and_initialization(vx_context context)
     //! [array define]
     //! [array query]
     vx_size num_items = 0;
-    vxQueryArray(array, VX_ARRAY_ATTRIBUTE_NUMITEMS, &num_items, sizeof(num_items));
+    vxQueryArray(array, VX_ARRAY_NUMITEMS, &num_items, sizeof(num_items));
     //! [array query]
     {
         //! [array range]
         vx_size i, stride = sizeof(vx_size);
         void *base = NULL;
+        vx_map_id map_id;
         /* access entire array at once */
-        vxAccessArrayRange(array, 0, num_items, &stride, &base, VX_READ_AND_WRITE);
+        vxMapArrayRange(array, 0, num_items, &map_id, &stride, &base, VX_READ_AND_WRITE, VX_MEMORY_TYPE_HOST, 0);
         for (i = 0; i < num_items; i++)
         {
             vxArrayItem(mystruct, base, i, stride).some_uint += i;
             vxArrayItem(mystruct, base, i, stride).some_double = 3.14f;
         }
-        vxCommitArrayRange(array, 0, num_items, base);
+        vxUnmapArrayRange(array, map_id);
         //! [array range]
 
         //! [array subaccess]
@@ -57,10 +58,10 @@ vx_array example_array_of_custom_type_and_initialization(vx_context context)
         for (i = 0; i < num_items; i++)
         {
             mystruct *myptr = NULL;
-            vxAccessArrayRange(array, i, i+1, &stride, (void **)&myptr, VX_READ_AND_WRITE);
+            vxMapArrayRange(array, i, i+1, &map_id, &stride, (void **)&myptr, VX_READ_AND_WRITE, VX_MEMORY_TYPE_HOST, 0);
             myptr->some_uint += 1;
             myptr->some_double = 3.14f;
-            vxCommitArrayRange(array, i, i+1, (void *)myptr);
+            vxUnmapArrayRange(array, map_id);
         }
         //! [array subaccess]
     }

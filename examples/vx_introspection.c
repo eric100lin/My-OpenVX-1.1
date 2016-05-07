@@ -35,7 +35,7 @@ vx_status vx_example_introspection()
 
     //! [targets]
     vx_uint32 num_targets = 0;
-    vx_status status = vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_TARGETS, &num_targets, sizeof(num_targets));
+    vx_status status = vxQueryContext(context, VX_CONTEXT_TARGETS, &num_targets, sizeof(num_targets));
     //! [targets]
     vx_uint32 t, k, p;
     //! [target_loop]
@@ -71,8 +71,8 @@ vx_status vx_example_introspection()
             //! [kernel_attr]
             vx_uint32 num_params = 0u;
             vx_char kernel_name[VX_MAX_KERNEL_NAME];
-            status = vxQueryKernel(kernel, VX_KERNEL_ATTRIBUTE_PARAMETERS, &num_params, sizeof(num_params));
-            status = vxQueryKernel(kernel, VX_KERNEL_ATTRIBUTE_NAME, kernel_name, sizeof(kernel_name));
+            status = vxQueryKernel(kernel, VX_KERNEL_PARAMETERS, &num_params, sizeof(num_params));
+            status = vxQueryKernel(kernel, VX_KERNEL_NAME, kernel_name, sizeof(kernel_name));
             //! [kernel_attr]
             {
                 //! [parameter_loop]
@@ -87,9 +87,9 @@ vx_status vx_example_introspection()
 
                     //! [parameter_attr]
                     vx_enum dir, state, type;
-                    status = vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_DIRECTION, &dir, sizeof(dir));
-                    status = vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_STATE, &state, sizeof(state));
-                    status = vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_TYPE, &type, sizeof(type));
+                    status = vxQueryParameter(param, VX_PARAMETER_DIRECTION, &dir, sizeof(dir));
+                    status = vxQueryParameter(param, VX_PARAMETER_STATE, &state, sizeof(state));
+                    status = vxQueryParameter(param, VX_PARAMETER_TYPE, &type, sizeof(type));
                     //! [parameter_attr]
                 }
                 vxReleaseNode(&node);
@@ -115,13 +115,13 @@ vx_status vx_example_introspection()
     //! [context]
     //! [num]
     vx_size k, num_kernels = 0;
-    vx_status status = vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_UNIQUE_KERNELS, &num_kernels, sizeof(num_kernels));
+    vx_status status = vxQueryContext(context, VX_CONTEXT_UNIQUE_KERNELS, &num_kernels, sizeof(num_kernels));
     //! [num]
     if (num_kernels > 0) {
     //! [malloc]
     vx_size size = num_kernels * sizeof(vx_kernel_info_t);
     vx_kernel_info_t *table = (vx_kernel_info_t *)malloc(size);
-    status = vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_UNIQUE_KERNEL_TABLE, table, size);
+    status = vxQueryContext(context, VX_CONTEXT_UNIQUE_KERNEL_TABLE, table, size);
     //! [malloc]
 
     //! [kernel_loop]
@@ -133,7 +133,7 @@ vx_status vx_example_introspection()
         //! [kernel]
         //! [kernel_attr]
         vx_uint32 p, num_params = 0u;
-        status = vxQueryKernel(kernel, VX_KERNEL_ATTRIBUTE_PARAMETERS, &num_params, sizeof(num_params));
+        status = vxQueryKernel(kernel, VX_KERNEL_PARAMETERS, &num_params, sizeof(num_params));
         //! [kernel_attr]
         if (status == VX_SUCCESS)
         {
@@ -147,9 +147,9 @@ vx_status vx_example_introspection()
 
                 //! [parameter_attr]
                 vx_enum dir, state, type;
-                status = vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_DIRECTION, &dir, sizeof(dir));
-                status = vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_STATE, &state, sizeof(state));
-                status = vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_TYPE, &type, sizeof(type));
+                status = vxQueryParameter(param, VX_PARAMETER_DIRECTION, &dir, sizeof(dir));
+                status = vxQueryParameter(param, VX_PARAMETER_STATE, &state, sizeof(state));
+                status = vxQueryParameter(param, VX_PARAMETER_TYPE, &type, sizeof(type));
                 //! [parameter_attr]
             }
         }

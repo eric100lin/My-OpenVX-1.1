@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
         if (vxGetStatus((vx_reference)graph) == VX_SUCCESS)
         {
             vx_uint32 p, num = 0;
-            status |= vxQueryGraph(graph, VX_GRAPH_ATTRIBUTE_NUMPARAMETERS, &num, sizeof(num));
+            status |= vxQueryGraph(graph, VX_GRAPH_NUMPARAMETERS, &num, sizeof(num));
             if (status == VX_SUCCESS)
             {
                 printf("There are %u parameters to this graph!\n", num);
@@ -85,8 +85,8 @@ int main(int argc, char *argv[])
                     {
                         vx_enum dir = 0;
                         vx_enum type = 0;
-                        status |= vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_DIRECTION, &dir, sizeof(dir));
-                        status |= vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_TYPE, &type, sizeof(type));
+                        status |= vxQueryParameter(param, VX_PARAMETER_DIRECTION, &dir, sizeof(dir));
+                        status |= vxQueryParameter(param, VX_PARAMETER_TYPE, &type, sizeof(type));
                         printf("graph.parameter[%u] dir:%d type:%08x\n", p, dir, type);
                         vxReleaseParameter(&param);
                     }

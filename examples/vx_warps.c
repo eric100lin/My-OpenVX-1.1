@@ -36,9 +36,9 @@ vx_status vx_example_warp_affine(vx_context context, vx_image src, vx_image dst)
         {c, f}, // 'offsets'
     };
     vx_matrix matrix = vxCreateMatrix(context, VX_TYPE_FLOAT32, 2, 3);
-    vxWriteMatrix(matrix, mat);
+    vxCopyMatrix(matrix, mat, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
     //! [warp affine]
-    return vxuWarpAffine(context, src, matrix, VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR, dst);
+    return vxuWarpAffine(context, src, matrix, VX_INTERPOLATION_NEAREST_NEIGHBOR, dst);
 }
 
 vx_status vx_example_warp_perspective(vx_context context, vx_image src, vx_image dst)
@@ -54,7 +54,7 @@ vx_status vx_example_warp_perspective(vx_context context, vx_image src, vx_image
         {c, f, i}, // 'offsets'
     };
     vx_matrix matrix = vxCreateMatrix(context, VX_TYPE_FLOAT32, 3, 3);
-    vxWriteMatrix(matrix, mat);
+    vxCopyMatrix(matrix, mat, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
     //! [warp perspective]
-    return vxuWarpPerspective(context, src, matrix, VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR, dst);
+    return vxuWarpPerspective(context, src, matrix, VX_INTERPOLATION_NEAREST_NEIGHBOR, dst);
 }

@@ -34,9 +34,8 @@ vx_status example_conv(vx_context context)
     };
     vx_uint32 scale = 8;
     vx_convolution scharr_x = vxCreateConvolution(context, 3, 3);
-    vxReadConvolutionCoefficients(scharr_x, NULL);
-    vxWriteConvolutionCoefficients(scharr_x, (vx_int16*)gx);
-    vxSetConvolutionAttribute(scharr_x, VX_CONVOLUTION_ATTRIBUTE_SCALE, &scale, sizeof(scale));
+    vxCopyConvolutionCoefficients(scharr_x, (vx_int16*)gx, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
+    vxSetConvolutionAttribute(scharr_x, VX_CONVOLUTION_SCALE, &scale, sizeof(scale));
     //! [assign]
     vxReleaseConvolution(&scharr_x);
     return VX_SUCCESS;

@@ -31,10 +31,10 @@ vx_action VX_CALLBACK analyze_brightness(vx_node node) {
     vx_parameter pmax = vxGetParameterByIndex(node, 2); // Max Value
     if (pmax) {
         vx_scalar smax = 0;
-        vxQueryParameter(pmax, VX_PARAMETER_ATTRIBUTE_REF, &smax, sizeof(smax));
+        vxQueryParameter(pmax, VX_PARAMETER_REF, &smax, sizeof(smax));
         if (smax) {
             vx_uint8 value = 0u;
-            vxReadScalarValue(smax, &value);
+            vxCopyScalar(smax, &value, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
             if (value >= MY_DESIRED_THRESHOLD) {
                 action = VX_ACTION_CONTINUE;
             }

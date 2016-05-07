@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 The Khronos Group Inc.
+ * Copyright (c) 2013-2016 The Khronos Group Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and/or associated documentation files (the
@@ -29,7 +29,7 @@ vx_status run_example_parallel(void)
     vx_context context = vxCreateContext();
     vx_image images[] = {
             vxCreateImage(context, 640, 480, VX_DF_IMAGE_UYVY),
-            vxCreateImage(context, 640, 480, VX_DF_IMAGE_U8),
+            vxCreateImage(context, 640, 480, VX_DF_IMAGE_S16),
             vxCreateImage(context, 640, 480, VX_DF_IMAGE_U8),
     };
     vx_graph graph = vxCreateGraph(context);

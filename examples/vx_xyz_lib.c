@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 The Khronos Group Inc.
+ * Copyright (c) 2013-2016 The Khronos Group Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and/or associated documentation files (the
@@ -71,6 +71,10 @@ vx_node vxXYZNode(vx_graph graph, vx_image input, vx_uint32 value, vx_image outp
             {
                 vxReleaseKernel(&kernel);
             }
+        }
+        else
+        {
+            vxUnloadKernels(context, "xyz");
         }
         //! [xyz node]
     }

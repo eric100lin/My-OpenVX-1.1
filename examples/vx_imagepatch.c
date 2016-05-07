@@ -33,13 +33,14 @@ vx_status example_imagepatch(vx_context context)
     vx_image image = vxCreateImage(context, width, height, VX_DF_IMAGE_U8);
     vx_rectangle_t rect;
     vx_imagepatch_addressing_t addr;
+    vx_map_id map_id;
 
     rect.start_x = rect.start_y = 0;
     rect.end_x = rect.end_y = PATCH_DIM;
 
-    status = vxAccessImagePatch(image, &rect, plane,
+    status = vxMapImagePatch(image, &rect, plane, &map_id,
                                 &addr, &base_ptr,
-                                VX_READ_AND_WRITE);
+                                VX_READ_AND_WRITE, VX_MEMORY_TYPE_HOST, 0);
     if (status == VX_SUCCESS)
     {
         vx_uint32 x,y,i,j;
@@ -90,10 +91,9 @@ vx_status example_imagepatch(vx_context context)
             }
         }
 
-        /* this commits the data back to the image. If rect were 0 or empty, it
-         * would just decrement the reference (used when reading an image only)
+        /* this commits the data back to the image.
          */
-        status = vxCommitImagePatch(image, &rect, plane, &addr, base_ptr);
+        status = vxUnmapImagePatch(image, map_id);
     }
     vxReleaseImage(&image);
     //! [imagepatch]

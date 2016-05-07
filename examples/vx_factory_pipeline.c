@@ -43,8 +43,8 @@ vx_action VX_CALLBACK example_maximacallback(vx_node node)
     vx_scalar maxima;
     vx_parameter param = vxGetParameterByIndex(node, 2); // max value
 
-    status |= vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &maxima, sizeof(maxima));
-    status |= vxReadScalarValue(maxima, &max_intensity);
+    status |= vxQueryParameter(param, VX_PARAMETER_REF, &maxima, sizeof(maxima));
+    status |= vxCopyScalar(maxima, &max_intensity, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
     if (status == VX_SUCCESS)
     {
         if (max_intensity > 10)
@@ -96,7 +96,7 @@ vx_graph vxPipelineGraphFactory(vx_context context)
         vx_threshold thresh = vxCreateThreshold(context, VX_THRESHOLD_TYPE_BINARY, VX_TYPE_UINT8);
         vx_array arr = vxCreateArray(context, VX_TYPE_UINT8, 374);
 
-        vxSetThresholdAttribute(thresh, VX_THRESHOLD_ATTRIBUTE_THRESHOLD_VALUE, &lo_threshold, sizeof(lo_threshold));
+        vxSetThresholdAttribute(thresh, VX_THRESHOLD_THRESHOLD_VALUE, &lo_threshold, sizeof(lo_threshold));
 
         for (i = 0; i < dimof(nodes); i++)
             nodes[i] = vxCreateGenericNode(graph, kernels[i]);

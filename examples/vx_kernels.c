@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 The Khronos Group Inc.
+ * Copyright (c) 2013-2016 The Khronos Group Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and/or associated documentation files (the
@@ -61,7 +61,7 @@ vx_node vx_create_specific_sobel(vx_context context, vx_graph graph, vx_bool eas
         //! [variant:second]
 #else   /*defined(EXPERIMENTAL_USE_VARIANTS)*/
         //! [secondmethod]
-        vx_kernel kernel = vxGetKernelByName(context, "org.khronos.openvx.sobel3x3");
+        vx_kernel kernel = vxGetKernelByName(context, "org.khronos.openvx.sobel_3x3");
         vx_node node = vxCreateGenericNode(graph, kernel);
         //! [secondmethod]
 #endif

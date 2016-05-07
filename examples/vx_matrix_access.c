@@ -43,15 +43,15 @@ vx_matrix example_random_matrix(vx_context context)
 #else
         vx_float32 *mat = (vx_float32 *)malloc(rows*columns*sizeof(vx_float32));
 #endif
-        if (vxReadMatrix(matrix, mat) == VX_SUCCESS) {
-            for (j = 0; j < rows; j++)
-                for (i = 0; i < columns; i++)
+        if (vxCopyMatrix(matrix, mat, VX_READ_ONLY, VX_MEMORY_TYPE_HOST) == VX_SUCCESS) {
+            for (j = 0; j < (vx_int32)rows; j++)
+                for (i = 0; i < (vx_int32)columns; i++)
 #if defined(OPENVX_USE_C99)
                     mat[j][i] = (vx_float32)rand()/(vx_float32)RAND_MAX;
 #else
                     mat[j*columns + i] = (vx_float32)rand()/(vx_float32)RAND_MAX;
 #endif
-            vxWriteMatrix(matrix, mat);
+            vxCopyMatrix(matrix, mat, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         }
 #if !defined(OPENVX_USE_C99)
         free(mat);

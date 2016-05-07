@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 The Khronos Group Inc.
+ * Copyright (c) 2013-2016 The Khronos Group Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and/or associated documentation files (the
@@ -72,12 +72,12 @@ vx_node vxTilingBoxNode(vx_graph graph, vx_image in, vx_image out, vx_uint32 wid
     if (node && (width&1) && (height&1))
     {
         vx_neighborhood_size_t nbhd;
-        vxQueryNode(node, VX_NODE_ATTRIBUTE_INPUT_NEIGHBORHOOD, &nbhd, sizeof(nbhd));
+        vxQueryNode(node, VX_NODE_INPUT_NEIGHBORHOOD, &nbhd, sizeof(nbhd));
         nbhd.left = 0 - ((width - 1)/2);
         nbhd.right = ((width - 1)/2);
         nbhd.top = 0 - ((height - 1)/2);
         nbhd.bottom = ((height - 1)/2);
-        vxSetNodeAttribute(node, VX_NODE_ATTRIBUTE_INPUT_NEIGHBORHOOD, &nbhd, sizeof(nbhd));
+        vxSetNodeAttribute(node, VX_NODE_INPUT_NEIGHBORHOOD, &nbhd, sizeof(nbhd));
     }
     return node;
 }
@@ -154,6 +154,8 @@ int main(int argc, char *argv[])
                 vxReleaseGraph(&graph);
             }
         }
+        status |= vxUnloadKernels(context, "openvx-debug");
+        status |= vxUnloadKernels(context, "openvx-tiling");
         for (i = 0; i < dimof(images); i++)
         {
             vxReleaseImage(&images[i]);
