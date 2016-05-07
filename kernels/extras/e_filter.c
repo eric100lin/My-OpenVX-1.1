@@ -22,6 +22,8 @@
  */
 
 #include <extras_k.h>
+/* TODO: remove vx_compatibility.h after transition period */
+#include <VX/vx_compatibility.h>
 
 static vx_int16 laplacian[3][3] = {
     {1, 1, 1},
@@ -75,7 +77,7 @@ vx_int32 vx_convolve8with16(void *base, vx_uint32 x, vx_uint32 y, vx_imagepatch_
 }
 
 // nodeless version of the Laplacian3x3 kernel
-vx_status vxLaplacian3x3(vx_image src, vx_image dst, vx_border_mode_t *bordermode)
+vx_status vxLaplacian3x3(vx_image src, vx_image dst, vx_border_t *bordermode)
 {
     vx_status status = VX_SUCCESS;
     vx_uint32 y, x;
@@ -89,7 +91,7 @@ vx_status vxLaplacian3x3(vx_image src, vx_image dst, vx_border_mode_t *bordermod
     status |= vxAccessImagePatch(src, &rect, 0, &src_addr, &src_base, VX_READ_ONLY);
     status |= vxAccessImagePatch(dst, &rect, 0, &dst_addr, &dst_base, VX_WRITE_ONLY);
     /*! \todo Implement other border modes */
-    if (bordermode->mode == VX_BORDER_MODE_UNDEFINED)
+    if (bordermode->mode == VX_BORDER_UNDEFINED)
     {
         /* shrink the image by 1 */
         vxAlterRectangle(&rect, 1, 1, -1, -1);

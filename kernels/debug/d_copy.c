@@ -22,6 +22,9 @@
  */
 
 #include <debug_k.h>
+/* TODO: remove vx_compatibility.h after transition period */
+#include <VX/vx_compatibility.h>
+
 
 // nodeless version of the CopyImage kernel
 vx_status vxCopyImage(vx_image input, vx_image output)
@@ -33,7 +36,7 @@ vx_status vxCopyImage(vx_image input, vx_image output)
     vx_imagepatch_addressing_t src_addr, dst_addr;
     vx_rectangle_t rect;
 
-    status |= vxQueryImage(input, VX_IMAGE_ATTRIBUTE_PLANES, &planes, sizeof(planes));
+    status |= vxQueryImage(input, VX_IMAGE_PLANES, &planes, sizeof(planes));
     status |= vxGetValidRegionImage(input, &rect);
     for (p = 0; p < planes && status == VX_SUCCESS; p++)
     {
@@ -70,8 +73,8 @@ vx_status vxCopyArray(vx_array src, vx_array dst)
     void *srcp = NULL;
 
     status = VX_SUCCESS;
-    status |= vxQueryArray(src, VX_ARRAY_ATTRIBUTE_NUMITEMS, &src_num_items, sizeof(src_num_items));
-    status |= vxQueryArray(dst, VX_ARRAY_ATTRIBUTE_CAPACITY, &dst_capacity, sizeof(dst_capacity));
+    status |= vxQueryArray(src, VX_ARRAY_NUMITEMS, &src_num_items, sizeof(src_num_items));
+    status |= vxQueryArray(dst, VX_ARRAY_CAPACITY, &dst_capacity, sizeof(dst_capacity));
     if (status == VX_SUCCESS)
     {
         status |= vxAccessArrayRange(src, 0, src_num_items, &src_stride, &srcp, VX_READ_ONLY);

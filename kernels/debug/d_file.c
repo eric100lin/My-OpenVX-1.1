@@ -21,10 +21,12 @@
  * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  */
 
+#include <stdio.h>
 #include <VX/vx.h>
 #include <VX/vx_lib_debug.h>
+/* TODO: remove vx_compatibility.h after transition period */
+#include <VX/vx_compatibility.h>
 #include <debug_k.h>
-#include <stdio.h>
 
 vx_status vxFWriteImage(vx_image input, vx_array file)
 {
@@ -55,10 +57,10 @@ vx_status vxFWriteImage(vx_image input, vx_array file)
         return VX_FAILURE;
     }
 
-    status |= vxQueryImage(input, VX_IMAGE_ATTRIBUTE_WIDTH,  &width,  sizeof(width));
-    status |= vxQueryImage(input, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-    status |= vxQueryImage(input, VX_IMAGE_ATTRIBUTE_PLANES, &planes, sizeof(planes));
-    status |= vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+    status |= vxQueryImage(input, VX_IMAGE_WIDTH,  &width,  sizeof(width));
+    status |= vxQueryImage(input, VX_IMAGE_HEIGHT, &height, sizeof(height));
+    status |= vxQueryImage(input, VX_IMAGE_PLANES, &planes, sizeof(planes));
+    status |= vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
 
     status |= vxGetValidRegionImage(input, &rect);
 
@@ -166,8 +168,8 @@ vx_status vxFReadImage(vx_array file, vx_image output)
         return VX_FAILURE;
     }
 
-    vxQueryImage(output, VX_IMAGE_ATTRIBUTE_PLANES, &planes, sizeof(planes));
-    vxQueryImage(output, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+    vxQueryImage(output, VX_IMAGE_PLANES, &planes, sizeof(planes));
+    vxQueryImage(output, VX_IMAGE_FORMAT, &format, sizeof(format));
 
     ext = strrchr(filename, '.');
     if (ext && (strcmp(ext, ".pgm") == 0 || strcmp(ext, ".PGM") == 0))
@@ -215,6 +217,8 @@ vx_status vxFReadImage(vx_array file, vx_image output)
                 break;
             }
         }
+        /* src pointer should be made NULL , otherwise the first plane data gets over written. */
+        src = NULL;
     }
     fclose(fp);
     vxCommitArrayRange(file, 0, 0, filename);
