@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014 The Khronos Group Inc.
+ * Copyright (c) 2012-2016 The Khronos Group Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and/or associated documentation files (the
@@ -43,10 +43,10 @@ typedef struct _vx_type_name_t {
 
 /*!< The list of settable attributes on a kernel */
 vx_type_name_t attribute_names[] = {
-    {_STR2(VX_KERNEL_ATTRIBUTE_LOCAL_DATA_SIZE),  VX_TYPE_SIZE, sizeof(vx_size)},
+    {_STR2(VX_KERNEL_LOCAL_DATA_SIZE),  VX_TYPE_SIZE, sizeof(vx_size)},
 #ifdef OPENVX_KHR_NODE_MEMORY
-    {_STR2(VX_KERNEL_ATTRIBUTE_GLOBAL_DATA_SIZE), VX_TYPE_SIZE, sizeof(vx_size)},
-    {_STR2(VX_KERNEL_ATTRIBUTE_GLOBAL_DATA_PTR),  VX_TYPE_SIZE, sizeof(vx_size)},
+    {_STR2(VX_KERNEL_GLOBAL_DATA_SIZE), VX_TYPE_SIZE, sizeof(vx_size)},
+    {_STR2(VX_KERNEL_GLOBAL_DATA_PTR),  VX_TYPE_SIZE, sizeof(vx_size)},
 #endif
 };
 
@@ -162,17 +162,17 @@ int main(int argc, char *argv[])
 
         vxPrintAllLog(context);
         vxRegisterHelperAsLogReader(context);
-        vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_VENDOR_ID, &vendor, sizeof(vendor));
-        vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_VERSION, &version, sizeof(version));
-        vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_IMPLEMENTATION, implementation, sizeof(implementation));
-        vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_MODULES, &modules, sizeof(modules));
-        vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_EXTENSIONS_SIZE, &size, sizeof(size));
+        vxQueryContext(context, VX_CONTEXT_VENDOR_ID, &vendor, sizeof(vendor));
+        vxQueryContext(context, VX_CONTEXT_VERSION, &version, sizeof(version));
+        vxQueryContext(context, VX_CONTEXT_IMPLEMENTATION, implementation, sizeof(implementation));
+        vxQueryContext(context, VX_CONTEXT_MODULES, &modules, sizeof(modules));
+        vxQueryContext(context, VX_CONTEXT_EXTENSIONS_SIZE, &size, sizeof(size));
         printf("implementation=%s (%02x:%02x) has %u modules\n", implementation, vendor, version, modules);
         extensions = malloc(size);
         if (extensions)
         {
             vx_char *line = extensions, *token = NULL;
-            vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_EXTENSIONS, extensions, size);
+            vxQueryContext(context, VX_CONTEXT_EXTENSIONS, extensions, size);
             do {
                 token = strtok(line, " ");
                 if (token)
@@ -181,18 +181,18 @@ int main(int argc, char *argv[])
             } while (token);
             free(extensions);
         }
-        status = vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_UNIQUE_KERNELS, &kernels, sizeof(kernels));
+        status = vxQueryContext(context, VX_CONTEXT_UNIQUE_KERNELS, &kernels, sizeof(kernels));
         if (status != VX_SUCCESS) goto exit;
         printf("There are %u kernels\n", kernels);
         size = kernels * sizeof(vx_kernel_info_t);
         table = malloc(size);
-        status = vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_UNIQUE_KERNEL_TABLE, table, size);
+        status = vxQueryContext(context, VX_CONTEXT_UNIQUE_KERNEL_TABLE, table, size);
         for (k = 0; k < kernels && table != NULL && status == VX_SUCCESS; k++)
         {
             vx_kernel kernel = vxGetKernelByEnum(context, table[k].enumeration);
             if (kernel && vxGetStatus((vx_reference)kernel) == VX_SUCCESS)
             {
-                status = vxQueryKernel(kernel, VX_KERNEL_ATTRIBUTE_PARAMETERS, &parameters, sizeof(parameters));
+                status = vxQueryKernel(kernel, VX_KERNEL_PARAMETERS, &parameters, sizeof(parameters));
                 printf("\t\tkernel[%u]=%s has %u parameters (%d)\n",
                         table[k].enumeration,
                         table[k].name,
@@ -205,8 +205,8 @@ int main(int argc, char *argv[])
                     vx_uint32 tIdx, dIdx;
 
                     status = VX_SUCCESS;
-                    status |= vxQueryParameter(parameter, VX_PARAMETER_ATTRIBUTE_TYPE, &type, sizeof(type));
-                    status |= vxQueryParameter(parameter, VX_PARAMETER_ATTRIBUTE_DIRECTION, &dir, sizeof(dir));
+                    status |= vxQueryParameter(parameter, VX_PARAMETER_TYPE, &type, sizeof(type));
+                    status |= vxQueryParameter(parameter, VX_PARAMETER_DIRECTION, &dir, sizeof(dir));
                     for (tIdx = 0; tIdx < dimof(parameter_names); tIdx++)
                         if (parameter_names[tIdx].tenum == type)
                             break;
@@ -253,6 +253,14 @@ int main(int argc, char *argv[])
             {
                 printf("ERROR: kernel %s is invalid (%d) !\n", table[k].name, status);
             }
+        }
+
+        for (m = 1; m < argc; m++)
+        {
+            if (vxUnloadKernels(context, argv[m]) != VX_SUCCESS)
+                printf("Failed to unload module %s\n", argv[m]);
+            else
+                printf("Unloaded module %s\n", argv[m]);
         }
 exit:
         if (table) free(table);
