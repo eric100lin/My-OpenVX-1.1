@@ -238,18 +238,18 @@ typedef struct _vx_tile_t {
  */
 enum vx_kernel_attribute_tiling_e {
     /*! \brief This allows a tiling mode kernel to set its input neighborhood. */
-    VX_KERNEL_ATTRIBUTE_INPUT_NEIGHBORHOOD      = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_KERNEL) + 0x7,
+    VX_KERNEL_INPUT_NEIGHBORHOOD      = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_KERNEL) + 0x7,
     /*! \brief This allows a tiling mode kernel to set its output tile block size. */
-    VX_KERNEL_ATTRIBUTE_OUTPUT_TILE_BLOCK_SIZE  = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_KERNEL) + 0x8,
+    VX_KERNEL_OUTPUT_TILE_BLOCK_SIZE  = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_KERNEL) + 0x8,
     /*! \brief This allows the author to set the border mode on the tiling kernel. */
-    VX_KERNEL_ATTRIBUTE_BORDER                  = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_KERNEL) + 0x9,
+    VX_KERNEL_BORDER                  = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_KERNEL) + 0x9,
     /*! \brief This determines the per tile memory allocation. */
-    VX_KERNEL_ATTRIBUTE_TILE_MEMORY_SIZE        = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_KERNEL) + 0xA,
+    VX_KERNEL_TILE_MEMORY_SIZE        = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_KERNEL) + 0xA,
 #if defined(OPENVX_TILING_1_1)
     /*! \brief This allows a tiling mode kernel to set its input tile block size. */
-    VX_KERNEL_ATTRIBUTE_INPUT_TILE_BLOCK_SIZE   = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_KERNEL) + 0xB,
+    VX_KERNEL_INPUT_TILE_BLOCK_SIZE   = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_KERNEL) + 0xB,
     /*! \brief This allows a tiling mode kernel to set its output neighborhood. */
-    VX_KERNEL_ATTRIBUTE_OUTPUT_NEIGHBORHOOD     = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_KERNEL) + 0xC,
+    VX_KERNEL_OUTPUT_NEIGHBORHOOD     = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_KERNEL) + 0xC,
 #endif
 };
 
@@ -259,29 +259,29 @@ enum vx_kernel_attribute_tiling_e {
  */
 enum vx_node_attribute_tiling_e {
     /*! \brief This allows a tiling mode node to get its input neighborhood. */
-    VX_NODE_ATTRIBUTE_INPUT_NEIGHBORHOOD      = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_NODE) + 0x7,
+    VX_NODE_INPUT_NEIGHBORHOOD      = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_NODE) + 0x7,
     /*! \brief This allows a tiling mode node to get its output tile block size. */
-    VX_NODE_ATTRIBUTE_OUTPUT_TILE_BLOCK_SIZE  = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_NODE) + 0x8,
+    VX_NODE_OUTPUT_TILE_BLOCK_SIZE  = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_NODE) + 0x8,
     /*! \brief This is the size of the tile local memory area. */
-    VX_NODE_ATTRIBUTE_TILE_MEMORY_SIZE        = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_NODE) + 0xA,
+    VX_NODE_TILE_MEMORY_SIZE        = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_NODE) + 0xA,
 #if defined(OPENVX_TILING_1_1)
     /*! \brief This allows a tiling mode node to get its input tile block size. */
-    VX_NODE_ATTRIBUTE_INPUT_TILE_BLOCK_SIZE   = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_NODE) + 0xB,
+    VX_NODE_INPUT_TILE_BLOCK_SIZE   = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_NODE) + 0xB,
     /*! \brief This allows a tiling mode node to get its output neighborhood. */
-    VX_NODE_ATTRIBUTE_OUTPUT_NEIGHBORHOOD     = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_NODE) + 0xC,
+    VX_NODE_OUTPUT_NEIGHBORHOOD     = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_NODE) + 0xC,
 #endif
 };
 
 /*! \brief The tiling border mode extensions
  * \ingroup group_tiling
  */
-enum vx_border_mode_tiling_e {
+enum vx_border_tiling_e {
     /*! \brief This value indicates that the author of the tiling kernel wrote
      * code to handle border conditions into the kernel itself. If this mode
      * is set, it can not be overriden by a call to the \ref vxSetNodeAttribute
-     * with \ref VX_NODE_ATTRIBUTE_BORDER_MODE.
+     * with \ref VX_NODE_BORDER.
      */
-    VX_BORDER_MODE_SELF = VX_ENUM_BASE(VX_ID_KHRONOS, VX_ENUM_BORDER_MODE) + 0x3,
+    VX_BORDER_SELF = VX_ENUM_BASE(VX_ID_KHRONOS, VX_ENUM_BORDER) + 0x3,
 };
 
 /*! \typedef vx_tiling_kernel_f
