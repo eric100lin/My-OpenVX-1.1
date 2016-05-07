@@ -105,7 +105,7 @@ static vx_uint8 vxGetFastCornerStrength(vx_int32 x, vx_int32 y, void* src_base,
                                         vx_imagepatch_addressing_t* src_addr,
                                         vx_uint8 tolerance)
 {
-    if (x < APERTURE || y < APERTURE || x >= src_addr->dim_x - APERTURE || y >= src_addr->dim_y - APERTURE)
+    if (x < APERTURE || y < APERTURE || x >= (vx_int32)src_addr->dim_x - APERTURE || y >= (vx_int32)src_addr->dim_y - APERTURE)
         return 0;
     {
     vx_uint8 p = *(vx_uint8*)vxFormatImagePatchAddress2d(src_base, x, y, src_addr);
@@ -136,7 +136,7 @@ static vx_uint8 vxGetFastCornerStrength(vx_int32 x, vx_int32 y, void* src_base,
 
 // nodeless version of the Fast9Corners kernel
 vx_status vxFast9Corners(vx_image src, vx_scalar sens, vx_scalar nonm, vx_array points,
-                         vx_scalar s_num_corners, vx_border_mode_t *bordermode)
+                         vx_scalar s_num_corners, vx_border_t *bordermode)
 {
     vx_float32 b = 0.0f;
     vx_imagepatch_addressing_t src_addr;
@@ -144,25 +144,25 @@ vx_status vxFast9Corners(vx_image src, vx_scalar sens, vx_scalar nonm, vx_array 
     vx_rectangle_t rect;
     vx_uint8 tolerance = 0;
     vx_bool do_nonmax;
-    vx_uint32 num_corners = 0;
+    vx_size num_corners = 0;
     vx_size dst_capacity = 0;
     vx_keypoint_t kp;
 
     vx_status status = vxGetValidRegionImage(src, &rect);
-    status |= vxReadScalarValue(sens, &b);
-    status |= vxReadScalarValue(nonm, &do_nonmax);
+    status |= vxCopyScalar(sens, &b, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+    status |= vxCopyScalar(nonm, &do_nonmax, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
     /* remove any pre-existing points */
     status |= vxTruncateArray(points, 0);
     status |= vxAccessImagePatch(src, &rect, 0, &src_addr, &src_base, VX_READ_ONLY);
     tolerance = (vx_uint8)b;
-    status |= vxQueryArray(points, VX_ARRAY_ATTRIBUTE_CAPACITY, &dst_capacity, sizeof(dst_capacity));
+    status |= vxQueryArray(points, VX_ARRAY_CAPACITY, &dst_capacity, sizeof(dst_capacity));
 
     memset(&kp, 0, sizeof(kp));
 
     if (status == VX_SUCCESS)
     {
         /*! \todo implement other Fast9 Corners border modes */
-        if (bordermode->mode == VX_BORDER_MODE_UNDEFINED)
+        if (bordermode->mode == VX_BORDER_UNDEFINED)
         {
             vx_int32 y, x;
             for (y = APERTURE; y < (vx_int32)(src_addr.dim_y - APERTURE); y++)
@@ -191,7 +191,11 @@ vx_status vxFast9Corners(vx_image src, vx_scalar sens, vx_scalar nonm, vx_array 
                             kp.x = x;
                             kp.y = y;
                             kp.strength = strength;
-                            status |= vxAddArrayItems(points, 1, &kp, 0);
+                            kp.scale = 0.0f;
+                            kp.orientation = 0.0f;
+                            kp.tracking_status = 1;
+                            kp.error = 0.0f;
+                            status |= vxAddArrayItems(points, 1, &kp, sizeof(kp));
                         }
                         num_corners++;
                     }
@@ -203,7 +207,7 @@ vx_status vxFast9Corners(vx_image src, vx_scalar sens, vx_scalar nonm, vx_array 
             status = VX_ERROR_NOT_IMPLEMENTED;
         }
         if (s_num_corners)
-            status |= vxWriteScalarValue(s_num_corners, &num_corners);
+            status |= vxCopyScalar(s_num_corners, &num_corners, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         status |= vxCommitImagePatch(src, NULL, 0, &src_addr, src_base);
     }
 

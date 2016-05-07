@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2014 The Khronos Group Inc.
+ * Copyright (c) 2011-2016 The Khronos Group Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and/or associated documentation files (the
@@ -24,13 +24,20 @@
 #ifndef _VX_C_MODEL_H_
 #define _VX_C_MODEL_H_
 
+#include <math.h>
 #include <VX/vx.h>
 #include <VX/vx_helper.h>
-#include <math.h>
+/* TODO: remove vx_compatibility.h after transition period */
+#include <VX/vx_compatibility.h>
 
 /*! \brief The largest convolution matrix the specification requires support for is 15x15.
  */
 #define C_MAX_CONVOLUTION_DIM (15)
+
+/*! \brief The largest nonlinear filter matrix the specification requires support for is 9x9.
+*/
+#define C_MAX_NONLINEAR_DIM (9)
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,15 +63,17 @@ vx_status vxChannelExtract(vx_image src, vx_scalar channel, vx_image dst);
 vx_status vxConvertColor(vx_image src, vx_image dst);
 vx_status vxConvertDepth(vx_image input, vx_image output, vx_scalar spol, vx_scalar sshf);
 
-vx_status vxConvolve(vx_image src, vx_convolution conv, vx_image dst, vx_border_mode_t *bordermode);
-vx_status vxConvolution3x3(vx_image src, vx_image dst, vx_int16 conv[3][3], const vx_border_mode_t *borders);
+vx_status vxConvolve(vx_image src, vx_convolution conv, vx_image dst, vx_border_t *bordermode);
+vx_status vxConvolution3x3(vx_image src, vx_image dst, vx_int16 conv[3][3], const vx_border_t *borders);
 
 vx_status vxFast9Corners(vx_image src, vx_scalar sens, vx_scalar nonm,
-                         vx_array points, vx_scalar num_corners, vx_border_mode_t *bordermode);
+                         vx_array points, vx_scalar num_corners, vx_border_t *bordermode);
 
-vx_status vxMedian3x3(vx_image src, vx_image dst, vx_border_mode_t *bordermode);
-vx_status vxBox3x3(vx_image src, vx_image dst, vx_border_mode_t *bordermode);
-vx_status vxGaussian3x3(vx_image src, vx_image dst, vx_border_mode_t *bordermode);
+vx_status vxMedian3x3(vx_image src, vx_image dst, vx_border_t *bordermode);
+vx_status vxBox3x3(vx_image src, vx_image dst, vx_border_t *bordermode);
+vx_status vxGaussian3x3(vx_image src, vx_image dst, vx_border_t *bordermode);
+
+vx_status vxNonLinearFilter(vx_scalar function, vx_image src, vx_matrix mask, vx_image dst, vx_border_t *bordermode);
 
 vx_status vxHistogram(vx_image src, vx_distribution dist);
 vx_status vxEqualizeHist(vx_image src, vx_image dst);
@@ -75,8 +84,8 @@ vx_status vxTableLookup(vx_image src, vx_lut lut, vx_image dst);
 vx_status vxMeanStdDev(vx_image input, vx_scalar mean, vx_scalar stddev);
 vx_status vxMinMaxLoc(vx_image input, vx_scalar minVal, vx_scalar maxVal, vx_array minLoc, vx_array maxLoc, vx_scalar minCount, vx_scalar maxCount);
 
-vx_status vxErode3x3(vx_image src, vx_image dst, vx_border_mode_t *bordermode);
-vx_status vxDilate3x3(vx_image src, vx_image dst, vx_border_mode_t *bordermode);
+vx_status vxErode3x3(vx_image src, vx_image dst, vx_border_t *bordermode);
+vx_status vxDilate3x3(vx_image src, vx_image dst, vx_border_t *bordermode);
 
 vx_status vxMagnitude(vx_image grad_x, vx_image grad_y, vx_image output);
 
@@ -86,14 +95,14 @@ vx_status vxOpticalFlowPyrLK(/*p1, p2, p3...*/);
 
 vx_status vxPhase(vx_image grad_x, vx_image grad_y, vx_image output);
 
-vx_status vxScaleImage(vx_image src_image, vx_image dst_image, vx_scalar stype, vx_border_mode_t *bordermode, vx_float64 *interm, vx_size size);
+vx_status vxScaleImage(vx_image src_image, vx_image dst_image, vx_scalar stype, vx_border_t *bordermode, vx_float64 *interm, vx_size size);
 
-vx_status vxSobel3x3(vx_image input, vx_image grad_x, vx_image grad_y, vx_border_mode_t *bordermode);
+vx_status vxSobel3x3(vx_image input, vx_image grad_x, vx_image grad_y, vx_border_t *bordermode);
 
 vx_status vxThreshold(vx_image src_image, vx_threshold threshold, vx_image dst_image);
 
-vx_status vxWarpPerspective(vx_image src_image, vx_matrix matrix, vx_scalar stype, vx_image dst_image, const vx_border_mode_t *borders);
-vx_status vxWarpAffine(vx_image src_image, vx_matrix matrix, vx_scalar stype, vx_image dst_image, const vx_border_mode_t *borders);
+vx_status vxWarpPerspective(vx_image src_image, vx_matrix matrix, vx_scalar stype, vx_image dst_image, const vx_border_t *borders);
+vx_status vxWarpAffine(vx_image src_image, vx_matrix matrix, vx_scalar stype, vx_image dst_image, const vx_border_t *borders);
 
 #ifdef __cplusplus
 }

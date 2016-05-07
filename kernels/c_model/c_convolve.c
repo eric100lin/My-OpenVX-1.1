@@ -25,7 +25,7 @@
 #include <VX/vx.h>
 
 // nodeless version of the Convolve kernel
-vx_status vxConvolve(vx_image src, vx_convolution conv, vx_image dst, vx_border_mode_t *bordermode)
+vx_status vxConvolve(vx_image src, vx_convolution conv, vx_image dst, vx_border_t *bordermode)
 {
     vx_int32 y, x, i;
     void *src_base = NULL;
@@ -42,19 +42,19 @@ vx_status vxConvolve(vx_image src, vx_convolution conv, vx_image dst, vx_border_
     vx_status status  = VX_SUCCESS;
     vx_int32 low_x, low_y, high_x, high_y;
 
-    status |= vxQueryImage(src, VX_IMAGE_ATTRIBUTE_FORMAT, &src_format, sizeof(src_format));
-    status |= vxQueryImage(dst, VX_IMAGE_ATTRIBUTE_FORMAT, &dst_format, sizeof(dst_format));
-    status |= vxQueryConvolution(conv, VX_CONVOLUTION_ATTRIBUTE_COLUMNS, &conv_width, sizeof(conv_width));
-    status |= vxQueryConvolution(conv, VX_CONVOLUTION_ATTRIBUTE_ROWS, &conv_height, sizeof(conv_height));
-    status |= vxQueryConvolution(conv, VX_CONVOLUTION_ATTRIBUTE_SCALE, &scale, sizeof(scale));
+    status |= vxQueryImage(src, VX_IMAGE_FORMAT, &src_format, sizeof(src_format));
+    status |= vxQueryImage(dst, VX_IMAGE_FORMAT, &dst_format, sizeof(dst_format));
+    status |= vxQueryConvolution(conv, VX_CONVOLUTION_COLUMNS, &conv_width, sizeof(conv_width));
+    status |= vxQueryConvolution(conv, VX_CONVOLUTION_ROWS, &conv_height, sizeof(conv_height));
+    status |= vxQueryConvolution(conv, VX_CONVOLUTION_SCALE, &scale, sizeof(scale));
     conv_radius_x = (vx_int32)conv_width / 2;
     conv_radius_y = (vx_int32)conv_height / 2;
-    status |= vxReadConvolutionCoefficients(conv, conv_mat);
+    status |= vxCopyConvolutionCoefficients(conv, conv_mat, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
     status |= vxGetValidRegionImage(src, &rect);
     status |= vxAccessImagePatch(src, &rect, 0, &src_addr, &src_base, VX_READ_ONLY);
     status |= vxAccessImagePatch(dst, &rect, 0, &dst_addr, &dst_base, VX_WRITE_ONLY);
 
-    if (bordermode->mode == VX_BORDER_MODE_UNDEFINED)
+    if (bordermode->mode == VX_BORDER_UNDEFINED)
     {
         low_x = conv_radius_x;
         high_x = ((src_addr.dim_x >= (vx_uint32)conv_radius_x) ? src_addr.dim_x - conv_radius_x : 0);
@@ -82,7 +82,7 @@ vx_status vxConvolve(vx_image src, vx_convolution conv, vx_image dst, vx_border_
 
                 vxReadRectangle(src_base, &src_addr, bordermode, src_format, x, y, conv_radius_x, conv_radius_y, slice);
 
-                for (i = 0; i < conv_width * conv_height; ++i)
+                for (i = 0; i < (vx_int32)(conv_width * conv_height); ++i)
                     sum += conv_mat[conv_width * conv_height - 1 - i] * slice[i];
             }
             else if (src_format == VX_DF_IMAGE_S16)
@@ -91,7 +91,7 @@ vx_status vxConvolve(vx_image src, vx_convolution conv, vx_image dst, vx_border_
 
                 vxReadRectangle(src_base, &src_addr, bordermode, src_format, x, y, conv_radius_x, conv_radius_y, slice);
 
-                for (i = 0; i < conv_width * conv_height; ++i)
+                for (i = 0; i < (vx_int32)(conv_width * conv_height); ++i)
                     sum += conv_mat[conv_width * conv_height - 1 - i] * slice[i];
             }
 

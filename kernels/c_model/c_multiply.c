@@ -39,17 +39,17 @@ vx_status vxMultiply(vx_image in0, vx_image in1, vx_scalar scale_param, vx_scala
     vx_df_image out_format = 0;
     vx_status status = VX_FAILURE;
 
-    vxQueryImage(output, VX_IMAGE_ATTRIBUTE_FORMAT, &out_format, sizeof(out_format));
-    vxQueryImage(in0, VX_IMAGE_ATTRIBUTE_FORMAT, &in0_format, sizeof(in0_format));
-    vxQueryImage(in1, VX_IMAGE_ATTRIBUTE_FORMAT, &in1_format, sizeof(in1_format));
+    vxQueryImage(output, VX_IMAGE_FORMAT, &out_format, sizeof(out_format));
+    vxQueryImage(in0, VX_IMAGE_FORMAT, &in0_format, sizeof(in0_format));
+    vxQueryImage(in1, VX_IMAGE_FORMAT, &in1_format, sizeof(in1_format));
 
     status = vxGetValidRegionImage(in0, &rect);
     status |= vxAccessImagePatch(in0, &rect, 0, &src_addr[0], (void **)&src_base[0], VX_READ_ONLY);
     status |= vxAccessImagePatch(in1, &rect, 0, &src_addr[1], (void **)&src_base[1], VX_READ_ONLY);
     status |= vxAccessImagePatch(output, &rect, 0, &dst_addr, (void **)&dst_base, VX_WRITE_ONLY);
-    status |= vxReadScalarValue(scale_param, &scale);
-    status |= vxReadScalarValue(opolicy_param, &overflow_policy);
-    status |= vxReadScalarValue(rpolicy_param, &rounding_policy);
+    status |= vxCopyScalar(scale_param, &scale, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+    status |= vxCopyScalar(opolicy_param, &overflow_policy, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+    status |= vxCopyScalar(rpolicy_param, &rounding_policy, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
     for (y = 0; y < dst_addr.dim_y; y++)
     {
         for (x = 0; x < dst_addr.dim_x; x++)

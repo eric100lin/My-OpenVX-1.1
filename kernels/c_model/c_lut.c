@@ -32,10 +32,12 @@ vx_status vxTableLookup(vx_image src, vx_lut lut, vx_image dst)
     void *src_base = NULL, *dst_base = NULL, *lut_ptr = NULL;
     vx_uint32 y = 0, x = 0;
     vx_size count = 0;
+    vx_uint32 offset = 0;
     vx_status status = VX_SUCCESS;
 
-    vxQueryLUT(lut, VX_LUT_ATTRIBUTE_TYPE, &type, sizeof(type));
-    vxQueryLUT(lut, VX_LUT_ATTRIBUTE_COUNT, &count, sizeof(count));
+    vxQueryLUT(lut, VX_LUT_TYPE, &type, sizeof(type));
+    vxQueryLUT(lut, VX_LUT_COUNT, &count, sizeof(count));
+    vxQueryLUT(lut, VX_LUT_OFFSET, &offset, sizeof(offset));
     status = vxGetValidRegionImage(src, &rect);
     status |= vxAccessImagePatch(src, &rect, 0, &src_addr, &src_base, VX_READ_ONLY);
     status |= vxAccessImagePatch(dst, &rect, 0, &dst_addr, &dst_base, VX_WRITE_ONLY);
@@ -50,9 +52,10 @@ vx_status vxTableLookup(vx_image src, vx_lut lut, vx_image dst)
                 vx_uint8 *src_ptr = vxFormatImagePatchAddress2d(src_base, x, y, &src_addr);
                 vx_uint8 *dst_ptr = vxFormatImagePatchAddress2d(dst_base, x, y, &dst_addr);
                 vx_uint8 *lut_tmp = (vx_uint8 *)lut_ptr;
-                if ((*src_ptr) < count)
+                vx_int32 index = (vx_int32)offset + (vx_int32)(*src_ptr);
+                if (index >= 0 && index < (vx_int32)count)
                 {
-                    *dst_ptr = lut_tmp[(*src_ptr)];
+                    *dst_ptr = lut_tmp[index];
                 }
             }
             else if (type == VX_TYPE_INT16)
@@ -60,9 +63,10 @@ vx_status vxTableLookup(vx_image src, vx_lut lut, vx_image dst)
                 vx_int16 *src_ptr = vxFormatImagePatchAddress2d(src_base, x, y, &src_addr);
                 vx_int16 *dst_ptr = vxFormatImagePatchAddress2d(dst_base, x, y, &dst_addr);
                 vx_int16 *lut_tmp = (vx_int16 *)lut_ptr;
-                if (((*src_ptr) < count) && ((*src_ptr) >= 0))
+                vx_int32 index = (vx_int32)offset + (vx_int32)(*src_ptr);
+                if (index >= 0 && index < (vx_int32)count)
                 {
-                    *dst_ptr = lut_tmp[(*src_ptr)];
+                    *dst_ptr = lut_tmp[index];
                 }
             }
         }

@@ -40,7 +40,7 @@ static int vx_uint8_compare(const void *p1, const void *p2)
 
 
 // nodeless version of the Median3x3 kernel
-vx_status vxMedian3x3(vx_image src, vx_image dst, vx_border_mode_t *borders)
+vx_status vxMedian3x3(vx_image src, vx_image dst, vx_border_t *borders)
 {
     vx_uint32 y, x;
     void *src_base = NULL;
@@ -56,7 +56,7 @@ vx_status vxMedian3x3(vx_image src, vx_image dst, vx_border_mode_t *borders)
     high_x = src_addr.dim_x;
     high_y = src_addr.dim_y;
 
-    if (borders->mode == VX_BORDER_MODE_UNDEFINED)
+    if (borders->mode == VX_BORDER_UNDEFINED)
     {
         ++low_x; --high_x;
         ++low_y; --high_y;
@@ -91,7 +91,7 @@ static vx_int16 box[3][3] = {
     {1, 1, 1},
 };
 
-vx_status vxBox3x3(vx_image src, vx_image dst, vx_border_mode_t *bordermode)
+vx_status vxBox3x3(vx_image src, vx_image dst, vx_border_t *bordermode)
 {
     return vxConvolution3x3(src, dst, box, bordermode);
 }
@@ -104,7 +104,7 @@ static vx_int16 gaussian[3][3] = {
     {1, 2, 1},
 };
 
-vx_status vxGaussian3x3(vx_image src, vx_image dst, vx_border_mode_t *bordermode)
+vx_status vxGaussian3x3(vx_image src, vx_image dst, vx_border_t *bordermode)
 {
     return vxConvolution3x3(src, dst, gaussian, bordermode);
 }

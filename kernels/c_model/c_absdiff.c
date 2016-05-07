@@ -34,8 +34,8 @@ vx_status vxAbsDiff(vx_image in1, vx_image in2, vx_image output)
     vx_df_image format, dst_format;
     vx_status status = VX_SUCCESS;
 
-    vxQueryImage(in1, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
-    vxQueryImage(output, VX_IMAGE_ATTRIBUTE_FORMAT, &dst_format, sizeof(dst_format));
+    vxQueryImage(in1, VX_IMAGE_FORMAT, &format, sizeof(format));
+    vxQueryImage(output, VX_IMAGE_FORMAT, &dst_format, sizeof(dst_format));
     status  = vxGetValidRegionImage(in1, &r_in1);
     status |= vxGetValidRegionImage(in2, &r_in2);
     vxFindOverlapRectangle(&r_in1, &r_in2, &rect);

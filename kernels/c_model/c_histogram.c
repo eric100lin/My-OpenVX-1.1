@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014 The Khronos Group Inc.
+ * Copyright (c) 2012-2016 The Khronos Group Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and/or associated documentation files (the
@@ -37,18 +37,17 @@ vx_status vxHistogram(vx_image src, vx_distribution dist)
     vx_int32 offset = 0;
     vx_uint32 range = 0;
     vx_size numBins = 0;
-    vx_uint32 window_size = 0;
+    vx_map_id map_id = 0;
     vx_status status = VX_SUCCESS;
 
-    vxQueryImage(src, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
-    vxQueryDistribution(dist, VX_DISTRIBUTION_ATTRIBUTE_BINS, &numBins, sizeof(numBins));
-    vxQueryDistribution(dist, VX_DISTRIBUTION_ATTRIBUTE_RANGE, &range, sizeof(range));
-    vxQueryDistribution(dist, VX_DISTRIBUTION_ATTRIBUTE_OFFSET, &offset, sizeof(offset));
-    vxQueryDistribution(dist, VX_DISTRIBUTION_ATTRIBUTE_WINDOW, &window_size, sizeof(window_size));
+    vxQueryImage(src, VX_IMAGE_FORMAT, &format, sizeof(format));
+    vxQueryDistribution(dist, VX_DISTRIBUTION_BINS, &numBins, sizeof(numBins));
+    vxQueryDistribution(dist, VX_DISTRIBUTION_RANGE, &range, sizeof(range));
+    vxQueryDistribution(dist, VX_DISTRIBUTION_OFFSET, &offset, sizeof(offset));
     status = vxGetValidRegionImage(src, &src_rect);
     status |= vxAccessImagePatch(src, &src_rect, 0, &src_addr, &src_base, VX_READ_ONLY);
-    status |= vxAccessDistribution(dist, &dist_ptr, VX_WRITE_ONLY);
-    //printf("distribution:%p bins:%u off:%u ws:%u range:%u\n", dist_ptr, numBins, offset, window_size, range);
+    status |= vxMapDistribution(dist, &map_id, &dist_ptr, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST, 0);
+    //printf("distribution:%p bins:%u off:%u range:%u\n", dist_ptr, numBins, offset, range);
     if (status == VX_SUCCESS)
     {
         vx_int32 *dist_tmp = dist_ptr;
@@ -67,9 +66,9 @@ vx_status vxHistogram(vx_image src, vx_distribution dist)
                 {
                     vx_uint8 *src_ptr = vxFormatImagePatchAddress2d(src_base, x, y, &src_addr);
                     vx_uint8 pixel = *src_ptr;
-                    if ((offset <= (vx_size)pixel) && ((vx_size)pixel < (offset+range)))
+                    if (((vx_size)offset <= (vx_size)pixel) && ((vx_size)pixel < (vx_size)(offset+range)))
                     {
-                        vx_size index = (pixel - (vx_uint16)offset) / window_size;
+                        vx_size index = (pixel - (vx_uint16)offset) * numBins / range;
                         dist_tmp[index]++;
                     }
                 }
@@ -77,16 +76,16 @@ vx_status vxHistogram(vx_image src, vx_distribution dist)
                 {
                     vx_uint16 *src_ptr = vxFormatImagePatchAddress2d(src_base, x, y, &src_addr);
                     vx_uint16 pixel = *src_ptr;
-                    if ((offset <= (vx_size)pixel) && ((vx_size)pixel < (offset+range)))
+                    if (((vx_size)offset <= (vx_size)pixel) && ((vx_size)pixel < (vx_size)(offset+range)))
                     {
-                        vx_size index = (pixel - (vx_uint16)offset) / window_size;
+                        vx_size index = (pixel - (vx_uint16)offset) * numBins / range;
                         dist_tmp[index]++;
                     }
                 }
             }
         }
     }
-    status |= vxCommitDistribution(dist, dist_ptr);
+    status |= vxUnmapDistribution(dist, map_id);
     status |= vxCommitImagePatch(src, NULL, 0, &src_addr, src_base);
 
     return status;

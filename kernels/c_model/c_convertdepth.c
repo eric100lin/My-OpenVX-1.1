@@ -41,10 +41,10 @@ vx_status vxConvertDepth(vx_image input, vx_image output, vx_scalar spol, vx_sca
     vx_int32 shift = 0;
 
     vx_status status = VX_SUCCESS;
-    status |= vxReadScalarValue(spol, &policy);
-    status |= vxReadScalarValue(sshf, &shift);
-    status |= vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format[0], sizeof(format[0]));
-    status |= vxQueryImage(output, VX_IMAGE_ATTRIBUTE_FORMAT, &format[1], sizeof(format[1]));
+    status |= vxCopyScalar(spol, &policy, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+    status |= vxCopyScalar(sshf, &shift, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+    status |= vxQueryImage(input, VX_IMAGE_FORMAT, &format[0], sizeof(format[0]));
+    status |= vxQueryImage(output, VX_IMAGE_FORMAT, &format[1], sizeof(format[1]));
     status |= vxGetValidRegionImage(input, &rect);
     status |= vxAccessImagePatch(input, &rect, 0, &src_addr, &src_base, VX_READ_ONLY);
     status |= vxAccessImagePatch(output, &rect, 0, &dst_addr, &dst_base, VX_WRITE_ONLY);

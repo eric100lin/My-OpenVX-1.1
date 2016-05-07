@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014 The Khronos Group Inc.
+ * Copyright (c) 2012-2016 The Khronos Group Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and/or associated documentation files (the
@@ -23,19 +23,19 @@
 
 #include <c_model.h>
 
-static vx_bool read_pixel(void *base, vx_imagepatch_addressing_t *addr,
-                          vx_float32 x, vx_float32 y, const vx_border_mode_t *borders, vx_uint8 *pixel)
+static vx_bool read_pixel_8u_C1(void *base, vx_imagepatch_addressing_t *addr,
+                          vx_float32 x, vx_float32 y, const vx_border_t *borders, vx_uint8 *pixel)
 {
     vx_bool out_of_bounds = (x < 0 || y < 0 || x >= addr->dim_x || y >= addr->dim_y);
     vx_uint32 bx, by;
     vx_uint8 *bpixel;
     if (out_of_bounds)
     {
-        if (borders->mode == VX_BORDER_MODE_UNDEFINED)
+        if (borders->mode == VX_BORDER_UNDEFINED)
             return vx_false_e;
-        if (borders->mode == VX_BORDER_MODE_CONSTANT)
+        if (borders->mode == VX_BORDER_CONSTANT)
         {
-            *pixel = borders->constant_value;
+            *pixel = borders->constant_value.U8;
             return vx_true_e;
         }
     }
@@ -67,7 +67,7 @@ static void transform_perspective(vx_uint32 dst_x, vx_uint32 dst_y, const vx_flo
 }
 
 static vx_status vxWarpGeneric(vx_image src_image, vx_matrix matrix, vx_scalar stype, vx_image dst_image,
-                               const vx_border_mode_t *borders, transform_f transform)
+                               const vx_border_t *borders, transform_f transform)
 {
     vx_status status = VX_SUCCESS;
     void *src_base = NULL;
@@ -82,8 +82,8 @@ static vx_status vxWarpGeneric(vx_image src_image, vx_matrix matrix, vx_scalar s
 
     vx_uint32 y = 0u, x = 0u;
 
-    vxQueryImage(dst_image, VX_IMAGE_ATTRIBUTE_WIDTH, &dst_width, sizeof(dst_width));
-    vxQueryImage(dst_image, VX_IMAGE_ATTRIBUTE_HEIGHT, &dst_height, sizeof(dst_height));
+    vxQueryImage(dst_image, VX_IMAGE_WIDTH, &dst_width, sizeof(dst_width));
+    vxQueryImage(dst_image, VX_IMAGE_HEIGHT, &dst_height, sizeof(dst_height));
 
     vxGetValidRegionImage(src_image, &src_rect);
     dst_rect.start_x = 0;
@@ -94,8 +94,8 @@ static vx_status vxWarpGeneric(vx_image src_image, vx_matrix matrix, vx_scalar s
     status |= vxAccessImagePatch(src_image, &src_rect, 0, &src_addr, &src_base, VX_READ_ONLY);
     status |= vxAccessImagePatch(dst_image, &dst_rect, 0, &dst_addr, &dst_base, VX_WRITE_ONLY);
 
-    status |= vxReadMatrix(matrix, m);
-    status |= vxReadScalarValue(stype, &type);
+    status |= vxCopyMatrix(matrix, m, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+    status |= vxCopyScalar(stype, &type, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
 
     if (status == VX_SUCCESS)
     {
@@ -111,25 +111,25 @@ static vx_status vxWarpGeneric(vx_image src_image, vx_matrix matrix, vx_scalar s
                 xf -= (vx_float32)src_rect.start_x;
                 yf -= (vx_float32)src_rect.start_y;
 
-                if (type == VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR)
+                if (type == VX_INTERPOLATION_NEAREST_NEIGHBOR)
                 {
-                    read_pixel(src_base, &src_addr, xf, yf, borders, dst);
+                    read_pixel_8u_C1(src_base, &src_addr, xf, yf, borders, dst);
                 }
-                else if (type == VX_INTERPOLATION_TYPE_BILINEAR)
+                else if (type == VX_INTERPOLATION_BILINEAR)
                 {
                     vx_uint8 tl = 0, tr = 0, bl = 0, br = 0;
                     vx_bool defined = vx_true_e;
-                    defined &= read_pixel(src_base, &src_addr, floorf(xf), floorf(yf), borders, &tl);
-                    defined &= read_pixel(src_base, &src_addr, floorf(xf) + 1, floorf(yf), borders, &tr);
-                    defined &= read_pixel(src_base, &src_addr, floorf(xf), floorf(yf) + 1, borders, &bl);
-                    defined &= read_pixel(src_base, &src_addr, floorf(xf) + 1, floorf(yf) + 1, borders, &br);
+                    defined &= read_pixel_8u_C1(src_base, &src_addr, floorf(xf), floorf(yf), borders, &tl);
+                    defined &= read_pixel_8u_C1(src_base, &src_addr, floorf(xf) + 1, floorf(yf), borders, &tr);
+                    defined &= read_pixel_8u_C1(src_base, &src_addr, floorf(xf), floorf(yf) + 1, borders, &bl);
+                    defined &= read_pixel_8u_C1(src_base, &src_addr, floorf(xf) + 1, floorf(yf) + 1, borders, &br);
                     if (defined)
                     {
                         vx_float32 ar = xf - floorf(xf);
                         vx_float32 ab = yf - floorf(yf);
                         vx_float32 al = 1.0f - ar;
                         vx_float32 at = 1.0f - ab;
-                        *dst = tl * al * at + tr * ar * at + bl * al * ab + br * ar * ab;
+                        *dst = (vx_uint8)(tl * al * at + tr * ar * at + bl * al * ab + br * ar * ab);
                     }
                 }
             }
@@ -138,7 +138,7 @@ static vx_status vxWarpGeneric(vx_image src_image, vx_matrix matrix, vx_scalar s
         /*! \todo compute maximum area rectangle */
     }
 
-    status |= vxWriteMatrix(matrix, m);
+    status |= vxCopyMatrix(matrix, m, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
     status |= vxCommitImagePatch(src_image, NULL, 0, &src_addr, src_base);
     status |= vxCommitImagePatch(dst_image, &dst_rect, 0, &dst_addr, dst_base);
 
@@ -146,13 +146,13 @@ static vx_status vxWarpGeneric(vx_image src_image, vx_matrix matrix, vx_scalar s
 }
 
 // nodeless version of the WarpAffine kernel
-vx_status vxWarpAffine(vx_image src_image, vx_matrix matrix, vx_scalar stype, vx_image dst_image, const vx_border_mode_t *borders)
+vx_status vxWarpAffine(vx_image src_image, vx_matrix matrix, vx_scalar stype, vx_image dst_image, const vx_border_t *borders)
 {
     return vxWarpGeneric(src_image, matrix, stype, dst_image, borders, transform_affine);
 }
 
 // nodeless version of the WarpPerspective kernel
-vx_status vxWarpPerspective(vx_image src_image, vx_matrix matrix, vx_scalar stype, vx_image dst_image, const vx_border_mode_t *borders)
+vx_status vxWarpPerspective(vx_image src_image, vx_matrix matrix, vx_scalar stype, vx_image dst_image, const vx_border_t *borders)
 {
     return vxWarpGeneric(src_image, matrix, stype, dst_image, borders, transform_perspective);
 }

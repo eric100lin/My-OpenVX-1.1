@@ -162,11 +162,11 @@ vx_status vxConvertColor(vx_image src, vx_image dst)
     vx_rectangle_t rect;
 
     vx_status status = VX_SUCCESS;
-    status |= vxQueryImage(src, VX_IMAGE_ATTRIBUTE_FORMAT, &src_format, sizeof(src_format));
-    status |= vxQueryImage(dst, VX_IMAGE_ATTRIBUTE_FORMAT, &dst_format, sizeof(dst_format));
-    status |= vxQueryImage(src, VX_IMAGE_ATTRIBUTE_PLANES, &src_planes, sizeof(src_planes));
-    status |= vxQueryImage(dst, VX_IMAGE_ATTRIBUTE_PLANES, &dst_planes, sizeof(dst_planes));
-    status |= vxQueryImage(src, VX_IMAGE_ATTRIBUTE_SPACE, &src_space, sizeof(src_space));
+    status |= vxQueryImage(src, VX_IMAGE_FORMAT, &src_format, sizeof(src_format));
+    status |= vxQueryImage(dst, VX_IMAGE_FORMAT, &dst_format, sizeof(dst_format));
+    status |= vxQueryImage(src, VX_IMAGE_PLANES, &src_planes, sizeof(src_planes));
+    status |= vxQueryImage(dst, VX_IMAGE_PLANES, &dst_planes, sizeof(dst_planes));
+    status |= vxQueryImage(src, VX_IMAGE_SPACE, &src_space, sizeof(src_space));
     status = vxGetValidRegionImage(src, &rect);
     for (p = 0; p < src_planes; p++)
     {

@@ -39,7 +39,7 @@ vx_status vxMagnitude(vx_image grad_x, vx_image grad_y, vx_image output)
     if (grad_x == 0 || grad_y == 0)
         return VX_ERROR_INVALID_PARAMETERS;
 
-    vxQueryImage(output, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+    vxQueryImage(output, VX_IMAGE_FORMAT, &format, sizeof(format));
     status = vxGetValidRegionImage(grad_x, &rect);
     status |= vxAccessImagePatch(grad_x, &rect, 0, &src_addr_x, (void **)&src_base_x, VX_READ_ONLY);
     status |= vxAccessImagePatch(grad_y, &rect, 0, &src_addr_y, (void **)&src_base_y, VX_READ_ONLY);

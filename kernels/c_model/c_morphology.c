@@ -23,7 +23,7 @@
 
 #include <c_model.h>
 
-static vx_status vxMorphology3x3(vx_image src, vx_image dst, vx_uint8 (*op)(vx_uint8, vx_uint8), const vx_border_mode_t *borders)
+static vx_status vxMorphology3x3(vx_image src, vx_image dst, vx_uint8 (*op)(vx_uint8, vx_uint8), const vx_border_t *borders)
 {
     vx_uint32 y, x, low_y = 0, low_x = 0, high_y, high_x;
     void *src_base = NULL;
@@ -38,7 +38,7 @@ static vx_status vxMorphology3x3(vx_image src, vx_image dst, vx_uint8 (*op)(vx_u
     high_y = src_addr.dim_y;
     high_x = src_addr.dim_x;
 
-    if (borders->mode == VX_BORDER_MODE_UNDEFINED)
+    if (borders->mode == VX_BORDER_UNDEFINED)
     {
         /* shrink by 1 */
         vxAlterRectangle(&rect, 1, 1, -1, -1);
@@ -79,13 +79,13 @@ static vx_uint8 max_op(vx_uint8 a, vx_uint8 b) {
 }
 
 // nodeless version of the Erode3x3 kernel
-vx_status vxErode3x3(vx_image src, vx_image dst, vx_border_mode_t *bordermode)
+vx_status vxErode3x3(vx_image src, vx_image dst, vx_border_t *bordermode)
 {
     return vxMorphology3x3(src, dst, min_op, bordermode);
 }
 
 // nodeless version of the Dilate3x3 kernel
-vx_status vxDilate3x3(vx_image src, vx_image dst, vx_border_mode_t *bordermode)
+vx_status vxDilate3x3(vx_image src, vx_image dst, vx_border_t *bordermode)
 {
     return vxMorphology3x3(src, dst, max_op, bordermode);
 }

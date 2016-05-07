@@ -28,7 +28,7 @@ vx_status vxChannelCombine(vx_image inputs[4], vx_image output)
 {
     vx_df_image format = 0;
     vx_rectangle_t rect;
-    vxQueryImage(output, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+    vxQueryImage(output, VX_IMAGE_FORMAT, &format, sizeof(format));
     vxGetValidRegionImage(inputs[0], &rect);
     if ((format == VX_DF_IMAGE_RGB) || (format == VX_DF_IMAGE_RGBX))
     {
@@ -282,8 +282,8 @@ vx_status vxChannelExtract(vx_image src, vx_scalar channel, vx_image dst)
     vx_uint32 cidx = 0;
     vx_status status = VX_ERROR_INVALID_PARAMETERS;
 
-    vxReadScalarValue(channel, &chan);
-    vxQueryImage(src, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+    vxCopyScalar(channel, &chan, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+    vxQueryImage(src, VX_IMAGE_FORMAT, &format, sizeof(format));
 
     switch (format)
     {

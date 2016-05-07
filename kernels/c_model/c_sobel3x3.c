@@ -36,7 +36,7 @@ static vx_int16 sobel_y[3][3] = {
 };
 
 // nodeless version of the Sobel3x3 kernel
-vx_status vxSobel3x3(vx_image input, vx_image grad_x, vx_image grad_y, vx_border_mode_t *bordermode)
+vx_status vxSobel3x3(vx_image input, vx_image grad_x, vx_image grad_y, vx_border_t *bordermode)
 {
     if (grad_x) {
         vx_status status = vxConvolution3x3(input, grad_x, sobel_x, bordermode);

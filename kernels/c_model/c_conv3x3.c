@@ -60,7 +60,7 @@ static vx_int16 vx_clamp_s16_i32(vx_int32 value)
 }
 
 static vx_int32 vx_convolve8with16(void *base, vx_uint32 x, vx_uint32 y, vx_imagepatch_addressing_t *addr,
-                                   vx_int16 conv[3][3], const vx_border_mode_t *borders)
+                                   vx_int16 conv[3][3], const vx_border_t *borders)
 {
 
     vx_uint8 pixels[3][3];
@@ -77,7 +77,7 @@ static vx_int32 vx_convolve8with16(void *base, vx_uint32 x, vx_uint32 y, vx_imag
     return sum / div;
 }
 
-vx_status vxConvolution3x3(vx_image src, vx_image dst, vx_int16 conv[3][3], const vx_border_mode_t *borders)
+vx_status vxConvolution3x3(vx_image src, vx_image dst, vx_int16 conv[3][3], const vx_border_t *borders)
 {
     vx_uint32 y, x;
     void *src_base = NULL;
@@ -91,12 +91,12 @@ vx_status vxConvolution3x3(vx_image src, vx_image dst, vx_int16 conv[3][3], cons
     status = vxGetValidRegionImage(src, &rect);
     status |= vxAccessImagePatch(src, &rect, 0, &src_addr, &src_base, VX_READ_ONLY);
     status |= vxAccessImagePatch(dst, &rect, 0, &dst_addr, &dst_base, VX_WRITE_ONLY);
-    status |= vxQueryImage(dst, VX_IMAGE_ATTRIBUTE_FORMAT, &dst_format, sizeof(dst_format));
+    status |= vxQueryImage(dst, VX_IMAGE_FORMAT, &dst_format, sizeof(dst_format));
 
     high_x = src_addr.dim_x;
     high_y = src_addr.dim_y;
 
-    if (borders->mode == VX_BORDER_MODE_UNDEFINED)
+    if (borders->mode == VX_BORDER_UNDEFINED)
     {
         ++low_x; --high_x;
         ++low_y; --high_y;

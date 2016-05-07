@@ -29,26 +29,41 @@ vx_status vxThreshold(vx_image src_image, vx_threshold threshold, vx_image dst_i
 {
     vx_enum type = 0;
     vx_rectangle_t rect;
-    vx_imagepatch_addressing_t src_addr, dst_addr;
-    void *src_base = NULL, *dst_base = NULL;
-    vx_uint32 y = 0, x = 0;
-    vx_int32 value = 0, lower = 0, upper = 0;
+    vx_imagepatch_addressing_t src_addr;
+    vx_imagepatch_addressing_t dst_addr;
+    void *src_base = NULL;
+    void *dst_base = NULL;
+    vx_uint32 y = 0;
+    vx_uint32 x = 0;
+    vx_int32 value = 0;
+    vx_int32 lower = 0;
+    vx_int32 upper = 0;
+    vx_int32 true_value;
+    vx_int32 false_value;
     vx_status status = VX_FAILURE;
 
-    vxQueryThreshold(threshold, VX_THRESHOLD_ATTRIBUTE_TYPE, &type, sizeof(type));
+    vxQueryThreshold(threshold, VX_THRESHOLD_TYPE, &type, sizeof(type));
+
     if (type == VX_THRESHOLD_TYPE_BINARY)
     {
-        vxQueryThreshold(threshold, VX_THRESHOLD_ATTRIBUTE_THRESHOLD_VALUE, &value, sizeof(value));
+        vxQueryThreshold(threshold, VX_THRESHOLD_THRESHOLD_VALUE, &value, sizeof(value));
+        VX_PRINT(VX_ZONE_INFO, "threshold type binary, value = %u\n", value);
     }
     else if (type == VX_THRESHOLD_TYPE_RANGE)
     {
-        vxQueryThreshold(threshold, VX_THRESHOLD_ATTRIBUTE_THRESHOLD_LOWER, &lower, sizeof(lower));
-        vxQueryThreshold(threshold, VX_THRESHOLD_ATTRIBUTE_THRESHOLD_UPPER, &upper, sizeof(upper));
+        vxQueryThreshold(threshold, VX_THRESHOLD_THRESHOLD_LOWER, &lower, sizeof(lower));
+        vxQueryThreshold(threshold, VX_THRESHOLD_THRESHOLD_UPPER, &upper, sizeof(upper));
+        VX_PRINT(VX_ZONE_INFO, "threshold type range, lower = %u, upper = %u\n", lower, upper);
     }
+
+    vxQueryThreshold(threshold, VX_THRESHOLD_TRUE_VALUE, &true_value, sizeof(true_value));
+    vxQueryThreshold(threshold, VX_THRESHOLD_FALSE_VALUE, &false_value, sizeof(false_value));
+    VX_PRINT(VX_ZONE_INFO, "threshold true value = %u, threshold false value = %u\n", true_value, false_value);
+
     status = vxGetValidRegionImage(src_image, &rect);
     status |= vxAccessImagePatch(src_image, &rect, 0, &src_addr, &src_base, VX_READ_ONLY);
     status |= vxAccessImagePatch(dst_image, &rect, 0, &dst_addr, &dst_base, VX_WRITE_ONLY);
-    VX_PRINT(VX_ZONE_INFO, "threshold = %u\n", value);
+
     for (y = 0; y < src_addr.dim_y; y++)
     {
         for (x = 0; x < src_addr.dim_x; x++)
@@ -59,18 +74,18 @@ vx_status vxThreshold(vx_image src_image, vx_threshold threshold, vx_image dst_i
             if (type == VX_THRESHOLD_TYPE_BINARY)
             {
                 if (*src_ptr > value)
-                    *dst_ptr = 255;
+                    *dst_ptr = (vx_uint8)true_value;
                 else
-                    *dst_ptr = 0;
+                    *dst_ptr = (vx_uint8)false_value;
             }
             if (type == VX_THRESHOLD_TYPE_RANGE)
             {
                 if (*src_ptr > upper)
-                    *dst_ptr = 0;
+                    *dst_ptr = (vx_uint8)false_value;
                 else if (*src_ptr < lower)
-                    *dst_ptr = 0;
+                    *dst_ptr = (vx_uint8)false_value;
                 else
-                    *dst_ptr = 255;
+                    *dst_ptr = (vx_uint8)true_value;
             }
         }
     }

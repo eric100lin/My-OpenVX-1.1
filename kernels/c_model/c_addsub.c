@@ -49,15 +49,15 @@ static vx_status vxBinaryU8S16OverflowOp(vx_image in0, vx_image in1, vx_scalar p
     vx_df_image out_format = 0;
     vx_status status = VX_SUCCESS;
 
-    vxQueryImage(output, VX_IMAGE_ATTRIBUTE_FORMAT, &out_format, sizeof(out_format));
-    vxQueryImage(in0, VX_IMAGE_ATTRIBUTE_FORMAT, &in0_format, sizeof(in0_format));
-    vxQueryImage(in1, VX_IMAGE_ATTRIBUTE_FORMAT, &in1_format, sizeof(in1_format));
+    vxQueryImage(output, VX_IMAGE_FORMAT, &out_format, sizeof(out_format));
+    vxQueryImage(in0, VX_IMAGE_FORMAT, &in0_format, sizeof(in0_format));
+    vxQueryImage(in1, VX_IMAGE_FORMAT, &in1_format, sizeof(in1_format));
 
     status = vxGetValidRegionImage(in0, &rect);
     status |= vxAccessImagePatch(in0, &rect, 0, &src_addr[0], (void **)&src_base[0], VX_READ_ONLY);
     status |= vxAccessImagePatch(in1, &rect, 0, &src_addr[1], (void **)&src_base[1], VX_READ_ONLY);
     status |= vxAccessImagePatch(output, &rect, 0, &dst_addr, (void **)&dst_base, VX_WRITE_ONLY);
-    status |= vxReadScalarValue(policy_param, &overflow_policy);
+    status |= vxCopyScalar(policy_param, &overflow_policy, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
     width = src_addr[0].dim_x;
     height = src_addr[0].dim_y;
     for (y = 0; y < height; y++)
