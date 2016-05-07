@@ -32,6 +32,8 @@
 #include <VX/vx.h>
 #include <VX/vx_lib_debug.h>
 #include <VX/vx_helper.h>
+/* TODO: remove vx_compatibility.h after transition period */
+#include <VX/vx_compatibility.h>
 
 typedef union _packed_value_u {
     vx_uint8  bytes[8];
@@ -57,8 +59,8 @@ static vx_status VX_CALLBACK vxCheckImageKernel(vx_node node, const vx_reference
         vx_rectangle_t rect;
 
         value.dword[0] = 0xDEADBEEF;
-        vxReadScalarValue(fill, &value.dword[0]);
-        vxQueryImage(image, VX_IMAGE_ATTRIBUTE_PLANES, &planes, sizeof(planes));
+        vxCopyScalar(fill, &value.dword[0], VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+        vxQueryImage(image, VX_IMAGE_PLANES, &planes, sizeof(planes));
         vxGetValidRegionImage(image, &rect);
         for (p = 0u; (p < planes); p++)
         {
@@ -85,7 +87,7 @@ static vx_status VX_CALLBACK vxCheckImageKernel(vx_node node, const vx_reference
                 {
                     vxAddLogEntry((vx_reference)node, VX_FAILURE, "Checked %p of %u sub-pixels with 0x%08x with %u errors\n", ptr, count, value.dword, errors);
                 }
-                vxWriteScalarValue(errs, &errors);
+                vxCopyScalar(errs, &errors, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
                 status = vxCommitImagePatch(image, NULL, p, &addr, ptr);
                 if (status != VX_SUCCESS)
                 {
@@ -121,9 +123,9 @@ static vx_status VX_CALLBACK vxCheckArrayKernel(vx_node node, const vx_reference
         vx_size i = 0, j = 0;
 
         value.dword[0] = 0xDEADBEEF;
-        vxReadScalarValue(fill, &value.dword[0]);
-        vxQueryArray(arr, VX_ARRAY_ATTRIBUTE_NUMITEMS, &num_items, sizeof(num_items));
-        vxQueryArray(arr, VX_ARRAY_ATTRIBUTE_ITEMSIZE, &item_size, sizeof(item_size));
+        vxCopyScalar(fill, &value.dword[0], VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+        vxQueryArray(arr, VX_ARRAY_NUMITEMS, &num_items, sizeof(num_items));
+        vxQueryArray(arr, VX_ARRAY_ITEMSIZE, &item_size, sizeof(item_size));
         status = vxAccessArrayRange(arr, 0, num_items, &stride, &ptr, VX_READ_ONLY);
         if (status == VX_SUCCESS)
         {
@@ -138,7 +140,7 @@ static vx_status VX_CALLBACK vxCheckArrayKernel(vx_node node, const vx_reference
                     }
                 }
             }
-            vxWriteScalarValue(errs, &errors);
+            vxCopyScalar(errs, &errors, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
             if (errors > 0)
             {
                 vxAddLogEntry((vx_reference)node, VX_FAILURE, "Check array %p of "VX_FMT_SIZE" items with 0x%02x, found %u errors\n", ptr, num_items, value, errors);
@@ -174,11 +176,11 @@ static vx_status VX_CALLBACK vxCheckImageInputValidator(vx_node node, vx_uint32 
         if (param)
         {
             vx_scalar scalar = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &scalar, sizeof(scalar));
+            vxQueryParameter(param, VX_PARAMETER_REF, &scalar, sizeof(scalar));
             if (scalar)
             {
                 vx_enum stype = 0;
-                vxQueryScalar(scalar, VX_SCALAR_ATTRIBUTE_TYPE, &stype, sizeof(stype));
+                vxQueryScalar(scalar, VX_SCALAR_TYPE, &stype, sizeof(stype));
                 if (stype == VX_TYPE_UINT32)
                 {
                     status = VX_SUCCESS;
@@ -211,16 +213,16 @@ static vx_status VX_CALLBACK vxCheckArrayInputValidator(vx_node node, vx_uint32 
             vx_array array = 0;
             vx_scalar scalar = 0;
 
-            vxQueryParameter(input, VX_PARAMETER_ATTRIBUTE_REF, &array, sizeof(array));
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &scalar, sizeof(scalar));
+            vxQueryParameter(input, VX_PARAMETER_REF, &array, sizeof(array));
+            vxQueryParameter(param, VX_PARAMETER_REF, &scalar, sizeof(scalar));
 
             if (array && scalar)
             {
                 vx_enum item_type = 0;
                 vx_enum stype = 0;
 
-                vxQueryArray(array, VX_ARRAY_ATTRIBUTE_ITEMTYPE, &item_type, sizeof(item_type));
-                vxQueryScalar(scalar, VX_SCALAR_ATTRIBUTE_TYPE, &stype, sizeof(stype));
+                vxQueryArray(array, VX_ARRAY_ITEMTYPE, &item_type, sizeof(item_type));
+                vxQueryScalar(scalar, VX_SCALAR_TYPE, &stype, sizeof(stype));
                 if (stype == item_type)
                 {
                     status = VX_SUCCESS;
@@ -245,7 +247,7 @@ static vx_status VX_CALLBACK vxCheckOutputValidator(vx_node node, vx_uint32 inde
     if (index == 2)
     {
         vx_enum stype =  VX_TYPE_UINT32;
-        vxSetMetaFormatAttribute(meta, VX_SCALAR_ATTRIBUTE_TYPE, &stype, sizeof(stype));
+        vxSetMetaFormatAttribute(meta, VX_SCALAR_TYPE, &stype, sizeof(stype));
         status = VX_SUCCESS;
     }
     return status;
@@ -267,6 +269,7 @@ vx_kernel_description_t checkimage_kernel = {
     "org.khronos.debug.check_image",
     vxCheckImageKernel,
     check_image_params, dimof(check_image_params),
+    NULL,
     vxCheckImageInputValidator,
     vxCheckOutputValidator,
     NULL, NULL,
@@ -277,6 +280,7 @@ vx_kernel_description_t checkarray_kernel = {
     "org.khronos.debug.check_array",
     vxCheckArrayKernel,
     check_array_params, dimof(check_array_params),
+    NULL,
     vxCheckArrayInputValidator,
     vxCheckOutputValidator,
     NULL, NULL,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014 The Khronos Group Inc.
+ * Copyright (c) 2012-2016 The Khronos Group Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and/or associated documentation files (the
@@ -28,6 +28,7 @@
  */
 
 #include <VX/vx.h>
+#include <VX/vx_compatibility.h>
 #include <VX/vx_lib_extras.h>
 #include <VX/vx_helper.h>
 
@@ -118,3 +119,46 @@ static vx_uint32 num_kernels = dimof(kernels);
     return status;
 }
 
+/*! \brief The destructor to remove a user loaded module from OpenVX.
+ * \param [in] context The handle to the implementation context.
+ * \return A \ref vx_status_e enumeration. Returns errors if some or all kernels were not added
+ * correctly.
+ * \note This follows the function pointer definition of a \ref vx_unpublish_kernels_f
+ * and uses the predefined name for the entry point, "vxUnpublishKernels".
+ * \ingroup group_example_kernel
+ */
+/*VX_API_ENTRY*/ vx_status VX_API_CALL vxUnpublishKernels(vx_context context)
+{
+    vx_status status = VX_FAILURE;
+
+    vx_uint32 k = 0;
+    for (k = 0; k < num_kernels; k++)
+    {
+        vx_kernel kernel = vxGetKernelByName(context, kernels[k]->name);
+        vx_kernel kernelcpy = kernel;
+
+        if (kernel)
+        {
+            status = vxReleaseKernel(&kernelcpy);
+            if (status != VX_SUCCESS)
+            {
+                vxAddLogEntry((vx_reference)context, status, "Failed to release kernel[%u]=%s\n",k, kernels[k]->name);
+            }
+            else
+            {
+                kernelcpy = kernel;
+                status = vxRemoveKernel(kernelcpy);
+                if (status != VX_SUCCESS)
+                {
+                    vxAddLogEntry((vx_reference)context, status, "Failed to remove kernel[%u]=%s\n",k, kernels[k]->name);
+                }
+            }
+        }
+        else
+        {
+            vxAddLogEntry((vx_reference)context, status, "Failed to get added kernel %s\n", kernels[k]->name);
+        }
+    }
+
+    return status;
+}

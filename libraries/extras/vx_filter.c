@@ -38,10 +38,10 @@ static vx_status VX_CALLBACK vxLaplacian3x3Kernel(vx_node node, const vx_referen
     vx_status status = VX_ERROR_INVALID_PARAMETERS;
     if (num == 2)
     {
-        vx_border_mode_t bordermode;
+        vx_border_t bordermode;
         vx_image src = (vx_image)parameters[0];
         vx_image dst = (vx_image)parameters[1];
-        status = vxQueryNode(node, VX_NODE_ATTRIBUTE_BORDER_MODE, &bordermode, sizeof(bordermode));
+        status = vxQueryNode(node, VX_NODE_BORDER, &bordermode, sizeof(bordermode));
         if (status == VX_SUCCESS)
         {
             status = vxLaplacian3x3(src, dst, &bordermode);
@@ -59,11 +59,11 @@ static vx_status VX_CALLBACK vxFilterInputValidator(vx_node node, vx_uint32 inde
         if (param)
         {
             vx_image input = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+            vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
             if (input)
             {
                 vx_df_image format = 0;
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
                 if (format == VX_DF_IMAGE_U8)
                 {
                     status = VX_SUCCESS;
@@ -85,18 +85,18 @@ static vx_status VX_CALLBACK vxFilterOutputValidator(vx_node node, vx_uint32 ind
         if (param)
         {
             vx_image input = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+            vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
             if (input)
             {
                 vx_uint32 width = 0, height = 0;
                 vx_df_image format = VX_DF_IMAGE_U8;
 
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+                vxQueryImage(input, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxQueryImage(input, VX_IMAGE_HEIGHT, &height, sizeof(height));
 
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_HEIGHT, &height, sizeof(height));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_FORMAT, &format, sizeof(format));
 
                 vxReleaseImage(&input);
 
@@ -118,6 +118,7 @@ vx_kernel_description_t laplacian3x3_kernel = {
     "org.khronos.extras.laplacian3x3",
     vxLaplacian3x3Kernel,
     filter_kernel_params, dimof(filter_kernel_params),
+    NULL,
     vxFilterInputValidator,
     vxFilterOutputValidator,
     NULL,

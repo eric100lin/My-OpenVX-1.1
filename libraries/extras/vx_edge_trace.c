@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014 The Khronos Group Inc.
+ * Copyright (c) 2012-2016 The Khronos Group Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and/or associated documentation files (the
@@ -26,13 +26,16 @@
  * \brief Edge tracing for the Canny edge detector.
  */
 
+#include <math.h>
+#include <stdlib.h>
 #include <VX/vx.h>
 #include <VX/vx_lib_extras.h>
 #include <VX/vx_helper.h>
-#include <math.h>
-#include <stdlib.h>
+/* TODO: remove vx_compatibility.h after transition period */
+#include <VX/vx_compatibility.h>
 
-static const struct offset_t {
+static const struct offset_t
+{
     int x;
     int y;
 } dir_offsets[8] = {
@@ -49,31 +52,44 @@ static const struct offset_t {
 static vx_status vxEdgeTrace(vx_image norm, vx_threshold threshold, vx_image output)
 {
     vx_rectangle_t rect;
-    vx_imagepatch_addressing_t norm_addr, output_addr;
-    void *norm_base = NULL, *output_base = NULL;
-    vx_uint32 y = 0, x = 0;
-    vx_int32 lower = 0, upper = 0;
+    vx_imagepatch_addressing_t norm_addr;
+    vx_imagepatch_addressing_t output_addr;
+    void* norm_base = NULL;
+    void* output_base = NULL;
+    vx_uint32 y = 0;
+    vx_uint32 x = 0;
+    vx_int32 lower = 0;
+    vx_int32 upper = 0;
     vx_status status = VX_SUCCESS;
-    vxQueryThreshold(threshold, VX_THRESHOLD_ATTRIBUTE_THRESHOLD_LOWER, &lower, sizeof(lower));
-    vxQueryThreshold(threshold, VX_THRESHOLD_ATTRIBUTE_THRESHOLD_UPPER, &upper, sizeof(upper));
+
+    vxQueryThreshold(threshold, VX_THRESHOLD_THRESHOLD_LOWER, &lower, sizeof(lower));
+    vxQueryThreshold(threshold, VX_THRESHOLD_THRESHOLD_UPPER, &upper, sizeof(upper));
+
     vxGetValidRegionImage(norm, &rect);
 
     status |= vxAccessImagePatch(norm, &rect, 0, &norm_addr, &norm_base, VX_READ_ONLY);
     status |= vxAccessImagePatch(output, &rect, 0, &output_addr, &output_base, VX_WRITE_ONLY);
-    if (status == VX_SUCCESS) {
-        const vx_uint8 NO = 0, MAYBE = 127, YES = 255;
+
+    if (status == VX_SUCCESS)
+    {
+        const vx_uint8 NO    = 0;
+        const vx_uint8 MAYBE = 127;
+        const vx_uint8 YES   = 255;
 
         /* Initially we add all YES pixels to the stack. Later we only add MAYBE
            pixels to it, and we reset their state to YES afterwards; so we can never
            add the same pixel more than once. That means that the stack size is bounded
            by the image size. */
-        vx_uint32 (*tracing_stack)[2] = malloc(output_addr.dim_y * output_addr.dim_x * sizeof *tracing_stack);
-        vx_uint32 (*stack_top)[2] = tracing_stack;
+        vx_uint32(*tracing_stack)[2] = malloc(output_addr.dim_y * output_addr.dim_x * sizeof *tracing_stack);
+        vx_uint32(*stack_top)[2] = tracing_stack;
+
+        if (NULL == tracing_stack)
+            return VX_ERROR_NO_MEMORY;
 
         for (y = 0; y < norm_addr.dim_y; y++)
             for (x = 0; x < norm_addr.dim_x; x++)
             {
-                vx_uint16 *norm_ptr = vxFormatImagePatchAddress2d(norm_base, x, y, &norm_addr);
+                vx_float32 *norm_ptr = vxFormatImagePatchAddress2d(norm_base, x, y, &norm_addr);
                 vx_uint8 *output_ptr = vxFormatImagePatchAddress2d(output_base, x, y, &output_addr);
 
                 if (*norm_ptr > upper)
@@ -94,13 +110,15 @@ static vx_status vxEdgeTrace(vx_image norm, vx_threshold threshold, vx_image out
             }
 
 
-        while (stack_top != tracing_stack) {
+        while (stack_top != tracing_stack)
+        {
             int i;
             --stack_top;
             x = (*stack_top)[0];
             y = (*stack_top)[1];
 
-            for (i = 0; i < dimof(dir_offsets); ++i) {
+            for (i = 0; i < dimof(dir_offsets); ++i)
+            {
                 const struct offset_t offset = dir_offsets[i];
                 vx_uint32 new_x, new_y;
                 vx_uint8 *output_ptr;
@@ -136,19 +154,30 @@ static vx_status vxEdgeTrace(vx_image norm, vx_threshold threshold, vx_image out
         status |= vxCommitImagePatch(norm, 0, 0, &norm_addr, norm_base);
         status |= vxCommitImagePatch(output, &rect, 0, &output_addr, output_base);
     }
+
     return status;
 }
 
-static vx_status VX_CALLBACK vxEdgeTraceKernel(vx_node node, const vx_reference *parameters, vx_uint32 num)
+static vx_param_description_t edge_trace_kernel_params[] =
+{
+    { VX_INPUT,  VX_TYPE_IMAGE,     VX_PARAMETER_STATE_REQUIRED },
+    { VX_INPUT,  VX_TYPE_THRESHOLD, VX_PARAMETER_STATE_REQUIRED },
+    { VX_OUTPUT, VX_TYPE_IMAGE,     VX_PARAMETER_STATE_REQUIRED },
+};
+
+static vx_status VX_CALLBACK vxEdgeTraceKernel(vx_node node, const vx_reference parameters[], vx_uint32 num)
 {
     vx_status status = VX_FAILURE;
-    if (num == 3)
+
+    if (num == dimof(edge_trace_kernel_params))
     {
-        vx_image norm = (vx_image)parameters[0];
+        vx_image     norm      = (vx_image)parameters[0];
         vx_threshold threshold = (vx_threshold)parameters[1];
-        vx_image output = (vx_image)parameters[2];
+        vx_image     output    = (vx_image)parameters[2];
+
         status = vxEdgeTrace(norm, threshold, output);
     }
+
     return status;
 }
 
@@ -160,12 +189,12 @@ static vx_status VX_CALLBACK vxEdgeTraceInputValidator(vx_node node, vx_uint32 i
         if (index == 0)
         {
             vx_image norm = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &norm, sizeof(norm));
+            vxQueryParameter(param, VX_PARAMETER_REF, &norm, sizeof(norm));
             if (norm)
             {
                 vx_df_image format = 0;
-                vxQueryImage(norm, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
-                if (format == VX_DF_IMAGE_U16)
+                vxQueryImage(norm, VX_IMAGE_FORMAT, &format, sizeof(format));
+                if (format == VX_DF_IMAGE_F32)
                     status = VX_SUCCESS;
                 else
                     status = VX_ERROR_INVALID_FORMAT;
@@ -175,11 +204,11 @@ static vx_status VX_CALLBACK vxEdgeTraceInputValidator(vx_node node, vx_uint32 i
         else if (index == 1)
         {
             vx_threshold threshold = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &threshold, sizeof(threshold));
+            vxQueryParameter(param, VX_PARAMETER_REF, &threshold, sizeof(threshold));
             if (threshold)
             {
                 vx_enum type = 0;
-                vxQueryThreshold(threshold, VX_THRESHOLD_ATTRIBUTE_TYPE, &type, sizeof(type));
+                vxQueryThreshold(threshold, VX_THRESHOLD_TYPE, &type, sizeof(type));
                 if (type == VX_THRESHOLD_TYPE_RANGE)
                     status = VX_SUCCESS;
                 else
@@ -201,19 +230,19 @@ static vx_status VX_CALLBACK vxEdgeTraceOutputValidator(vx_node node, vx_uint32 
         if (src_param)
         {
             vx_image src = 0;
-            vxQueryParameter(src_param, VX_PARAMETER_ATTRIBUTE_REF, &src, sizeof(src));
+            vxQueryParameter(src_param, VX_PARAMETER_REF, &src, sizeof(src));
             if (src)
             {
                 vx_uint32 width = 0, height = 0;
                 vx_df_image format = VX_DF_IMAGE_U8;
 
-                vxQueryImage(src, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(height));
-                vxQueryImage(src, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-                //vxQueryImage(src, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxQueryImage(src, VX_IMAGE_WIDTH, &width, sizeof(height));
+                vxQueryImage(src, VX_IMAGE_HEIGHT, &height, sizeof(height));
+                //vxQueryImage(src, VX_IMAGE_FORMAT, &format, sizeof(format));
 
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_FORMAT, &format, sizeof(format));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_HEIGHT, &height, sizeof(height));
                 status = VX_SUCCESS;
                 vxReleaseImage(&src);
             }
@@ -223,17 +252,13 @@ static vx_status VX_CALLBACK vxEdgeTraceOutputValidator(vx_node node, vx_uint32 
     return status;
 }
 
-static vx_param_description_t edge_trace_kernel_params[] = {
-    {VX_INPUT, VX_TYPE_IMAGE, VX_PARAMETER_STATE_REQUIRED},
-    {VX_INPUT, VX_TYPE_THRESHOLD,   VX_PARAMETER_STATE_REQUIRED},
-    {VX_OUTPUT,VX_TYPE_IMAGE, VX_PARAMETER_STATE_REQUIRED},
-};
-
-vx_kernel_description_t edge_trace_kernel = {
+vx_kernel_description_t edge_trace_kernel =
+{
     VX_KERNEL_EXTRAS_EDGE_TRACE,
     "org.khronos.extra.edge_trace",
     vxEdgeTraceKernel,
     edge_trace_kernel_params, dimof(edge_trace_kernel_params),
+    NULL,
     vxEdgeTraceInputValidator,
     vxEdgeTraceOutputValidator,
     NULL,

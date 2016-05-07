@@ -31,6 +31,8 @@
 #include <VX/vx.h>
 #include <VX/vx_lib_debug.h>
 #include <VX/vx_helper.h>
+/* TODO: remove vx_compatibility.h after transition period */
+#include <VX/vx_compatibility.h>
 
 vx_status VX_CALLBACK vxCompareImagesKernel(vx_node node, const vx_reference *parameters, vx_uint32 num)
 {
@@ -47,14 +49,14 @@ vx_status VX_CALLBACK vxCompareImagesKernel(vx_node node, const vx_reference *pa
         vx_size a_planes, b_planes;
         vx_df_image b_format;
 
-        vxQueryImage(a, VX_IMAGE_ATTRIBUTE_FORMAT, &a_format, sizeof(a_format));
-        vxQueryImage(b, VX_IMAGE_ATTRIBUTE_FORMAT, &b_format, sizeof(b_format));
-        vxQueryImage(a, VX_IMAGE_ATTRIBUTE_PLANES, &a_planes, sizeof(a_planes));
-        vxQueryImage(b, VX_IMAGE_ATTRIBUTE_PLANES, &b_planes, sizeof(b_planes));
-        vxQueryImage(a, VX_IMAGE_ATTRIBUTE_WIDTH,  &a_width,  sizeof(a_width));
-        vxQueryImage(b, VX_IMAGE_ATTRIBUTE_WIDTH,  &b_width,  sizeof(b_width));
-        vxQueryImage(a, VX_IMAGE_ATTRIBUTE_HEIGHT, &a_height, sizeof(a_height));
-        vxQueryImage(b, VX_IMAGE_ATTRIBUTE_HEIGHT, &b_height, sizeof(b_height));
+        vxQueryImage(a, VX_IMAGE_FORMAT, &a_format, sizeof(a_format));
+        vxQueryImage(b, VX_IMAGE_FORMAT, &b_format, sizeof(b_format));
+        vxQueryImage(a, VX_IMAGE_PLANES, &a_planes, sizeof(a_planes));
+        vxQueryImage(b, VX_IMAGE_PLANES, &b_planes, sizeof(b_planes));
+        vxQueryImage(a, VX_IMAGE_WIDTH,  &a_width,  sizeof(a_width));
+        vxQueryImage(b, VX_IMAGE_WIDTH,  &b_width,  sizeof(b_width));
+        vxQueryImage(a, VX_IMAGE_HEIGHT, &a_height, sizeof(a_height));
+        vxQueryImage(b, VX_IMAGE_HEIGHT, &b_height, sizeof(b_height));
 
         if ((a_planes == b_planes) &&
             (a_format == b_format) &&
@@ -102,7 +104,7 @@ vx_status VX_CALLBACK vxCompareImagesKernel(vx_node node, const vx_reference *pa
                         }
                     }
                 }
-                vxWriteScalarValue(diffs, &numDiffs);
+                vxCopyScalar(diffs, &numDiffs, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
                 for (p = 0; p < a_planes; p++)
                 {
                     status |= vxCommitImagePatch(a, NULL, p, &a_addrs[p], a_base_ptrs[p]);
@@ -136,20 +138,20 @@ static vx_status VX_CALLBACK vxCompareInputValidator(vx_node node, vx_uint32 ind
         {
             vx_image inputs[2];
 
-            vxQueryParameter(params[0], VX_PARAMETER_ATTRIBUTE_REF, &inputs[0], sizeof(inputs[0]));
-            vxQueryParameter(params[1], VX_PARAMETER_ATTRIBUTE_REF, &inputs[1], sizeof(inputs[1]));
+            vxQueryParameter(params[0], VX_PARAMETER_REF, &inputs[0], sizeof(inputs[0]));
+            vxQueryParameter(params[1], VX_PARAMETER_REF, &inputs[1], sizeof(inputs[1]));
             if (inputs[0] && inputs[1])
             {
                 vx_uint32 width[2], height[2];
                 vx_df_image format[2];
 
-                vxQueryImage(inputs[0], VX_IMAGE_ATTRIBUTE_WIDTH, &width[0], sizeof(width[0]));
-                vxQueryImage(inputs[0], VX_IMAGE_ATTRIBUTE_HEIGHT, &height[0], sizeof(height[0]));
-                vxQueryImage(inputs[0], VX_IMAGE_ATTRIBUTE_FORMAT, &format[0], sizeof(format[0]));
+                vxQueryImage(inputs[0], VX_IMAGE_WIDTH, &width[0], sizeof(width[0]));
+                vxQueryImage(inputs[0], VX_IMAGE_HEIGHT, &height[0], sizeof(height[0]));
+                vxQueryImage(inputs[0], VX_IMAGE_FORMAT, &format[0], sizeof(format[0]));
 
-                vxQueryImage(inputs[1], VX_IMAGE_ATTRIBUTE_WIDTH, &width[1], sizeof(width[1]));
-                vxQueryImage(inputs[1], VX_IMAGE_ATTRIBUTE_HEIGHT, &height[1], sizeof(height[1]));
-                vxQueryImage(inputs[1], VX_IMAGE_ATTRIBUTE_FORMAT, &format[1], sizeof(format[1]));
+                vxQueryImage(inputs[1], VX_IMAGE_WIDTH, &width[1], sizeof(width[1]));
+                vxQueryImage(inputs[1], VX_IMAGE_HEIGHT, &height[1], sizeof(height[1]));
+                vxQueryImage(inputs[1], VX_IMAGE_FORMAT, &format[1], sizeof(format[1]));
 
                 if (width[0] == width[1] &&
                     height[0] == height[1] &&
@@ -173,7 +175,7 @@ static vx_status VX_CALLBACK vxCompareOutputValidator(vx_node node, vx_uint32 in
     if (index == 2)
     {
         vx_enum stype =  VX_TYPE_UINT32;
-        vxSetMetaFormatAttribute(meta, VX_SCALAR_ATTRIBUTE_TYPE, &stype, sizeof(stype));
+        vxSetMetaFormatAttribute(meta, VX_SCALAR_TYPE, &stype, sizeof(stype));
         status = VX_SUCCESS;
     }
     return status;
@@ -190,6 +192,7 @@ vx_kernel_description_t compareimage_kernel = {
     "org.khronos.debug.compare_images",
     vxCompareImagesKernel,
     compare_images_params, dimof(compare_images_params),
+    NULL,
     vxCompareInputValidator,
     vxCompareOutputValidator,
     NULL,

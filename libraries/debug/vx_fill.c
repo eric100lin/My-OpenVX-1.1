@@ -31,6 +31,8 @@
 #include <VX/vx.h>
 #include <VX/vx_lib_debug.h>
 #include <VX/vx_helper.h>
+/* TODO: remove vx_compatibility.h after transition period */
+#include <VX/vx_compatibility.h>
 
 static vx_status VX_CALLBACK vxFillImageKernel(vx_node node, const vx_reference *parameters, vx_uint32 num)
 {
@@ -44,8 +46,8 @@ static vx_status VX_CALLBACK vxFillImageKernel(vx_node node, const vx_reference 
         vx_size planes = 0u;
         vx_int32 i = 0;
 
-        vxReadScalarValue(fill, value);
-        vxQueryImage(image, VX_IMAGE_ATTRIBUTE_PLANES, &planes, sizeof(planes));
+        vxCopyScalar(fill, value, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+        vxQueryImage(image, VX_IMAGE_PLANES, &planes, sizeof(planes));
         for (p = 0u; p < planes; p++)
         {
             void *ptr = NULL;
@@ -91,11 +93,11 @@ static vx_status VX_CALLBACK vxFillImageInputValidator(vx_node node, vx_uint32 i
         if (param)
         {
             vx_scalar scalar;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &scalar, sizeof(scalar));
+            vxQueryParameter(param, VX_PARAMETER_REF, &scalar, sizeof(scalar));
             if (scalar)
             {
                 vx_enum stype = 0;
-                vxQueryScalar(scalar, VX_SCALAR_ATTRIBUTE_TYPE, &stype, sizeof(stype));
+                vxQueryScalar(scalar, VX_SCALAR_TYPE, &stype, sizeof(stype));
                 if (stype == VX_TYPE_UINT32)
                 {
                     status = VX_SUCCESS;
@@ -117,19 +119,19 @@ static vx_status VX_CALLBACK vxFillImageOutputValidator(vx_node node, vx_uint32 
         if (param)
         {
             vx_image image = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &image, sizeof(image));
+            vxQueryParameter(param, VX_PARAMETER_REF, &image, sizeof(image));
             if (image)
             {
                 vx_uint32 width = 0, height = 0;
                 vx_df_image format = VX_DF_IMAGE_VIRT;
 
-                vxQueryImage(image, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxQueryImage(image, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-                vxQueryImage(image, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxQueryImage(image, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxQueryImage(image, VX_IMAGE_HEIGHT, &height, sizeof(height));
+                vxQueryImage(image, VX_IMAGE_FORMAT, &format, sizeof(format));
 
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_HEIGHT, &height, sizeof(height));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_FORMAT, &format, sizeof(format));
 
                 vxReleaseImage(&image);
 
@@ -159,6 +161,7 @@ vx_kernel_description_t fillimage_kernel = {
     "org.khronos.debug.fill_image",
     vxFillImageKernel,
     fill_image_params, dimof(fill_image_params),
+    NULL,
     vxFillImageInputValidator,
     vxFillImageOutputValidator,
     NULL, NULL,

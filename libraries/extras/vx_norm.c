@@ -25,73 +25,85 @@
  * \brief Elementwise binary norm kernel (Extras)
  */
 
+#include <math.h>
+#include <stdlib.h>
 #include <VX/vx.h>
 #include <VX/vx_lib_extras.h>
 #include <VX/vx_helper.h>
-#include <math.h>
-#include <stdlib.h>
+/* TODO: remove vx_compatibility.h after transition period */
+#include <VX/vx_compatibility.h>
 
 static vx_status vxNorm(vx_image input_x, vx_image input_y, vx_scalar norm_type, vx_image output)
 {
-    vx_status status = VX_FAILURE;
-    vx_uint32 y, x;
+    vx_uint32 x;
+    vx_uint32 y;
     vx_df_image format = 0;
-    vx_uint8 *dst_base   = NULL;
-    vx_int16 *src_base_x = NULL;
-    vx_int16 *src_base_y = NULL;
-    vx_imagepatch_addressing_t dst_addr, src_addr_x, src_addr_y;
+    vx_float32* dst_base   = NULL;
+    vx_float32* src_base_x = NULL;
+    vx_float32* src_base_y = NULL;
+    vx_imagepatch_addressing_t src_addr_x;
+    vx_imagepatch_addressing_t src_addr_y;
+    vx_imagepatch_addressing_t dst_addr;
     vx_rectangle_t rect;
     vx_enum norm_type_value;
+    vx_status status = VX_SUCCESS;
 
-    vxReadScalarValue(norm_type, &norm_type_value);
-    vxQueryImage(output, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
-    vxGetValidRegionImage(input_x, &rect);
-    status = VX_SUCCESS;
+    status |= vxCopyScalar(norm_type, &norm_type_value, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+    status |= vxQueryImage(output, VX_IMAGE_FORMAT, &format, sizeof(format));
+    status |= vxGetValidRegionImage(input_x, &rect);
     status |= vxAccessImagePatch(input_x, &rect, 0, &src_addr_x, (void **)&src_base_x, VX_READ_ONLY);
     status |= vxAccessImagePatch(input_y, &rect, 0, &src_addr_y, (void **)&src_base_y, VX_READ_ONLY);
     status |= vxAccessImagePatch(output, &rect, 0, &dst_addr, (void **)&dst_base, VX_WRITE_ONLY);
+
     for (y = 0; y < src_addr_x.dim_y; y++)
     {
         for (x = 0; x < src_addr_x.dim_x; x++)
         {
-            vx_int16 *in_x = vxFormatImagePatchAddress2d(src_base_x, x, y, &src_addr_x);
-            vx_int16 *in_y = vxFormatImagePatchAddress2d(src_base_y, x, y, &src_addr_y);
-            vx_uint16 *dst = vxFormatImagePatchAddress2d(dst_base, x, y, &dst_addr);
-            vx_uint32 value;
+            vx_float32* in_x = vxFormatImagePatchAddress2d(src_base_x, x, y, &src_addr_x);
+            vx_float32* in_y = vxFormatImagePatchAddress2d(src_base_y, x, y, &src_addr_y);
+            vx_float32* dst = vxFormatImagePatchAddress2d(dst_base, x, y, &dst_addr);
+            vx_float32 value;
 
             if (norm_type_value == VX_NORM_L1)
             {
-                value = abs(in_x[0]) + abs(in_y[0]);
+                value = fabsf(in_x[0]) + fabsf(in_y[0]);
             }
             else
             {
-                vx_uint32 squares[2] = { (vx_int32)in_x[0]*in_x[0], (vx_int32)in_y[0]*in_y[0] };
-#ifdef _MSC_VER
-                value = 0.5f + sqrt(squares[0] + squares[1]);
-#else
-                value = lrintf(sqrt(squares[0] + squares[1]));
-#endif
+                value = rintf(hypotf(in_x[0], in_y[0]));
             }
 
-            *dst = (vx_uint16)(value > UINT16_MAX ? UINT16_MAX : value);
+            *dst = value;
         }
     }
+
     status |= vxCommitImagePatch(input_x, 0, 0, &src_addr_x, src_base_x);
     status |= vxCommitImagePatch(input_y, 0, 0, &src_addr_y, src_base_y);
     status |= vxCommitImagePatch(output, &rect, 0, &dst_addr, dst_base);
+
     return status;
 }
 
-static vx_status VX_CALLBACK vxNormKernel(vx_node node, const vx_reference *parameters, vx_uint32 num)
+static vx_param_description_t norm_kernel_params[] =
 {
-    if (num == 4)
+    { VX_INPUT,  VX_TYPE_IMAGE,  VX_PARAMETER_STATE_REQUIRED },
+    { VX_INPUT,  VX_TYPE_IMAGE,  VX_PARAMETER_STATE_REQUIRED },
+    { VX_INPUT,  VX_TYPE_SCALAR, VX_PARAMETER_STATE_REQUIRED },
+    { VX_OUTPUT, VX_TYPE_IMAGE,  VX_PARAMETER_STATE_REQUIRED },
+};
+
+static vx_status VX_CALLBACK vxNormKernel(vx_node node, const vx_reference parameters[], vx_uint32 num)
+{
+    if (num == dimof(norm_kernel_params))
     {
-        vx_image input_x = (vx_image)parameters[0];
-        vx_image input_y = (vx_image)parameters[1];
+        vx_image  input_x   = (vx_image)parameters[0];
+        vx_image  input_y   = (vx_image)parameters[1];
         vx_scalar norm_type = (vx_scalar)parameters[2];
-        vx_image output = (vx_image)parameters[3];
+        vx_image  output    = (vx_image)parameters[3];
+
         return vxNorm(input_x, input_y, norm_type, output);
     }
+
     return VX_ERROR_INVALID_PARAMETERS;
 }
 
@@ -104,12 +116,12 @@ static vx_status VX_CALLBACK vxNormInputValidator(vx_node node, vx_uint32 index)
     {
         vx_image input = 0;
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
-            if (format == VX_DF_IMAGE_S16)
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
+            if (format == VX_DF_IMAGE_F32)
             {
                 if (index == 0)
                 {
@@ -120,14 +132,14 @@ static vx_status VX_CALLBACK vxNormInputValidator(vx_node node, vx_uint32 index)
                     vx_parameter param0 = vxGetParameterByIndex(node, index);
                     vx_image input0 = 0;
 
-                    vxQueryParameter(param0, VX_PARAMETER_ATTRIBUTE_REF, &input0, sizeof(input0));
+                    vxQueryParameter(param0, VX_PARAMETER_REF, &input0, sizeof(input0));
                     if (input0)
                     {
                         vx_uint32 width0 = 0, height0 = 0, width1 = 0, height1 = 0;
-                        vxQueryImage(input0, VX_IMAGE_ATTRIBUTE_WIDTH, &width0, sizeof(width0));
-                        vxQueryImage(input0, VX_IMAGE_ATTRIBUTE_HEIGHT, &height0, sizeof(height0));
-                        vxQueryImage(input, VX_IMAGE_ATTRIBUTE_WIDTH, &width1, sizeof(width1));
-                        vxQueryImage(input, VX_IMAGE_ATTRIBUTE_HEIGHT, &height1, sizeof(height1));
+                        vxQueryImage(input0, VX_IMAGE_WIDTH, &width0, sizeof(width0));
+                        vxQueryImage(input0, VX_IMAGE_HEIGHT, &height0, sizeof(height0));
+                        vxQueryImage(input, VX_IMAGE_WIDTH, &width1, sizeof(width1));
+                        vxQueryImage(input, VX_IMAGE_HEIGHT, &height1, sizeof(height1));
 
                         if (width0 == width1 && height0 == height1)
                             status = VX_SUCCESS;
@@ -142,17 +154,17 @@ static vx_status VX_CALLBACK vxNormInputValidator(vx_node node, vx_uint32 index)
     if (index == 2)
     {
         vx_scalar norm_type;
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &norm_type, sizeof(norm_type));
+        vxQueryParameter(param, VX_PARAMETER_REF, &norm_type, sizeof(norm_type));
 
         if (norm_type)
         {
             vx_enum type;
-            vxQueryScalar(norm_type, VX_SCALAR_ATTRIBUTE_TYPE, &type, sizeof(type));
+            vxQueryScalar(norm_type, VX_SCALAR_TYPE, &type, sizeof(type));
 
             if (type == VX_TYPE_ENUM)
             {
                 vx_enum value;
-                vxReadScalarValue(norm_type, &value);
+                vxCopyScalar(norm_type, &value, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
                 if (value == VX_NORM_L1 || value == VX_NORM_L2)
                     status = VX_SUCCESS;
             }
@@ -175,18 +187,19 @@ static vx_status VX_CALLBACK vxNormOutputValidator(vx_node node, vx_uint32 index
         if (param0)
         {
             vx_image input = 0;
-            vxQueryParameter(param0, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+            vxQueryParameter(param0, VX_PARAMETER_REF, &input, sizeof(input));
             if (input)
             {
-                vx_uint32 width = 0, height = 0;
-                vx_df_image format = VX_DF_IMAGE_U16;
+                vx_uint32 width = 0;
+                vx_uint32 height = 0;
+                vx_df_image format = VX_DF_IMAGE_F32;
                 status = VX_SUCCESS;
-                status |= vxQueryImage(input, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                status |= vxQueryImage(input, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+                status |= vxQueryImage(input, VX_IMAGE_WIDTH, &width, sizeof(width));
+                status |= vxQueryImage(input, VX_IMAGE_HEIGHT, &height, sizeof(height));
 
-                status |= vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
-                status |= vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-                status |= vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(format));
+                status |= vxSetMetaFormatAttribute(meta, VX_IMAGE_FORMAT, &format, sizeof(format));
+                status |= vxSetMetaFormatAttribute(meta, VX_IMAGE_HEIGHT, &height, sizeof(height));
+                status |= vxSetMetaFormatAttribute(meta, VX_IMAGE_WIDTH, &width, sizeof(format));
                 vxReleaseImage(&input);
             }
             vxReleaseParameter(&param0);
@@ -195,18 +208,13 @@ static vx_status VX_CALLBACK vxNormOutputValidator(vx_node node, vx_uint32 index
     return status;
 }
 
-static vx_param_description_t norm_kernel_params[] = {
-    {VX_INPUT, VX_TYPE_IMAGE, VX_PARAMETER_STATE_REQUIRED},
-    {VX_INPUT, VX_TYPE_IMAGE, VX_PARAMETER_STATE_REQUIRED},
-    {VX_INPUT, VX_TYPE_SCALAR, VX_PARAMETER_STATE_REQUIRED},
-    {VX_OUTPUT, VX_TYPE_IMAGE, VX_PARAMETER_STATE_REQUIRED},
-};
-
-vx_kernel_description_t norm_kernel = {
+vx_kernel_description_t norm_kernel =
+{
     VX_KERNEL_EXTRAS_ELEMENTWISE_NORM,
     "org.khronos.extra.elementwise_norm",
     vxNormKernel,
     norm_kernel_params, dimof(norm_kernel_params),
+    NULL,
     vxNormInputValidator,
     vxNormOutputValidator,
     NULL,

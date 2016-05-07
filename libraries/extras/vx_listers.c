@@ -30,6 +30,8 @@
 #include <VX/vx.h>
 #include <VX/vx_lib_extras.h>
 #include <VX/vx_helper.h>
+/* TODO: remove vx_compatibility.h after transition period */
+#include <VX/vx_compatibility.h>
 
 static vx_status VX_CALLBACK vxImageListerKernel(vx_node node, const vx_reference *parameters, vx_uint32 num)
 {
@@ -51,8 +53,8 @@ static vx_status VX_CALLBACK vxImageListerKernel(vx_node node, const vx_referenc
         /* remove any pre-existing points */
         status |= vxTruncateArray(arr, 0);
         status |= vxAccessImagePatch(src, &rect, 0, &src_addr, &src_base, VX_READ_ONLY);
-        status |= vxQueryImage(src, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
-        status |= vxQueryArray(arr, VX_ARRAY_ATTRIBUTE_CAPACITY, &dst_capacity, sizeof(dst_capacity));
+        status |= vxQueryImage(src, VX_IMAGE_FORMAT, &format, sizeof(format));
+        status |= vxQueryArray(arr, VX_ARRAY_CAPACITY, &dst_capacity, sizeof(dst_capacity));
         for (y = 0; y < src_addr.dim_y; y++)
         {
             for (x = 0; x < src_addr.dim_x; x++)
@@ -94,9 +96,11 @@ static vx_status VX_CALLBACK vxImageListerKernel(vx_node node, const vx_referenc
                             keypoint.x = rect.start_x + x;
                             keypoint.y = rect.start_y + y;
                             keypoint.strength = strength;
+                            keypoint.scale = 0.0f;
+                            keypoint.orientation = 0.0f;
                             keypoint.tracking_status = 1;
-                            keypoint.error = 0;
-                            status |= vxAddArrayItems(arr, 1, &keypoint, 0);
+                            keypoint.error = 0.0f;
+                            status |= vxAddArrayItems(arr, 1, &keypoint, sizeof(vx_keypoint_t));
                             //printf("pixel(%d,%d) = %lf (status = %d)\n",x,y,strength, status);
                         }
                         num_corners++;
@@ -105,7 +109,7 @@ static vx_status VX_CALLBACK vxImageListerKernel(vx_node node, const vx_referenc
             }
         }
         if (s_num_points)
-            status |= vxWriteScalarValue(s_num_points, &num_corners);
+            status |= vxCopyScalar(s_num_points, &num_corners, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         status |= vxCommitImagePatch(src, NULL, 0, &src_addr, src_base);
     }
     return status;
@@ -120,11 +124,11 @@ static vx_status VX_CALLBACK vxListerInputValidator(vx_node node, vx_uint32 inde
         if (param)
         {
             vx_image input = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+            vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
             if (input)
             {
                 vx_df_image format = 0;
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
                 if ((format == VX_DF_IMAGE_U8) ||
                     (format == VX_DF_IMAGE_S16) ||
                     (format == VX_DF_IMAGE_S32) ||
@@ -149,14 +153,14 @@ static vx_status VX_CALLBACK vxListerOutputValidator(vx_node node, vx_uint32 ind
         vx_enum type = VX_TYPE_KEYPOINT;
 
         status = VX_SUCCESS;
-        status |= vxSetMetaFormatAttribute(meta, VX_ARRAY_ATTRIBUTE_CAPACITY, &capacity, sizeof(capacity));
-        status |= vxSetMetaFormatAttribute(meta, VX_ARRAY_ATTRIBUTE_ITEMTYPE, &type, sizeof(type));
+        status |= vxSetMetaFormatAttribute(meta, VX_ARRAY_CAPACITY, &capacity, sizeof(capacity));
+        status |= vxSetMetaFormatAttribute(meta, VX_ARRAY_ITEMTYPE, &type, sizeof(type));
     }
     else if (index == 2)
     {
         vx_enum type = VX_TYPE_SIZE;
         status = VX_SUCCESS;
-        status |= vxSetMetaFormatAttribute(meta, VX_SCALAR_ATTRIBUTE_TYPE, &type, sizeof(type));
+        status |= vxSetMetaFormatAttribute(meta, VX_SCALAR_TYPE, &type, sizeof(type));
     }
     return status;
 }
@@ -172,6 +176,7 @@ vx_kernel_description_t lister_kernel = {
     "org.khronos.extras.image_to_list",
     vxImageListerKernel,
     lister_kernel_params, dimof(lister_kernel_params),
+    NULL,
     vxListerInputValidator,
     vxListerOutputValidator,
     NULL,

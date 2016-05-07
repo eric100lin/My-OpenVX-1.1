@@ -28,13 +28,15 @@
  * \defgroup group_debug_ext Debugging Extension
  */
 
-#include <VX/vx.h>
-#include <VX/vx_lib_debug.h>
-#include <VX/vx_helper.h>
-#include <debug_k.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <VX/vx.h>
+#include <VX/vx_lib_debug.h>
+#include <VX/vx_helper.h>
+/* TODO: remove vx_compatibility.h after transition period */
+#include <VX/vx_compatibility.h>
+#include <debug_k.h>
 
 static vx_status VX_CALLBACK vxFWriteImageKernel(vx_node node, const vx_reference parameters[], vx_uint32 num)
 {
@@ -78,8 +80,8 @@ static vx_status VX_CALLBACK vxFWriteArrayKernel(vx_node node, const vx_referenc
             return VX_FAILURE;
         }
 
-        vxQueryArray(arr, VX_ARRAY_ATTRIBUTE_NUMITEMS, &num_items, sizeof(num_items));
-        vxQueryArray(arr, VX_ARRAY_ATTRIBUTE_ITEMSIZE, &item_size, sizeof(item_size));
+        vxQueryArray(arr, VX_ARRAY_NUMITEMS, &num_items, sizeof(num_items));
+        vxQueryArray(arr, VX_ARRAY_ITEMSIZE, &item_size, sizeof(item_size));
         status = vxAccessArrayRange(arr, 0, num_items, &stride, &arrptr, VX_READ_ONLY);
 
         if (status == VX_SUCCESS)
@@ -153,8 +155,8 @@ static vx_status VX_CALLBACK vxFReadArrayKernel(vx_node node, const vx_reference
         if (fread(&num_items, sizeof(num_items), 1, fp) == sizeof(num_items) &&
             fread(&item_size, sizeof(item_size), 1, fp) == sizeof(item_size))
         {
-            vxQueryArray(arr, VX_ARRAY_ATTRIBUTE_CAPACITY, &arr_capacity, sizeof(arr_capacity));
-            vxQueryArray(arr, VX_ARRAY_ATTRIBUTE_ITEMSIZE, &arr_item_size, sizeof(arr_item_size));
+            vxQueryArray(arr, VX_ARRAY_CAPACITY, &arr_capacity, sizeof(arr_capacity));
+            vxQueryArray(arr, VX_ARRAY_ITEMSIZE, &arr_item_size, sizeof(arr_item_size));
 
             if (arr_capacity >= num_items && arr_item_size == item_size)
             {
@@ -165,7 +167,7 @@ static vx_status VX_CALLBACK vxFReadArrayKernel(vx_node node, const vx_reference
                     {
                         status = VX_SUCCESS;
                         status |= vxTruncateArray(arr, 0);
-                        status |= vxAddArrayItems(arr, num_items, tmpbuf, 0);
+                        status |= vxAddArrayItems(arr, num_items, tmpbuf, item_size);
                     }
                     free(tmpbuf);
                 }
@@ -200,13 +202,13 @@ static vx_status VX_CALLBACK vxFWriteImageInputValidator(vx_node node, vx_uint32
         if(param)
         {
             vx_image img = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &img, sizeof(img));
+            vxQueryParameter(param, VX_PARAMETER_REF, &img, sizeof(img));
             if (img)
             {
                 vx_df_image formats[] = {VX_DF_IMAGE_U8, VX_DF_IMAGE_S16, VX_DF_IMAGE_U16, VX_DF_IMAGE_U32, VX_DF_IMAGE_UYVY, VX_DF_IMAGE_YUYV, VX_DF_IMAGE_IYUV, VX_DF_IMAGE_RGB};
                 vx_df_image format = 0;
                 vx_uint32 i = 0;
-                vxQueryImage(img, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxQueryImage(img, VX_IMAGE_FORMAT, &format, sizeof(format));
                 for (i = 0; i < dimof(formats); i++)
                 {
                     if (formats[i] == format)
@@ -226,7 +228,7 @@ static vx_status VX_CALLBACK vxFWriteImageInputValidator(vx_node node, vx_uint32
         if(param)
         {
             vx_array file = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &file, sizeof(file));
+            vxQueryParameter(param, VX_PARAMETER_REF, &file, sizeof(file));
             if(file)
             {
                 vx_char *filename = NULL;
@@ -265,7 +267,7 @@ static vx_status VX_CALLBACK vxReadImageInputValidator(vx_node node, vx_uint32 i
             vx_char *filename = NULL;
             vx_size filename_stride = 0;
 
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &file, sizeof(file));
+            vxQueryParameter(param, VX_PARAMETER_REF, &file, sizeof(file));
             if (file)
             {
                 vxAccessArrayRange(file, 0, VX_MAX_FILE_NAME, &filename_stride, (void **)&filename, VX_READ_ONLY);
@@ -307,7 +309,7 @@ static vx_status VX_CALLBACK vxReadImageOutputValidator(vx_node node, vx_uint32 
             vx_uint32 width = 0, height = 0;
             vx_df_image format = VX_DF_IMAGE_VIRT;
 
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &file, sizeof(file));
+            vxQueryParameter(param, VX_PARAMETER_REF, &file, sizeof(file));
 
             if (file)
             {
@@ -392,9 +394,9 @@ static vx_status VX_CALLBACK vxReadImageOutputValidator(vx_node node, vx_uint32 
 
                 status = VX_SUCCESS;
 
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-                vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_HEIGHT, &height, sizeof(height));
+                vxSetMetaFormatAttribute(meta, VX_IMAGE_FORMAT, &format, sizeof(format));
 
                 fclose(fp);
                 vxCommitArrayRange(file, 0, 0, filename);
@@ -453,6 +455,7 @@ vx_kernel_description_t fwriteimage_kernel = {
     "org.khronos.debug.fwrite_image",
     vxFWriteImageKernel,
     fwriteimage_kernel_params, dimof(fwriteimage_kernel_params),
+    NULL,
     vxFWriteImageInputValidator,
     vxAllPassOutputValidator,
     NULL, NULL,
@@ -463,6 +466,7 @@ vx_kernel_description_t fwritearray_kernel = {
     "org.khronos.debug.fwrite_array",
     vxFWriteArrayKernel,
     fwritearray_kernel_params, dimof(fwritearray_kernel_params),
+    NULL,
     vxAllPassInputValidator,
     vxAllPassOutputValidator,
     NULL, NULL,
@@ -473,6 +477,7 @@ vx_kernel_description_t freadimage_kernel = {
     "org.khronos.debug.fread_image",
     vxFReadImageKernel,
     freadimage_kernel_params, dimof(freadimage_kernel_params),
+    NULL,
     vxReadImageInputValidator,
     vxReadImageOutputValidator,
     NULL, NULL,
@@ -483,6 +488,7 @@ vx_kernel_description_t freadarray_kernel = {
     "org.khronos.debug.fread_array",
     vxFReadArrayKernel,
     freadarray_kernel_params, dimof(freadarray_kernel_params),
+    NULL,
     vxAllPassInputValidator,
     vxAllPassOutputValidator,
     NULL, NULL,

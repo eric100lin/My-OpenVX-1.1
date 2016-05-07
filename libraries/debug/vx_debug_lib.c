@@ -27,11 +27,13 @@
  * \author Erik Rainey <erik.rainey@gmail.com>
  */
 
+#include <stdio.h>
+#include <assert.h>
 #include <VX/vx.h>
 #include <VX/vx_lib_debug.h>
 #include <VX/vx_helper.h>
-#include <stdio.h>
-#include <assert.h>
+/* TODO: remove vx_compatibility.h after transition period */
+#include <VX/vx_compatibility.h>
 
 
 //*****************************************************************************
@@ -63,7 +65,7 @@ vx_node vxFWriteImageNode(vx_graph graph, vx_image image, vx_char name[VX_MAX_FI
     vx_context context = vxGetContext((vx_reference)graph);
     vx_array filepath = vxCreateArray(context, VX_TYPE_CHAR, VX_MAX_FILE_NAME);
     if (vxGetStatus((vx_reference)filepath) == VX_SUCCESS) {
-        status = vxAddArrayItems(filepath, VX_MAX_FILE_NAME, &name[0], 0);
+        status = vxAddArrayItems(filepath, VX_MAX_FILE_NAME, &name[0], sizeof(name[0]));
         if (status == VX_SUCCESS)
         {
             vx_reference params[] = {
@@ -85,7 +87,7 @@ vx_node vxFWriteArrayNode(vx_graph graph, vx_array arr, vx_char name[VX_MAX_FILE
     vx_context context = vxGetContext((vx_reference)graph);
     vx_array filepath = vxCreateArray(context, VX_TYPE_CHAR, VX_MAX_FILE_NAME);
     if (vxGetStatus((vx_reference)filepath) == VX_SUCCESS) {
-        status = vxAddArrayItems(filepath, VX_MAX_FILE_NAME, &name[0], 0);
+        status = vxAddArrayItems(filepath, VX_MAX_FILE_NAME, &name[0], sizeof(name[0]));
         if (status == VX_SUCCESS)
         {
             vx_reference params[] = {
@@ -107,7 +109,7 @@ vx_node vxFReadImageNode(vx_graph graph, vx_char name[VX_MAX_FILE_NAME], vx_imag
     vx_context context = vxGetContext((vx_reference)graph);
     vx_array filepath = vxCreateArray(context, VX_TYPE_CHAR, VX_MAX_FILE_NAME);
     if (vxGetStatus((vx_reference)filepath) == VX_SUCCESS) {
-        status = vxAddArrayItems(filepath, VX_MAX_FILE_NAME, &name[0], 0);
+        status = vxAddArrayItems(filepath, VX_MAX_FILE_NAME, &name[0], sizeof(name[0]));
         if (status == VX_SUCCESS)
         {
             vx_reference params[] = {
@@ -129,7 +131,7 @@ vx_node vxFReadArrayNode(vx_graph graph, vx_char name[VX_MAX_FILE_NAME], vx_arra
     vx_context context = vxGetContext((vx_reference)graph);
     vx_array filepath = vxCreateArray(context, VX_TYPE_CHAR, VX_MAX_FILE_NAME);
     if (vxGetStatus((vx_reference)filepath) == VX_SUCCESS) {
-        status = vxAddArrayItems(filepath, VX_MAX_FILE_NAME, &name[0], 0);
+        status = vxAddArrayItems(filepath, VX_MAX_FILE_NAME, &name[0], sizeof(name[0]));
         if (status == VX_SUCCESS)
         {
             vx_reference params[] = {
@@ -137,7 +139,7 @@ vx_node vxFReadArrayNode(vx_graph graph, vx_char name[VX_MAX_FILE_NAME], vx_arra
                 (vx_reference)arr,
             };
 
-            node = vxCreateNodeByStructure(graph, VX_KERNEL_DEBUG_FWRITE_ARRAY, params, dimof(params));
+            node = vxCreateNodeByStructure(graph, VX_KERNEL_DEBUG_FREAD_ARRAY, params, dimof(params));
             vxReleaseArray(&filepath); // the graph should add a reference to this, so we don't need it.
         }
     }
@@ -359,7 +361,7 @@ vx_status vxuCheckImage(vx_context context, vx_image input, vx_uint32 value, vx_
         }
         vxReleaseGraph(&graph);
     }
-    vxWriteScalarValue(errs, numErrors);
+    vxCopyScalar(errs, numErrors, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
     vxReleaseScalar(&errs);
     return status;
 }
@@ -384,7 +386,7 @@ vx_status vxuCheckArray(vx_context context, vx_array input, vx_uint8 value, vx_u
         }
         vxReleaseGraph(&graph);
     }
-    vxWriteScalarValue(errs, numErrors);
+    vxCopyScalar(errs, numErrors, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
     vxReleaseScalar(&errs);
     return status;
 }
@@ -408,7 +410,7 @@ vx_status vxuCompareImages(vx_context context, vx_image a, vx_image b, vx_uint32
         }
         vxReleaseGraph(&graph);
     }
-    vxWriteScalarValue(diffs, numDiffs);
+    vxCopyScalar(diffs, numDiffs, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
     vxReleaseScalar(&diffs);
     return status;
 }

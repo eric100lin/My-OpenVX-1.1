@@ -30,6 +30,8 @@
 #include <VX/vx.h>
 #include <VX/vx_lib_extras.h>
 #include <VX/vx_helper.h>
+/* TODO: remove vx_compatibility.h after transition period */
+#include <VX/vx_compatibility.h>
 
 static vx_status VX_CALLBACK vxHarrisScoreKernel(vx_node node, const vx_reference *parameters, vx_uint32 num)
 {
@@ -47,22 +49,22 @@ static vx_status VX_CALLBACK vxHarrisScoreKernel(vx_node node, const vx_referenc
         vx_rectangle_t rect;
 
         status = vxGetValidRegionImage(grad_x, &rect);
-        status |= vxReadScalarValue(grad_s, &grad_size);
-        status |= vxReadScalarValue(winds, &block_size);
-        status |= vxReadScalarValue(sens, &k);
+        status |= vxCopyScalar(grad_s, &grad_size, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+        status |= vxCopyScalar(winds, &block_size, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+        status |= vxCopyScalar(sens, &k, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
         if (status == VX_SUCCESS)
         {
             vx_int32 y, x, i, j;
-            vx_border_mode_t borders = {VX_BORDER_MODE_UNDEFINED, 0};
+            vx_border_t borders = { VX_BORDER_UNDEFINED, {{ 0 }} };
             void *gx_base = NULL, *gy_base = NULL, *dst_base = NULL;
             vx_imagepatch_addressing_t gx_addr, gy_addr, dst_addr;
 
             status |= vxAccessImagePatch(grad_x, &rect, 0, &gx_addr, &gx_base, VX_READ_ONLY);
             status |= vxAccessImagePatch(grad_y, &rect, 0, &gy_addr, &gy_base, VX_READ_ONLY);
             status |= vxAccessImagePatch(dst, &rect, 0, &dst_addr, &dst_base, VX_WRITE_ONLY);
-            status |= vxQueryNode(node, VX_NODE_ATTRIBUTE_BORDER_MODE, &borders, sizeof(borders));
+            status |= vxQueryNode(node, VX_NODE_BORDER, &borders, sizeof(borders));
             /*! \todo implement other Harris Corners border modes */
-            if (borders.mode == VX_BORDER_MODE_UNDEFINED)
+            if (borders.mode == VX_BORDER_UNDEFINED)
             {
                 double scale = 1.0 / ((1<<(grad_size-1))* block_size * 255.0);
 
@@ -86,10 +88,10 @@ static vx_status VX_CALLBACK vxHarrisScoreKernel(vx_node node, const vx_referenc
                         {
                             for (i = -b2; i <= b2; i++)
                             {
-                                vx_int16 *pgx = vxFormatImagePatchAddress2d(gx_base, x+i, y+j, &gx_addr);
-                                vx_int16 *pgy = vxFormatImagePatchAddress2d(gy_base, x+i, y+j, &gy_addr);
-                                vx_float32 gx = ((vx_float32)*pgx);
-                                vx_float32 gy = ((vx_float32)*pgy);
+                                vx_float32 *pgx = vxFormatImagePatchAddress2d(gx_base, x+i, y+j, &gx_addr);
+                                vx_float32 *pgy = vxFormatImagePatchAddress2d(gy_base, x+i, y+j, &gy_addr);
+                                vx_float32 gx = (*pgx);
+                                vx_float32 gy = (*pgy);
                                 sum_ix2 += gx * gx*scale*scale;
                                 sum_iy2 += gy * gy*scale*scale;
                                 sum_ixy += gx * gy*scale*scale;
@@ -132,12 +134,12 @@ static vx_status VX_CALLBACK vxHarrisScoreInputValidator(vx_node node, vx_uint32
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
-            if (format == VX_DF_IMAGE_S16)
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
+            if (format == VX_DF_IMAGE_F32)
             {
                 status = VX_SUCCESS;
             }
@@ -151,11 +153,11 @@ static vx_status VX_CALLBACK vxHarrisScoreInputValidator(vx_node node, vx_uint32
         if (param)
         {
             vx_scalar scalar = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &scalar, sizeof(scalar));
+            vxQueryParameter(param, VX_PARAMETER_REF, &scalar, sizeof(scalar));
             if (scalar)
             {
                 vx_enum stype = 0;
-                vxQueryScalar(scalar, VX_SCALAR_ATTRIBUTE_TYPE, &stype, sizeof(stype));
+                vxQueryScalar(scalar, VX_SCALAR_TYPE, &stype, sizeof(stype));
                 if (stype == VX_TYPE_FLOAT32)
                 {
                     status = VX_SUCCESS;
@@ -175,15 +177,15 @@ static vx_status VX_CALLBACK vxHarrisScoreInputValidator(vx_node node, vx_uint32
         if (param)
         {
             vx_scalar scalar = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &scalar, sizeof(scalar));
+            vxQueryParameter(param, VX_PARAMETER_REF, &scalar, sizeof(scalar));
             if (scalar)
             {
                 vx_enum stype = 0;
-                vxQueryScalar(scalar, VX_SCALAR_ATTRIBUTE_TYPE, &stype, sizeof(stype));
+                vxQueryScalar(scalar, VX_SCALAR_TYPE, &stype, sizeof(stype));
                 if (stype == VX_TYPE_INT32)
                 {
                     vx_int32 size = 0;
-                    vxReadScalarValue(scalar, &size);
+                    vxCopyScalar(scalar, &size, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
                     size = 1 << (size - 1);
                     if (size == 4 || size == 16 || size == 64)
                     {
@@ -205,15 +207,15 @@ static vx_status VX_CALLBACK vxHarrisScoreInputValidator(vx_node node, vx_uint32
         if (param)
         {
             vx_scalar scalar = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &scalar, sizeof(scalar));
+            vxQueryParameter(param, VX_PARAMETER_REF, &scalar, sizeof(scalar));
             if (scalar)
             {
                 vx_enum stype = 0;
-                vxQueryScalar(scalar, VX_SCALAR_ATTRIBUTE_TYPE, &stype, sizeof(stype));
+                vxQueryScalar(scalar, VX_SCALAR_TYPE, &stype, sizeof(stype));
                 if (stype == VX_TYPE_INT32)
                 {
                     vx_int32 size = 0;
-                    vxReadScalarValue(scalar, &size);
+                    vxCopyScalar(scalar, &size, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
                     if (size == 3 || size == 5 || size == 7)
                     {
                         status = VX_SUCCESS;
@@ -239,18 +241,18 @@ static vx_status VX_CALLBACK vxHarrisScoreOutputValidator(vx_node node, vx_uint3
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, 0); /* we reference the input image */
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_uint32 width = 0, height = 0;
             vx_df_image format = VX_DF_IMAGE_F32;
 
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+            vxQueryImage(input, VX_IMAGE_WIDTH, &width, sizeof(width));
+            vxQueryImage(input, VX_IMAGE_HEIGHT, &height, sizeof(height));
 
-            vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-            vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-            vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxSetMetaFormatAttribute(meta, VX_IMAGE_WIDTH, &width, sizeof(width));
+            vxSetMetaFormatAttribute(meta, VX_IMAGE_HEIGHT, &height, sizeof(height));
+            vxSetMetaFormatAttribute(meta, VX_IMAGE_FORMAT, &format, sizeof(format));
 
             vxReleaseImage(&input);
 
@@ -275,6 +277,7 @@ vx_kernel_description_t harris_score_kernel = {
     "org.khronos.extras.harris_score",
     vxHarrisScoreKernel,
     harrisscore_kernel_params, dimof(harrisscore_kernel_params),
+    NULL,
     vxHarrisScoreInputValidator,
     vxHarrisScoreOutputValidator,
     NULL,

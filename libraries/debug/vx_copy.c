@@ -33,6 +33,8 @@
 #include <VX/vx_lib_debug.h>
 #include <VX/vx_helper.h>
 #include <debug_k.h>
+/* TODO: remove vx_compatibility.h after transition period */
+#include <VX/vx_compatibility.h>
 
 
 static vx_status VX_CALLBACK vxCopyImagePtrKernel(vx_node node, const vx_reference *parameters, vx_uint32 num)
@@ -50,13 +52,13 @@ static vx_status VX_CALLBACK vxCopyImagePtrKernel(vx_node node, const vx_referen
         vx_rectangle_t rect;
         vx_uint8 *srcp = NULL;
 
-        vxReadScalarValue(input, &src);
+        vxCopyScalar(input, &src, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
         srcp = (vx_uint8 *)src;
 
         status = VX_SUCCESS; // assume success until an error occurs.
-        status |= vxQueryImage(output, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-        status |= vxQueryImage(output, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-        status |= vxQueryImage(output, VX_IMAGE_ATTRIBUTE_PLANES, &planes, sizeof(planes));
+        status |= vxQueryImage(output, VX_IMAGE_WIDTH, &width, sizeof(width));
+        status |= vxQueryImage(output, VX_IMAGE_HEIGHT, &height, sizeof(height));
+        status |= vxQueryImage(output, VX_IMAGE_PLANES, &planes, sizeof(planes));
         rect.start_x = rect.start_y = 0;
         rect.end_x = width;
         rect.end_y = height;
@@ -125,20 +127,20 @@ static vx_status VX_CALLBACK vxCopyImageOutputValidator(vx_node node, vx_uint32 
         if (param)
         {
             vx_image input = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(vx_image));
+            vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(vx_image));
             if (input)
             {
                 vx_uint32 width = 0, height = 0;
                 vx_df_image format = VX_DF_IMAGE_VIRT;
 
                 status = VX_SUCCESS;
-                status |= vxQueryImage(input, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                status |= vxQueryImage(input, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-                status |= vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                status |= vxQueryImage(input, VX_IMAGE_WIDTH, &width, sizeof(width));
+                status |= vxQueryImage(input, VX_IMAGE_HEIGHT, &height, sizeof(height));
+                status |= vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
 
-                status |= vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                status |= vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-                status |= vxSetMetaFormatAttribute(meta, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                status |= vxSetMetaFormatAttribute(meta, VX_IMAGE_WIDTH, &width, sizeof(width));
+                status |= vxSetMetaFormatAttribute(meta, VX_IMAGE_HEIGHT, &height, sizeof(height));
+                status |= vxSetMetaFormatAttribute(meta, VX_IMAGE_FORMAT, &format, sizeof(format));
                 vxReleaseImage(&input);
             }
             vxReleaseParameter(&param);
@@ -156,16 +158,16 @@ static vx_status VX_CALLBACK vxCopyArrayOutputValidator(vx_node node, vx_uint32 
         if (param)
         {
             vx_array input;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(vx_array));
+            vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(vx_array));
             if (input)
             {
                 vx_enum item_type = VX_TYPE_INVALID;
                 vx_size capacity = 0ul;
                 status = VX_SUCCESS;
-                status |= vxQueryArray(input, VX_ARRAY_ATTRIBUTE_ITEMTYPE, &item_type, sizeof(item_type));
-                status |= vxQueryArray(input, VX_ARRAY_ATTRIBUTE_CAPACITY, &capacity, sizeof(capacity));
-                status |= vxSetMetaFormatAttribute(meta, VX_ARRAY_ATTRIBUTE_ITEMTYPE, &item_type, sizeof(item_type));
-                status |= vxSetMetaFormatAttribute(meta, VX_ARRAY_ATTRIBUTE_CAPACITY, &capacity, sizeof(capacity));
+                status |= vxQueryArray(input, VX_ARRAY_ITEMTYPE, &item_type, sizeof(item_type));
+                status |= vxQueryArray(input, VX_ARRAY_CAPACITY, &capacity, sizeof(capacity));
+                status |= vxSetMetaFormatAttribute(meta, VX_ARRAY_ITEMTYPE, &item_type, sizeof(item_type));
+                status |= vxSetMetaFormatAttribute(meta, VX_ARRAY_CAPACITY, &capacity, sizeof(capacity));
                 vxReleaseArray(&input);
             }
             vxReleaseParameter(&param);
@@ -204,6 +206,7 @@ vx_kernel_description_t copyimageptr_kernel = {
     "org.khronos.debug.copy_image_ptr",
     vxCopyImagePtrKernel,
     copyimageptr_kernel_params, dimof(copyimageptr_kernel_params),
+    NULL,
     vxAllPassInputValidator,
     vxAllPassOutputValidator,
     NULL,
@@ -215,6 +218,7 @@ vx_kernel_description_t copyimage_kernel = {
     "org.khronos.debug.copy_image",
     vxCopyImageKernel,
     copyimage_kernel_params, dimof(copyimage_kernel_params),
+    NULL,
     vxAllPassInputValidator,
     vxCopyImageOutputValidator,
     NULL,
@@ -226,6 +230,7 @@ vx_kernel_description_t copyarray_kernel = {
     "org.khronos.debug.copy_array",
     vxCopyArrayKernel,
     copyarray_kernel_params, dimof(copyarray_kernel_params),
+    NULL,
     vxAllPassInputValidator,
     vxCopyArrayOutputValidator,
     NULL,
