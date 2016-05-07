@@ -72,7 +72,7 @@
  */
 enum vx_kernel_xyz_ext_e {
     /*! \brief The Example User Defined Kernel */
-    VX_KERNEL_KHR_XYZ = VX_KERNEL_BASE(VX_ID_KHRONOS, VX_LIBRARY_XYZ) + 0x0,
+    VX_KERNEL_KHR_XYZ = VX_KERNEL_BASE(VX_ID_DEFAULT, VX_LIBRARY_XYZ) + 0x0,
     // up to 0xFFF kernel enums can be created.
 };
 //! [KERNEL ENUM]
