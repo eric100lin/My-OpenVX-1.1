@@ -55,14 +55,6 @@ enum vx_library_e {
 enum vx_kernel_e {
 
     /*!
-     * \brief The invalid kernel is used to for conformance failure in relation to
-     * some kernel operation (Get/Release).
-     * \details If the kernel is executed it shall always return an error.
-     * The kernel has no parameters. To address by name use "org.khronos.openvx.invalid".
-     */
-    VX_KERNEL_INVALID = VX_KERNEL_BASE(VX_ID_KHRONOS, VX_LIBRARY_KHR_BASE) + 0x0,
-
-    /*!
      * \brief The Color Space conversion kernel.
      * \details The conversions are based on the <tt>\ref vx_df_image_e</tt> code in the images.
      * \see group_vision_function_colorconvert
@@ -285,6 +277,21 @@ enum vx_kernel_e {
      * \see group_vision_function_scale_image
      */
     VX_KERNEL_HALFSCALE_GAUSSIAN = VX_KERNEL_BASE(VX_ID_KHRONOS, VX_LIBRARY_KHR_BASE) + 0x29,
+
+    /*! \brief The Laplacian Image Pyramid Kernel.
+    * \see group_vision_function_laplacian_pyramid
+    */
+    VX_KERNEL_LAPLACIAN_PYRAMID = VX_KERNEL_BASE(VX_ID_KHRONOS, VX_LIBRARY_KHR_BASE) + 0x2A,
+
+    /*! \brief The Laplacian Pyramid Reconstruct Kernel.
+    * \see group_vision_function_laplacian_pyramid
+    */
+    VX_KERNEL_LAPLACIAN_RECONSTRUCT = VX_KERNEL_BASE(VX_ID_KHRONOS, VX_LIBRARY_KHR_BASE) + 0x2B,
+
+    /*! \brief The Non Linear Filter Kernel.
+    * \see group_vision_function_nonlinear_filter
+    */
+    VX_KERNEL_NON_LINEAR_FILTER = VX_KERNEL_BASE(VX_ID_KHRONOS, VX_LIBRARY_KHR_BASE) + 0x2C,
 
     /* insert new kernels here */
     VX_KERNEL_MAX_1_0, /*!< \internal Used for bounds checking in the conformance test. */
