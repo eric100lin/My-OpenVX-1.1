@@ -24,6 +24,8 @@
 #ifndef _VX_KHR_OPENCL_H_
 #define _VX_KHR_OPENCL_H_
 
+#include <VX/vx.h>
+
 /*! \file
  * \brief The OpenVX to OpenCL Inter-op Extension Header.
  *
@@ -227,6 +229,43 @@ VX_API_ENTRY vx_kernel VX_API_CALL vxAddOpenCLAsBinaryKernel(vx_context context,
  */
 #define vxDecFrequency(ptr, value, offset, range, window_size) \
     ((offset <= value) && (value <= (range+offset)) ? --ptr[(value-offset)/window_size] : 0)
+
+#if defined(VX_VERSION_1_1) && (VX_VERSION >= VX_VERSION_1_1)
+
+/*! \brief Allows access to a distribution frequency counter.
+ * \param ptr The <tt>__global</tt> pointer to the base of the distribution.
+ * \param value The value to retrive the frequency count for.
+ * \param offset The offset within the input domain.
+ * \param range The total range within the domain starting from offset.
+ * \param num_bins The number of bins in the domain range.
+ * \ingroup group_cl_distribution
+ */
+#define vxGetFrequency2(ptr, value, offset, range, num_bins) \
+    ((offset <= value) && (value <= (range+offset)) ? ptr[(value-offset)*num_bins/range] : 0)
+
+/*! \brief Increments a distribution frequency counter for a value.
+ * \param ptr The <tt>__global</tt> pointer to the base of the distribution.
+ * \param value The value to increment the frequency count for.
+ * \param offset The offset within the input domain.
+ * \param range The total range within the domain starting from offset.
+ * \param num_bins The number of bins in the domain range.
+ * \ingroup group_cl_distribution
+ */
+#define vxIncFrequency2(ptr, value, offset, range, num_bins) \
+    ((offset <= value) && (value <= (range+offset)) ? ++ptr[(value-offset)*num_bins/range] : 0)
+
+/*! \brief Decrements a distribution frequency counter for a value.
+ * \param ptr The <tt>__global</tt> pointer to the base of the distribution.
+ * \param value The value to decrement the frequency count for.
+ * \param offset The offset within the input domain.
+ * \param range The total range within the domain starting from offset.
+ * \param num_bins The number of bins in the domain range.
+ * \ingroup group_cl_distribution
+ */
+#define vxDecFrequency2(ptr, value, offset, range, num_bins) \
+    ((offset <= value) && (value <= (range+offset)) ? --ptr[(value-offset)*num_bins/range] : 0)
+
+#endif /*VX_VERSION_1_1*/
 
 #endif
 
