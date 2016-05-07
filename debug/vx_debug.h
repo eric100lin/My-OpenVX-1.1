@@ -177,7 +177,7 @@ void vx_set_debug_zone_from_env(void);
  * \param [in] addr
  * \ingroup group_int_image
  */
-void vxPrintImageAddressing(vx_imagepatch_addressing_t *addr);
+void vxPrintImageAddressing(const vx_imagepatch_addressing_t *addr);
 
 /*! \brief Prints the values of the images.
  * \ingroup group_int_image

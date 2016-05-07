@@ -195,7 +195,7 @@ void vx_print(vx_enum zone, char *format, ...)
 
 #endif
 
-void vxPrintImageAddressing(vx_imagepatch_addressing_t *addr)
+void vxPrintImageAddressing(const vx_imagepatch_addressing_t *addr)
 {
     if (addr)
     {
