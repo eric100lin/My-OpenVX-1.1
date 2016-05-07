@@ -39,12 +39,12 @@ enum vx_kernel_attribute_memory_e {
      * Use a \ref vx_size parameter.
      * \note If not set it will default to zero.
      */
-    VX_KERNEL_ATTRIBUTE_GLOBAL_DATA_SIZE = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_KERNEL) + 0x5,
+    VX_KERNEL_GLOBAL_DATA_SIZE = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_KERNEL) + 0x5,
     /*! \brief The global data pointer to the shared across all the instances of
      * the kernel (nodes are instances of the kernels).
      * Use a \ref void * parameter.
      */
-    VX_KERNEL_ATTRIBUTE_GLOBAL_DATA_PTR = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_KERNEL) + 0x6,
+    VX_KERNEL_GLOBAL_DATA_PTR = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_KERNEL) + 0x6,
 };
 
 /*! \brief The node object attributes for global and local memory.
@@ -54,11 +54,11 @@ enum vx_node_attribute_memory_e {
     /*! \brief Used to indicate the size of the shared kernel global memory area.
      * Use a \ref vx_size parameter.
      */
-    VX_NODE_ATTRIBUTE_GLOBAL_DATA_SIZE = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_NODE) + 0x5,
+    VX_NODE_GLOBAL_DATA_SIZE = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_NODE) + 0x5,
     /*! \brief Used to indicate the pointer to the shared kernel global memory area.
      * Use a void * parameter.
      */
-    VX_NODE_ATTRIBUTE_GLOBAL_DATA_PTR = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_NODE) + 0x6,
+    VX_NODE_GLOBAL_DATA_PTR = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_NODE) + 0x6,
 };
 
 #endif
