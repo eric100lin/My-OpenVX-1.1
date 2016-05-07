@@ -49,7 +49,7 @@ enum vx_ext_target_type_e {
 
 enum vx_ext_target_context_attribute_e {
     /*! \brief Used to query the context for the number of active targets. Use a <tt>\ref vx_uint32</tt> parameter. */
-    VX_CONTEXT_ATTRIBUTE_TARGETS = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_CONTEXT) + 0xC,
+    VX_CONTEXT_TARGETS = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_CONTEXT) + 0xC,
 };
 
 /*! \brief An abstract handle to a target.
@@ -91,7 +91,7 @@ extern "C" {
  * \return <tt>\ref vx_target</tt>
  * \retval 0 Invalid index.
  * \retval * A target reference.
- * \note Use <tt>\ref vxQueryContext</tt> with <tt>\ref VX_CONTEXT_ATTRIBUTE_NUMTARGETS</tt> to retrieve the upper limit of targets.
+ * \note Use <tt>\ref vxQueryContext</tt> with <tt>\ref VX_CONTEXT_NUMTARGETS</tt> to retrieve the upper limit of targets.
  * \ingroup group_target
  */
 VX_API_ENTRY vx_target VX_API_CALL vxGetTargetByIndex(vx_context context, vx_uint32 index);
