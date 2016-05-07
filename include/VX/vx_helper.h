@@ -66,6 +66,7 @@ typedef struct _vx_param_description_t {
     vx_enum     state;          /*!< \brief From \ref vx_parameter_state_e */
 } vx_param_description_t;
 
+
 /*! \brief Contains everything needed to abstractly describe a kernel.
  * This is used to declare kernels at compile time.
  * \ingroup group_helper
@@ -81,10 +82,12 @@ typedef struct _vx_kernel_description_t {
     vx_param_description_t *parameters;
     /*! \brief The number of paraemeters in the array. */
     vx_uint32               numParams;
-    /*! \brief The input validator */
-    vx_kernel_input_validate_f input_validate;
-    /*! \brief The output validator */
-    vx_kernel_output_validate_f output_validate;
+    /*! \brief The parameters validator */
+    vx_kernel_validate_f    validate;
+    /*! \brief The input validator (deprecated  in openvx 1.1) */
+    void* input_validate;
+    /*! \brief The output validator (deprecated in openvx 1.1) */
+    void* output_validate;
     /*! \brief The initialization function */
     vx_kernel_initialize_f initialize;
     /*! \brief The deinitialization function */
@@ -280,7 +283,7 @@ vx_bool vxFindOverlapRectangle(vx_rectangle_t *rect_a, vx_rectangle_t *rect_b, v
  */
 void vxReadRectangle(const void *base,
                      const vx_imagepatch_addressing_t *addr,
-                     const vx_border_mode_t *borders,
+                     const vx_border_t *borders,
                      vx_df_image type,
                      vx_uint32 center_x,
                      vx_uint32 center_y,
