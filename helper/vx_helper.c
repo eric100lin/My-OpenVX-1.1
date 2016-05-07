@@ -21,10 +21,13 @@
  * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  */
 
+#include <math.h>
 #include <stdlib.h>
 #include <VX/vx.h>
 #include <VX/vx_helper.h>
-#include <math.h>
+#include <VX/vx_lib_extras.h>
+/* TODO: remove vx_compatibility.h after transition period */
+#include <VX/vx_compatibility.h>
 
 #if defined(EXPERIMENTAL_USE_TARGET)
 #include <VX/vx_ext_target.h>
@@ -153,7 +156,7 @@ vx_bool vxFindAllTargetsOfKernelsByName(vx_context context, vx_char kname[VX_MAX
 {
     vx_bool ret = vx_false_e;
     vx_uint32 k = 0u, t = 0u, num_targets = 0u;
-    vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_TARGETS, &num_targets, sizeof(num_targets));
+    vxQueryContext(context, VX_CONTEXT_TARGETS, &num_targets, sizeof(num_targets));
     for (t = 0u; t < num_targets; t++)
     {
         vx_target target = vxGetTargetByIndex(context, t);
@@ -194,7 +197,7 @@ vx_bool vxCreateListOfAllTargets(vx_context context, vx_char **targets[], vx_uin
 {
     vx_bool ret = vx_false_e;
     vx_uint32 t = 0u;
-    if (vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_TARGETS, num_targets, sizeof(*num_targets)) == VX_SUCCESS)
+    if (vxQueryContext(context, VX_CONTEXT_TARGETS, num_targets, sizeof(*num_targets)) == VX_SUCCESS)
     {
         *targets = (vx_char **)calloc(*num_targets, sizeof(vx_char *));
         if (*targets)
@@ -240,6 +243,10 @@ void vxDestroyListOfAllTargets(vx_char **targets[], vx_uint32 num_targets)
 }
 #endif
 
+/* Note: with the current sample implementation structure, we have no other choice than
+returning 0 in case of errors not due to vxCreateGenericNode, because vxGetErrorObject
+is internal to another library and is not exported. This is not an issue since vxGetStatus
+correctly manages a ref == 0 */
 vx_node vxCreateNodeByStructure(vx_graph graph,
                                 vx_enum kernelenum,
                                 vx_reference params[],
@@ -309,19 +316,19 @@ vx_status vxLinkParametersByReference(vx_parameter a, vx_parameter b) {
     vx_enum types[2] = {0,0};
     vx_reference ref = 0;
 
-    status = vxQueryParameter(a, VX_PARAMETER_ATTRIBUTE_DIRECTION, &dirs[0], sizeof(dirs[0]));
+    status = vxQueryParameter(a, VX_PARAMETER_DIRECTION, &dirs[0], sizeof(dirs[0]));
     if (status != VX_SUCCESS)
         return status;
 
-    status = vxQueryParameter(b, VX_PARAMETER_ATTRIBUTE_DIRECTION, &dirs[1], sizeof(dirs[1]));
+    status = vxQueryParameter(b, VX_PARAMETER_DIRECTION, &dirs[1], sizeof(dirs[1]));
     if (status != VX_SUCCESS)
         return status;
 
-    status = vxQueryParameter(a, VX_PARAMETER_ATTRIBUTE_TYPE, &types[0], sizeof(types[0]));
+    status = vxQueryParameter(a, VX_PARAMETER_TYPE, &types[0], sizeof(types[0]));
     if (status != VX_SUCCESS)
         return status;
 
-    status = vxQueryParameter(b, VX_PARAMETER_ATTRIBUTE_TYPE, &types[1], sizeof(types[1]));
+    status = vxQueryParameter(b, VX_PARAMETER_TYPE, &types[1], sizeof(types[1]));
     if (status != VX_SUCCESS)
         return status;
 
@@ -329,14 +336,14 @@ vx_status vxLinkParametersByReference(vx_parameter a, vx_parameter b) {
     {
         if ((dirs[0] == VX_OUTPUT || dirs[0] == VX_BIDIRECTIONAL) && dirs[1] == VX_INPUT)
         {
-            status = vxQueryParameter(a, VX_PARAMETER_ATTRIBUTE_REF, &ref, sizeof(ref));
+            status = vxQueryParameter(a, VX_PARAMETER_REF, &ref, sizeof(ref));
             if (status != VX_SUCCESS)
                 return status;
             status = vxSetParameterByReference(b, ref);
         }
         else if ((dirs[1] == VX_OUTPUT || dirs[1] == VX_BIDIRECTIONAL) && dirs[0] == VX_INPUT)
         {
-            status = vxQueryParameter(b, VX_PARAMETER_ATTRIBUTE_REF, &ref, sizeof(ref));
+            status = vxQueryParameter(b, VX_PARAMETER_REF, &ref, sizeof(ref));
             if (status != VX_SUCCESS)
                 return status;
             status = vxSetParameterByReference(a, ref);
@@ -358,12 +365,12 @@ vx_status vxSetAffineRotationMatrix(vx_matrix matrix,
     vx_float32 mat[3][2];
     vx_size columns = 0ul, rows = 0ul;
     vx_enum type = 0;
-    vxQueryMatrix(matrix, VX_MATRIX_ATTRIBUTE_COLUMNS, &columns, sizeof(columns));
-    vxQueryMatrix(matrix, VX_MATRIX_ATTRIBUTE_ROWS, &rows, sizeof(rows));
-    vxQueryMatrix(matrix, VX_MATRIX_ATTRIBUTE_TYPE, &type, sizeof(type));
+    vxQueryMatrix(matrix, VX_MATRIX_COLUMNS, &columns, sizeof(columns));
+    vxQueryMatrix(matrix, VX_MATRIX_ROWS, &rows, sizeof(rows));
+    vxQueryMatrix(matrix, VX_MATRIX_TYPE, &type, sizeof(type));
     if ((columns == 2) && (rows == 3) && (type == VX_TYPE_FLOAT32))
     {
-        status = vxReadMatrix(matrix, mat);
+        status = vxCopyMatrix(matrix, mat, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
         if (status == VX_SUCCESS)
         {
             vx_float32 radians = (angle / 360.0f) * (vx_float32)VX_TAU;
@@ -375,7 +382,7 @@ vx_status vxSetAffineRotationMatrix(vx_matrix matrix,
             mat[0][1] = -b;
             mat[1][1] = a;
             mat[2][1] = (b * center_x) + ((1.0f - a) * center_y);
-            status = vxWriteMatrix(matrix, mat);
+            status = vxCopyMatrix(matrix, mat, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         }
     }
     else
@@ -412,7 +419,7 @@ vx_status vxAddParameterToGraphByIndex(vx_graph g, vx_node n, vx_uint32 index)
 
 void vxReadRectangle(const void *base,
                      const vx_imagepatch_addressing_t *addr,
-                     const vx_border_mode_t *borders,
+                     const vx_border_t *borders,
                      vx_df_image type,
                      vx_uint32 center_x,
                      vx_uint32 center_y,
@@ -455,6 +462,8 @@ void vxReadRectangle(const void *base,
                 case VX_DF_IMAGE_U16:
                 case VX_DF_IMAGE_S16:
                     ((vx_uint16*)destination)[dest_index] = borders->constant_value; break;
+                case VX_DF_IMAGE_F32:
+                    ((vx_float32*)destination)[dest_index] = borders->constant_value; break;
                 default:
                     abort(); // add other types as needed
                 }
@@ -470,6 +479,8 @@ void vxReadRectangle(const void *base,
                 case VX_DF_IMAGE_U16:
                 case VX_DF_IMAGE_S16:
                     ((vx_uint16*)destination)[dest_index] = *(vx_uint16*)(ptr + offset); break;
+                case VX_DF_IMAGE_F32:
+                    ((vx_float32*)destination)[dest_index] = *(vx_float32*)(ptr + offset); break;
                 default:
                     abort(); // add other types as needed
                 }
@@ -484,7 +495,7 @@ void vxReadRectangle(const void *base,
     vx_int32 ky, kx;
     vx_uint32 dest_index = 0;
     // kx, kx - kernel x and y
-    if( borders->mode == VX_BORDER_MODE_REPLICATE || borders->mode == VX_BORDER_MODE_UNDEFINED )
+    if( borders->mode == VX_BORDER_REPLICATE || borders->mode == VX_BORDER_UNDEFINED )
     {
         for (ky = -(int32_t)radius_y; ky <= (int32_t)radius_y; ++ky)
         {
@@ -509,15 +520,18 @@ void vxReadRectangle(const void *base,
                 case VX_DF_IMAGE_U32:
                     ((vx_uint32*)destination)[dest_index] = *(vx_uint32*)(ptr + y*stride_y + x*stride_x);
                     break;
+                case VX_DF_IMAGE_F32:
+                    ((vx_float32*)destination)[dest_index] = *(vx_float32*)(ptr + y*stride_y + x*stride_x);
+                    break;
                 default:
                     abort();
                 }
             }
         }
     }
-    else if( borders->mode == VX_BORDER_MODE_CONSTANT )
+    else if( borders->mode == VX_BORDER_CONSTANT )
     {
-        vx_uint32 cval = borders->constant_value;
+        vx_pixel_value_t cval = borders->constant_value;
         for (ky = -(int32_t)radius_y; ky <= (int32_t)radius_y; ++ky)
         {
             vx_int32 y = (vx_int32)(center_y + ky);
@@ -534,21 +548,30 @@ void vxReadRectangle(const void *base,
                         if( !ccase )
                             ((vx_uint8*)destination)[dest_index] = *(vx_uint8*)(ptr + y*stride_y + x*stride_x);
                         else
-                            ((vx_uint8*)destination)[dest_index] = (vx_uint8)cval;
+                            ((vx_uint8*)destination)[dest_index] = (vx_uint8)cval.U8;
                         break;
                     case VX_DF_IMAGE_S16:
                     case VX_DF_IMAGE_U16:
                         if( !ccase )
                             ((vx_uint16*)destination)[dest_index] = *(vx_uint16*)(ptr + y*stride_y + x*stride_x);
                         else
-                            ((vx_uint16*)destination)[dest_index] = (vx_uint16)cval;
+                            ((vx_uint16*)destination)[dest_index] = (vx_uint16)cval.U16;
                         break;
                     case VX_DF_IMAGE_S32:
                     case VX_DF_IMAGE_U32:
                         if( !ccase )
                             ((vx_uint32*)destination)[dest_index] = *(vx_uint32*)(ptr + y*stride_y + x*stride_x);
                         else
-                            ((vx_uint32*)destination)[dest_index] = (vx_uint32)cval;
+                            ((vx_uint32*)destination)[dest_index] = (vx_uint32)cval.U32;
+                        break;
+                    case VX_DF_IMAGE_F32:
+                        if( !ccase )
+                            ((vx_float32*)destination)[dest_index] = *(vx_float32*)(ptr + y*stride_y + x*stride_x);
+                        else
+                        {
+                            const vx_uint8* p = (const vx_uint8*)&cval.reserved;
+                            ((vx_float32*)destination)[dest_index] = *(vx_float32*)p;
+                        }
                         break;
                     default:
                         abort();
@@ -588,10 +611,10 @@ vx_status vxMatrixTrace(vx_matrix matrix, vx_scalar trace) {
     vx_status status = VX_SUCCESS;
     vx_enum mtype = VX_TYPE_INVALID, stype = VX_TYPE_INVALID;
 
-    status |= vxQueryMatrix(matrix, VX_MATRIX_ATTRIBUTE_COLUMNS, &columns, sizeof(columns));
-    status |= vxQueryMatrix(matrix, VX_MATRIX_ATTRIBUTE_ROWS, &rows, sizeof(rows));
-    status |= vxQueryMatrix(matrix, VX_MATRIX_ATTRIBUTE_TYPE, &mtype, sizeof(mtype));
-    status |= vxQueryScalar(trace, VX_SCALAR_ATTRIBUTE_TYPE, &stype, sizeof(stype));
+    status |= vxQueryMatrix(matrix, VX_MATRIX_COLUMNS, &columns, sizeof(columns));
+    status |= vxQueryMatrix(matrix, VX_MATRIX_ROWS, &rows, sizeof(rows));
+    status |= vxQueryMatrix(matrix, VX_MATRIX_TYPE, &mtype, sizeof(mtype));
+    status |= vxQueryScalar(trace, VX_SCALAR_TYPE, &stype, sizeof(stype));
 
     if (status != VX_SUCCESS)
         return VX_ERROR_INVALID_REFERENCE;
@@ -603,15 +626,15 @@ vx_status vxMatrixTrace(vx_matrix matrix, vx_scalar trace) {
     if (stype == VX_TYPE_INT32) {
         vx_int32 mat[rows][columns];
         vx_int32 t = 0;
-        status |= vxReadMatrix(matrix, mat);
+        status |= vxCopyMatrix(matrix, mat, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
         t = vxh_matrix_trace_i32(columns, rows, mat);
-        status |= vxWriteScalarValue(trace, &t);
+        status |= vxCopyScalar(trace, &t, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
     } else if (stype == VX_TYPE_FLOAT32) {
         vx_float32 mat[rows][columns];
         vx_float32 t = 0.0f;
-        status |= vxReadMatrix(matrix, mat);
+        status |= vxCopyMatrix(matrix, mat, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
         t = vxh_matrix_trace_f32(columns, rows, mat);
-        status |= vxWriteScalarValue(trace, &t);
+        status |= vxCopyScalar(trace, &t, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
     }
     return status;
 }
@@ -647,12 +670,12 @@ vx_status vxMatrixInverse(vx_matrix input, vx_matrix output) {
     vx_size ri, ro;
     vx_enum ti, to;
     vx_status status = VX_SUCCESS;
-    status |= vxQueryMatrix(input, VX_MATRIX_ATTRIBUTE_COLUMNS, &ci, sizeof(ci));
-    status |= vxQueryMatrix(input, VX_MATRIX_ATTRIBUTE_ROWS, &ri, sizeof(ri));
-    status |= vxQueryMatrix(input, VX_MATRIX_ATTRIBUTE_TYPE, &ti, sizeof(ti));
-    status |= vxQueryMatrix(output, VX_MATRIX_ATTRIBUTE_COLUMNS, &co, sizeof(co));
-    status |= vxQueryMatrix(output, VX_MATRIX_ATTRIBUTE_ROWS, &ro, sizeof(ro));
-    status |= vxQueryMatrix(output, VX_MATRIX_ATTRIBUTE_TYPE, &to, sizeof(to));
+    status |= vxQueryMatrix(input, VX_MATRIX_COLUMNS, &ci, sizeof(ci));
+    status |= vxQueryMatrix(input, VX_MATRIX_ROWS, &ri, sizeof(ri));
+    status |= vxQueryMatrix(input, VX_MATRIX_TYPE, &ti, sizeof(ti));
+    status |= vxQueryMatrix(output, VX_MATRIX_COLUMNS, &co, sizeof(co));
+    status |= vxQueryMatrix(output, VX_MATRIX_ROWS, &ro, sizeof(ro));
+    status |= vxQueryMatrix(output, VX_MATRIX_TYPE, &to, sizeof(to));
     if (status != VX_SUCCESS)
         return status;
     if (ci != co || ri != ro || ci != ri)
@@ -662,9 +685,9 @@ vx_status vxMatrixInverse(vx_matrix input, vx_matrix output) {
     if (ti == VX_TYPE_FLOAT32) {
         vx_float32 in[ri][ci];
         vx_float32 ou[ro][co];
-        vxReadMatrix(input, in);
+        vxCopyMatrix(input, in, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
         vxh_matrix_inverse_f32(ci, ri, ou, in);
-        vxWriteMatrix(output, ou);
+        vxCopyMatrix(output, ou, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
     }
     /*! \bug implement integer */
     return status;
