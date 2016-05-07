@@ -97,7 +97,7 @@ extern "C" {
  * should be inclusive from index number 0 to [number of references - 1]. For example,
  * if there are 20 references in the xml file, none of the reference indices should be >= 20.
  * \return A <tt>\ref vx_status_e</tt> enumeration.
- * \see https://www.khronos.org/registry/vx/schema/openvx-1-0.xsd
+ * \see https://www.khronos.org/registry/vx/schema/openvx-1-1.xsd
  * \ingroup group_xml
  */
 VX_API_ENTRY vx_status VX_API_CALL vxExportToXML(vx_context context, vx_char xmlfile[]);
@@ -114,7 +114,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxExportToXML(vx_context context, vx_char xml
  * all references of interest have been retrieved, this import obects should be released using
  * <tt>\ref vxReleaseImport</tt>.
  * \return \ref vx_import object containing references to the imported objects in the context
- * \see https://www.khronos.org/registry/vx/schema/openvx-1-0.xsd
+ * \see https://www.khronos.org/registry/vx/schema/openvx-1-1.xsd
  * \ingroup group_xml
  */
 VX_API_ENTRY vx_import VX_API_CALL vxImportFromXML(vx_context context, vx_char xmlfile[]);
@@ -195,18 +195,6 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryImport(vx_import import, vx_enum attri
  * \ingroup group_xml
  */
 VX_API_ENTRY vx_status VX_API_CALL vxReleaseImport(vx_import *import);
-
-/*! \brief Releases a reference.
- * The object may not be garbage collected until its total reference count is zero.
- * \param [in] ref The pointer to the reference to release.
- * \return A <tt>\ref vx_status_e</tt> enumeration.
- * \retval VX_SUCCESS No errors.
- * \retval VX_ERROR_INVALID_REFERENCE If reference is not a <tt>\ref vx_reference</tt>.
- * \note After returning from this function the reference will be zeroed.
- * \pre <tt>\ref vxGetImportReferenceByName</tt> or <tt>\ref vxGetImportReferenceByIndex</tt>
- * \ingroup group_xml
- */
-VX_API_ENTRY vx_status VX_API_CALL vxReleaseReference(vx_reference *ref);
 
 #ifdef __cplusplus
 }
