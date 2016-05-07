@@ -69,6 +69,8 @@
 #endif
 
 #include <VX/vx.h>
+/* TODO: remove vx_compatibility.h after transition period */
+#include <VX/vx_compatibility.h>
 #if defined(OPENVX_USE_TILING)
 #define OPENVX_TILING_1_0
 #include <VX/vx_khr_tiling.h>
@@ -147,7 +149,7 @@
 /*! \brief Maximum number of parameters to a kernel.
  * \ingroup group_int_defines
  */
-#define VX_INT_MAX_PARAMS   (10)
+#define VX_INT_MAX_PARAMS   (15)
 
 /*! \brief Maximum number of loadable modules.
  * \ingroup group_int_defines
@@ -158,6 +160,11 @@
  * \ingroup group_int_defines
  */
 #define VX_INT_MAX_CONVOLUTION_DIM (15)
+
+/*! \brief The largest nonlinear filter matrix the specification requires support for is 9x9.
+* \ingroup group_int_defines
+*/
+#define VX_INT_MAX_NONLINEAR_DIM (9)
 
 /*! \brief A magic value to look for and set in references.
  * \ingroup group_int_defines
@@ -197,12 +204,12 @@
 /*! \brief Used to determine if a type is a struct.
  * \ingroup group_int_macros
  */
-#define VX_TYPE_IS_STRUCT(type) ((type) >= VX_TYPE_RECTANGLE && (type) < VX_TYPE_STRUCT_MAX)
+#define VX_TYPE_IS_STRUCT(type) ((type) >= VX_TYPE_RECTANGLE && (type) < VX_TYPE_KHRONOS_STRUCT_MAX)
 
 /*! \brief Used to determine if a type is an object.
  * \ingroup group_int_macros
  */
-#define VX_TYPE_IS_OBJECT(type) ((type) >= VX_TYPE_REFERENCE && (type) < VX_TYPE_OBJECT_MAX)
+#define VX_TYPE_IS_OBJECT(type) ((type) >= VX_TYPE_REFERENCE && (type) < VX_TYPE_KHRONOS_OBJECT_END)
 
 /*! A parameter checker for size and alignment.
  * \ingroup group_int_macros
@@ -466,6 +473,10 @@ typedef enum _vx_reftype_e {
  * \ingroup group_int_refererence
  */
 typedef struct _vx_reference {
+#if !DISABLE_ICD_COMPATIBILITY
+    /*! \brief Platform for ICD compatibility. */
+    struct _vx_platform * platform;
+#endif
     /*! \brief Used to validate references, must be set to VX_MAGIC. */
     vx_uint32 magic;
     /*! \brief Set to an enum value in \ref vx_type_e. */
@@ -513,9 +524,8 @@ typedef struct _vx_reference {
     /*! \brief An OpenCL event that the framework can block upon for this object */
     cl_event event;
 #endif
-#if defined(EXPERIMENTAL_USE_XML)
+    /*! \brief The reference name */
     char name[VX_MAX_REFERENCE_NAME];
-#endif
 } vx_reference_t;
 
 
@@ -606,6 +616,14 @@ typedef struct _vx_parameter {
     vx_kernel      kernel;
 } vx_parameter_t;
 
+/*!
+ * \brief The enum value used to mark empty kernel table entry.
+ */
+enum vx_kernel_invalid_e
+{
+    VX_KERNEL_INVALID = VX_KERNEL_BASE(VX_ID_KHRONOS, VX_LIBRARY_KHR_BASE)
+};
+
 /*! \brief The kernel attributes structure.
  * \ingroup group_int_kernel
  */
@@ -619,7 +637,7 @@ typedef struct _vx_kernel_attr_t {
     /*! \brief The global data pointer for this kernel */
     vx_ptr_t      globalDataPtr;
     /*! \brief The border mode of this node */
-    vx_border_mode_t borders;
+    vx_border_t   borders;
 #ifdef OPENVX_KHR_TILING
     /*! \brief The block size information */
     vx_tile_block_size_t blockinfo;
@@ -648,6 +666,10 @@ typedef struct _vx_kernel {
     vx_signature_t signature;
     /*! Indicates that the kernel is not yet enabled. */
     vx_bool        enabled;
+    /*! Indicates that this kernel is added by user. */
+    vx_bool        user_kernel;
+    /*! \brief */
+    vx_kernel_validate_f validate;
     /*! \brief */
     vx_kernel_input_validate_f validate_input;
     /*! \brief */
@@ -727,6 +749,7 @@ typedef vx_status (*vx_target_verify_f)(vx_target target, vx_node node);
  * \param [in] enumeration
  * \param [in] func_ptr
  * \param [in] numParams
+ * \param [in] validate
  * \param [in] input
  * \param [in] output
  * \param [in] initialize
@@ -738,6 +761,7 @@ typedef vx_kernel (*vx_target_addkernel_f)(vx_target target,
                                            vx_enum enumeration,
                                            vx_kernel_f func_ptr,
                                            vx_uint32 num_parameters,
+                                           vx_kernel_validate_f validate,
                                            vx_kernel_input_validate_f input,
                                            vx_kernel_output_validate_f output,
                                            vx_kernel_initialize_f initialize,
@@ -860,6 +884,42 @@ typedef struct _vx_external_t {
     void *extra_data;
 } vx_external_t;
 
+typedef union _vx_memory_map_extra
+{
+    struct
+    {
+        /*! \brief The rectangle to map in case of image */
+        vx_rectangle_t rect;
+        vx_uint32 plane_index;
+    } image_data;
+    struct
+    {
+        vx_size start;
+        vx_size end;
+    } array_data;
+} vx_memory_map_extra;
+
+/*! \brief The framework's mapping memory tracking structure.
+ * \ingroup group_int_context.
+ */
+typedef struct _vx_memory_map_t
+{
+    /*! \brief Indicates if this entry is being used */
+    vx_bool used;
+    /*! \brief The reference of data object being mapped */
+    vx_reference ref;
+    /*! \brief The extra data of mapped object */
+    vx_memory_map_extra extra;
+    /*! \brief The usage model of the pointer */
+    vx_enum usage;
+    /*! \brief The memory type */
+    vx_enum mem_type;
+    /*! \brief The options to map operation */
+    vx_uint32 flags;
+    /*! \brief The mapping buffer pointer associated with the reference. */
+    void* ptr;
+} vx_memory_map_t;
+
 /*! \brief The top level context data for the entire OpenVX instance
  * \ingroup group_int_context
  */
@@ -898,6 +958,10 @@ typedef struct _vx_context {
     vx_bool             log_reentrant;
     /*! \brief The list of externally accessed references */
     vx_external_t       accessors[VX_INT_MAX_REF];
+    /*! \brief The memory mapping table lock */
+    vx_sem_t            memory_maps_lock;
+    /*! \brief The list of memory maps */
+    vx_memory_map_t     memory_maps[VX_INT_MAX_REF];
     /*! \brief The list of user defined structs. */
     struct {
         /*! \brief Type constant */
@@ -921,7 +985,17 @@ typedef struct _vx_context {
     cl_command_queue    queues[CL_MAX_PLATFORMS][CL_MAX_DEVICES];
 #endif
     /*! \brief The immediate mode border */
-    vx_border_mode_t    imm_border;
+    vx_border_t         imm_border;
+    /*! \brief The unsupported border mode policy for immediate mode functions */
+    vx_enum             imm_border_policy;
+    /*! \brief The next available dynamic user kernel ID */
+    vx_uint32           next_dynamic_user_kernel_id;
+    /*! \brief The next available dynamic user library ID */
+    vx_uint32           next_dynamic_user_library_id;
+    /*! \brief The immediate mode enumeration */
+    vx_enum             imm_target_enum;
+    /*! \brief The immediate mode target string */
+    vx_char             imm_target_string[VX_MAX_TARGET_NAME];
 } vx_context_t;
 
 /*! \brief A data structure used to track the various costs which could being optimized.
@@ -970,6 +1044,10 @@ typedef struct _vx_node {
     vx_graph            child;
     /*! \brief The node cost factors */
     vx_cost_factors_t   costs;
+    /*! \brief The node replica flag */
+    vx_bool             is_replicated;
+    /*! \brief The replicated parameters flags */
+    vx_bool             replicated_flags[VX_INT_MAX_PARAMS];
 } vx_node_t;
 
 /*! \brief The internal representation of a graph.
@@ -1007,6 +1085,8 @@ typedef struct _vx_graph {
     vx_bool        should_serialize;
     /*! \brief [hidden] If non-NULL, the parent graph, for scope handling. */
     vx_graph       parentGraph;
+    /*! \brief The array of all delays in this graph */
+    vx_delay       delays[VX_INT_MAX_REF];
 } vx_graph_t;
 
 /*! \brief The dimensions enumeration, also stride enumerations.
@@ -1047,7 +1127,9 @@ typedef struct _vx_memory_t {
     /*! \brief Determines if this memory was allocated by the system */
     vx_bool        allocated;
     /*! \brief The number of pointers in the array */
-    vx_int32       nptrs;
+    vx_uint32      nptrs;
+    /*! \brief The array of ROI offsets (one per plane for images) */
+    vx_uint32      offset[VX_PLANE_MAX];
     /*! \brief The array of pointers (one per plane for images) */
     vx_uint8*      ptrs[VX_PLANE_MAX];
     /*! \brief The number of dimensions per ptr */
@@ -1083,7 +1165,7 @@ typedef struct _vx_image {
     /*! \brief Height of the Image in Pixels */
     vx_uint32      height;
     /*! \brief Format of the Image in VX_DF_IMAGE codes */
-    vx_df_image      format;
+    vx_df_image    format;
     /*! \brief The number of active planes */
     vx_uint32      planes;
     /*! \brief The constants space (BT601 or BT709) */
@@ -1096,12 +1178,14 @@ typedef struct _vx_image {
     vx_uint32      bounds[VX_PLANE_MAX][VX_DIM_MAX][VX_BOUND_MAX];
     /*! \brief A pointer to a parent image object. */
     vx_image       parent;
+    /*! \brief The array of ROIs from this image */
+    vx_image       subimages[VX_INT_MAX_REF];
     /*! \brief Indicates if the image is constant. */
     vx_bool        constant;
     /*! \brief The valid region */
     vx_rectangle_t region;
-    /*! \brief The import type */
-    vx_enum        import_type;
+    /*! \brief The memory type */
+    vx_enum        memory_type;
 #if defined(EXPERIMENTAL_USE_OPENCL)
     /*! \brief This describes the type of OpenCL Image that maps to this image (if applicable). */
     cl_image_format cl_format;
@@ -1124,6 +1208,8 @@ typedef struct _vx_array {
     vx_size num_items;
     /*! \brief The array capacity */
     vx_size capacity;
+    /*! \brief Offset attribute value. Used internally by LUT implementation */
+    vx_uint32 offset;
 } vx_array_t;
 
 /*! \brief The internal representation of the delay parameters as a list.
@@ -1151,6 +1237,8 @@ typedef struct _vx_delay {
     vx_delay_param_t *set;
     /*! \brief The set of objects in the delay. */
     vx_reference *refs;
+    /*! \brief The set of delays for pyramid levels. */
+    vx_delay *pyr;
 } vx_delay_t;
 
 /*! \brief A LUT is a specific type of array.
@@ -1184,15 +1272,19 @@ typedef struct _vx_distribution {
     vx_reference_t base;
     /*! \brief Memory layout */
     vx_memory_t memory;
-    /*! \brief The number of elements in the active X dimension of the distribution. */
-    vx_uint32 window_x;
-    /*! \brief The number of elements in the active Y dimension of the distribution. */
-    vx_uint32 window_y;
+    /*! \brief The total number of the values in the active X dimension of the distribution. */
+    vx_uint32 range_x;
+    /*! \brief The total number of the values in the active Y dimension of the distribution. */
+    vx_uint32 range_y;
     /*! \brief The number of inactive elements from zero in the X dimension */
     vx_int32 offset_x;
     /*! \brief The number of inactive elements from zero in the Y dimension */
     vx_int32 offset_y;
 } vx_distribution_t;
+
+
+#define VX_DEFAULT_THRESHOLD_FALSE_VALUE 0
+#define VX_DEFAULT_THRESHOLD_TRUE_VALUE  255
 
 /*! \brief The internal threshold structure.
  * \ingroup group_int_threshold
@@ -1202,16 +1294,18 @@ typedef struct _vx_threshold {
     vx_reference_t base;
     /*! \brief From \ref vx_threshold_type_e */
     vx_enum thresh_type;
+    /*! \brief From \ref vx_type_e */
+    vx_enum data_type;
     /*! \brief The binary threshold value */
-    vx_uint8 value;
+    vx_int32 value;
     /*! \brief Lower bound for range threshold */
-    vx_uint8 lower;
+    vx_int32 lower;
     /*! \brief Upper bound for range threshold */
-    vx_uint8 upper;
+    vx_int32 upper;
     /*! \brief True value for output */
-    vx_uint8 true_value;
-    /*! \brief Fasle value for output */
-    vx_uint8 false_value;
+    vx_int32 true_value;
+    /*! \brief False value for output */
+    vx_int32 false_value;
 } vx_threshold_t;
 
 /*! \brief The internal matrix structure.
@@ -1228,6 +1322,10 @@ typedef struct _vx_matrix {
     vx_size columns;
     /*! \brief Number of rows */
     vx_size rows;
+    /*! \brief Origin */
+    vx_coordinates2d_t origin;
+    /*! \brief Pattern */
+    vx_enum pattern;
 } vx_matrix_t;
 
 /*! \brief A convolution is a special type of matrix (MxM)
@@ -1290,7 +1388,7 @@ typedef struct _vx_meta_format
             vx_uint32 width;    /*!< \brief The width of the image in pixels */
             vx_uint32 height;   /*!< \brief The height of the image in pixels */
             vx_df_image format;   /*!< \brief The format of the image. */
-            vx_delta_rectangle_t delta; /*!< \brief The delta rectangle applied to this image */
+            vx_rectangle_t delta; /*!< \brief The delta rectangle applied to this image */
         } image;
         /*! \brief When a VX_TYPE_PYRAMID is specified */
         struct pyramid {
@@ -1309,6 +1407,34 @@ typedef struct _vx_meta_format
             vx_enum item_type;  /*!< \brief The type of the Array items */
             vx_size capacity;   /*!< \brief The capacity of the Array */
         } array;
+        /*! \brief When a VX_TYPE_MATRIX is specified */
+        struct matrix {
+            vx_enum type;       /*!< \brief The value type of the matrix*/
+            vx_size rows;       /*!< \brief The M dimension of the matrix*/
+            vx_size cols;       /*!< \brief The N dimension of the matrix*/
+        } matrix;
+        /*! \brief When a VX_TYPE_DISTRIBUTION is specified */
+        struct distribution {
+            vx_size bins;       /*!< \brief Indicates the number of bins*/
+            vx_int32 offset;    /*!< \brief Indicates the start of the values to use (inclusive)*/
+            vx_uint32 range;    /*!< \brief Indicates the total number of the consecutive values of the distribution interval*/
+        } distribution;
+        /*! \brief When a VX_TYPE_REMAP is specified */
+        struct remap {
+            vx_uint32 src_width; /*!< \brief The source width*/
+            vx_uint32 src_height;/*!< \brief The source height*/
+            vx_uint32 dst_width; /*!< \brief The destination width*/
+            vx_uint32 dst_height;/*!< \brief The destination width*/
+        } remap;
+        /*! \brief When a VX_TYPE_LUT is specified */
+        struct lut {
+            vx_enum type;        /*!< \brief Indicates the value type of the LUT*/
+            vx_size count;       /*!< \brief Indicates the number of elements in the LUT*/
+        } lut;
+        /*! \brief When a VX_TYPE_THRESHOLD is specified */
+        struct threshold {
+            vx_enum type; /*!< \brief The value type of the threshold*/
+        } threshold;
     } dim;
 } vx_meta_format_t;
 
@@ -1346,6 +1472,10 @@ extern "C" {
 #endif
 
 #include <vx_inlines.c>
+
+#if !DISABLE_ICD_COMPATIBILITY
+	VX_API_ENTRY vx_context VX_API_CALL vxCreateContextFromPlatform(struct _vx_platform * platform);
+#endif
 
 #ifdef __cplusplus
 }

@@ -47,6 +47,11 @@ vx_bool vxAllocateArray(vx_array array);
 vx_status vxAccessArrayRangeInt(vx_array array, vx_size start, vx_size end, vx_size *pStride, void **ptr, vx_enum usage);
 vx_status vxCommitArrayRangeInt(vx_array array, vx_size start, vx_size end, const void *ptr);
 
+vx_status vxCopyArrayRangeInt(vx_array arr, vx_size start, vx_size end, vx_size stride, void *ptr, vx_enum usage, vx_enum mem_type);
+vx_status vxMapArrayRangeInt(vx_array arr, vx_size start, vx_size end, vx_map_id *map_id, vx_size *stride,
+                             void **ptr, vx_enum usage, vx_enum mem_type, vx_uint32 flags);
+vx_status vxUnmapArrayRangeInt(vx_array arr, vx_map_id map_id);
+
 #ifdef __cplusplus
 }
 #endif

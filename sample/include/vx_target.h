@@ -72,6 +72,14 @@ vx_status vxInitializeTarget(vx_target_t *target, vx_kernel_description_t *kerne
  */
 vx_status vxDeinitializeTarget(vx_target_t *target);
 
+/*! \brief Match target name with specified target string.
+ * \param [in] target_name The target name string.
+ * \param [in] target_string The target string.
+ * \ingroup group_int_target
+ * \retval vx_true_e If string matches, vx_false_e if not.
+ */
+vx_bool vxMatchTargetNameWithString(const char* target_name, const char* target_string);
+
 #ifdef __cplusplus
 }
 #endif

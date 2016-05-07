@@ -62,6 +62,7 @@ vx_kernel_t *vxAllocateKernel(vx_context context,
  * \param [in] name The name of the kernel in dotted notation.
  * \param [in] parameters The list of parameters for each kernel.
  * \param [in] numParams The number of parameters in the list.
+ * \param [in] validator The function pointer to the params validator.
  * \param [in] in_validator The function pointer to the input validator.
  * \param [in] out_validator The function pointer to the output validator.
  * \param [in] initialize The function to call to initialize the kernel.
@@ -75,6 +76,7 @@ vx_status vxInitializeKernel(vx_context context,
                              vx_char name[VX_MAX_KERNEL_NAME],
                              vx_param_description_t *parameters,
                              vx_uint32 numParams,
+                             vx_kernel_validate_f validator,
                              vx_kernel_input_validate_f in_validator,
                              vx_kernel_output_validate_f out_validator,
                              vx_kernel_initialize_f initialize,

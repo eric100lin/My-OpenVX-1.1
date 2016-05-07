@@ -84,6 +84,37 @@ vx_bool vxFindAccessor(vx_context context, const void *ptr, vx_uint32 *pIndex);
  */
 void vxRemoveAccessor(vx_context context, vx_uint32 index);
 
+
+/*! \brief Searches the memory maps list to find an open slot and
+ *  allocate memory for mapped buffer.
+ * \ingroup group_int_context
+ */
+VX_INT_API vx_bool vxMemoryMap(
+    vx_context   context,
+    vx_reference ref,
+    vx_size      size,
+    vx_enum      usage,
+    vx_enum      mem_type,
+    vx_uint32    flags,
+    void*        extra_data,
+    void**       ptr,
+    vx_map_id*   map_id);
+
+/*! \brief Checks the consistency of given ref & map_id by looking
+*  into memory maps list.
+ * \ingroup group_int_context
+*/
+VX_INT_API vx_bool vxFindMemoryMap(
+    vx_context   context,
+    vx_reference ref,
+    vx_map_id    map_id);
+
+/*! \brief Finds and removes a map_id from the list.
+ * \ingroup group_int_context
+ */
+VX_INT_API void vxMemoryUnmap(vx_context context, vx_uint32 map_id);
+
+
 #ifdef __cplusplus
 }
 #endif
