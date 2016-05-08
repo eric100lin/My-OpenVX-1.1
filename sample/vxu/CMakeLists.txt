@@ -28,7 +28,8 @@ include_directories( BEFORE
                      ${CMAKE_CURRENT_SOURCE_DIR}
                      ${CMAKE_CURRENT_SOURCE_DIR}/../include
                      ${CMAKE_SOURCE_DIR}/debug
-                     ${CMAKE_SOURCE_DIR}/include )
+                     ${CMAKE_SOURCE_DIR}/include
+					 ${OPENCL_INCLUDE_PATH})
 					 
 if ((WIN32) OR (CYGWIN))
    add_definitions( ${OPENVX_BUILDING_EXPORT_DEF} )
