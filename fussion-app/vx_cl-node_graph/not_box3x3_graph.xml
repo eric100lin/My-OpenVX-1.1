@@ -2,31 +2,22 @@
 <openvx xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xmlns="https://www.khronos.org/registry/vx/schema"
         xsi:schemaLocation="https://www.khronos.org/registry/vx/schema openvx-1-0.xsd"
-        references="15">
+        references="6">
 	<graph reference="0">
 		<node reference="1">
 			<kernel>org.khronos.openvx.not</kernel>
 			<parameter index="0" reference="3" />
-			<parameter index="1" reference="13" />
+			<parameter index="1" reference="4" />
 		</node>
 		<node reference="2">
 			<kernel>org.khronos.openvx.box3x3</kernel>
-			<parameter index="0" reference="13" />
-			<parameter index="1" reference="14" />
+			<parameter index="0" reference="4" />
+			<parameter index="1" reference="5" />
 		</node>
 		<image reference="4" width="640" height="480" format="U008" />
-		<image reference="5" width="640" height="480" format="U008" />
-		<image reference="6" width="640" height="480" format="U008" />
-		<image reference="7" width="640" height="480" format="U008" />
-		<image reference="8" width="640" height="480" format="U008" />
-		<image reference="9" width="640" height="480" format="U008" />
-		<image reference="10" width="640" height="480" format="U008" />
-		<image reference="11" width="640" height="480" format="U008" />
-		<image reference="12" width="640" height="480" format="U008" />
-		<image reference="13" width="640" height="480" format="U008" />
 	</graph>
 	<image reference="3" width="640" height="480" format="U008">
 	</image>
-	<image reference="14" width="640" height="480" format="U008">
+	<image reference="5" width="640" height="480" format="U008">
 	</image>
 </openvx>

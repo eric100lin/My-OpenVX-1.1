@@ -118,11 +118,11 @@ vx_status not_box3x3_graph(vx_context context, Mat inMat, Mat &outMat)
 		//Qurey profiling information
 		if(i!=0)
 		{
-			status = vxQueryGraph(graph, VX_GRAPH_ATTRIBUTE_PERFORMANCE, &perf_graph, sizeof(vx_perf_t));
+			status = vxQueryGraph(graph, VX_GRAPH_PERFORMANCE, &perf_graph, sizeof(vx_perf_t));
 			CHECK_STATUS(status, "vxQueryGraph");
-			status = vxQueryNode(not_node, VX_NODE_ATTRIBUTE_PERFORMANCE, &perf_not, sizeof(vx_perf_t));
+			status = vxQueryNode(not_node, VX_NODE_PERFORMANCE, &perf_not, sizeof(vx_perf_t));
 			CHECK_STATUS(status, "vxQueryNode(perf_not)");
-			status = vxQueryNode(box3x3_node, VX_NODE_ATTRIBUTE_PERFORMANCE, &perf_box3x3, sizeof(vx_perf_t));
+			status = vxQueryNode(box3x3_node, VX_NODE_PERFORMANCE, &perf_box3x3, sizeof(vx_perf_t));
 			CHECK_STATUS(status, "vxQueryNode(perf_box3x3)");
 			elapsedTime_graph += perf_graph.tmp;
 			elapsedTime_not_node += perf_not.tmp;
