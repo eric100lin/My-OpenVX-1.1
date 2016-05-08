@@ -324,11 +324,17 @@ vx_status vxTargetInit(vx_target_t *target)
                                     cl_kernels[k]->description.output_validate,
                                     cl_kernels[k]->description.initialize,
                                     cl_kernels[k]->description.deinitialize);
+								VX_PRINT(VX_ZONE_KERNEL, "Initialized Kernel %s, %d\n", cl_kernels[k]->description.name, status);
+								if (status != VX_SUCCESS) {
+									break;
+								}
                                 if (vxIsKernelUnique(&target->kernels[k]) == vx_true_e) {
                                     target->base.context->num_unique_kernels++;
                                 } else {
                                     VX_PRINT(VX_ZONE_KERNEL, "Kernel %s is NOT unqiue\n", target->kernels[k].name);
                                 }
+								status = vxFinalizeKernel(&target->kernels[k]);
+								VX_PRINT(VX_ZONE_KERNEL, "vxFinalizeKernel status %d\n", status);
                             }
                         }
                     }

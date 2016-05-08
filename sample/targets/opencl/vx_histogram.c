@@ -161,6 +161,7 @@ vx_cl_kernel_description_t histogram_kernel = {
         "org.khronos.openvx.histogram",
         NULL,
         histogram_kernel_params, dimof(histogram_kernel_params),
+		NULL,
         vxHistogramInputValidator,
         vxHistogramOutputValidator,
     },

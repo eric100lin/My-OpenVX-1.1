@@ -329,9 +329,9 @@ vx_bool vxIsValidSpecificReference(vx_reference ref, vx_enum type)
     }
     else
     {
-        VX_PRINT(VX_ZONE_WARNING, "Reference was NULL\n");
-        //DEBUG_BREAK();
-        VX_BACKTRACE(VX_ZONE_WARNING);
+        //======== VX_PRINT(VX_ZONE_WARNING, "Reference was NULL\n");
+        //======== //DEBUG_BREAK();
+        //======== VX_BACKTRACE(VX_ZONE_WARNING);
     }
     return ret;
 }
