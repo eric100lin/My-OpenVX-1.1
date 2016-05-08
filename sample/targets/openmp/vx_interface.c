@@ -78,17 +78,20 @@ vx_status vxTargetSupports(vx_target target,
         strncmp(targetName, "default", VX_MAX_TARGET_NAME) == 0)
     {
         vx_uint32 k = 0u;
-        for (k = 0u; k < target->num_kernels; k++)
+        for (k = 0u; k < VX_INT_MAX_KERNELS; k++)
         {
             vx_char targetKernelName[VX_MAX_KERNEL_NAME];
             vx_char *kernel;
+            vx_char def[8] = "default";
 #if defined(EXPERIMENTAL_USE_VARIANTS)
             vx_char *variant;
-            vx_char def[8] = "default";
 #endif
 
             strncpy(targetKernelName, target->kernels[k].name, VX_MAX_KERNEL_NAME);
             kernel = strtok(targetKernelName, ":");
+            if (kernel == NULL)
+                kernel = def;
+
 #if defined(EXPERIMENTAL_USE_VARIANTS)
             variant = strtok(NULL, ":");
 
@@ -130,8 +133,7 @@ vx_action vxTargetProcess(vx_target target, vx_node_t *nodes[], vx_size startInd
         nodes[n]->executed = vx_true_e;
         nodes[n]->status = status;
         vxStopCapture(&nodes[n]->perf);
-		nodes[n]->computePerf = nodes[n]->perf;
-		
+
         VX_PRINT(VX_ZONE_GRAPH,"kernel %s returned %d\n", nodes[n]->kernel->name, status);
 
         if (status == VX_SUCCESS)
@@ -163,6 +165,7 @@ vx_kernel vxTargetAddKernel(vx_target target,
                             vx_enum enumeration,
                             vx_kernel_f func_ptr,
                             vx_uint32 numParams,
+                            vx_kernel_validate_f validate,
                             vx_kernel_input_validate_f input,
                             vx_kernel_output_validate_f output,
                             vx_kernel_initialize_f initialize,
@@ -170,7 +173,7 @@ vx_kernel vxTargetAddKernel(vx_target target,
 {
     vx_uint32 k = 0u;
     vx_kernel_t *kernel = NULL;
-    for (k = target->num_kernels; k < VX_INT_MAX_KERNELS; k++)
+    for (k = 0; k < VX_INT_MAX_KERNELS; k++)
     {
         kernel = &(target->kernels[k]);
         if ((kernel->enabled == vx_false_e) &&
@@ -180,7 +183,7 @@ vx_kernel vxTargetAddKernel(vx_target target,
                                kernel,
                                enumeration, func_ptr, name,
                                NULL, numParams,
-                               input, output, initialize, deinitialize);
+                               validate, input, output, initialize, deinitialize);
             VX_PRINT(VX_ZONE_KERNEL, "Reserving %s Kernel[%u] for %s\n", target->name, k, kernel->name);
             target->num_kernels++;
             break;

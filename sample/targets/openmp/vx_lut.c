@@ -100,11 +100,11 @@ static vx_status vxTableLookupInputValidator(vx_node node, vx_uint32 index)
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
             if (format == VX_DF_IMAGE_U8 || format == VX_DF_IMAGE_S16)
             {
                 status = VX_SUCCESS;
@@ -117,11 +117,11 @@ static vx_status vxTableLookupInputValidator(vx_node node, vx_uint32 index)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
         vx_lut lut = 0;
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &lut, sizeof(lut));
+        vxQueryParameter(param, VX_PARAMETER_REF, &lut, sizeof(lut));
         if (lut)
         {
             vx_enum type = 0;
-            vxQueryLUT(lut, VX_LUT_ATTRIBUTE_TYPE, &type, sizeof(type));
+            vxQueryLUT(lut, VX_LUT_TYPE, &type, sizeof(type));
             if (type == VX_TYPE_UINT8 || type == VX_TYPE_INT16)
             {
                 status = VX_SUCCESS;
@@ -142,13 +142,13 @@ static vx_status vxTableLookupOutputValidator(vx_node node, vx_uint32 index, vx_
         if (src_param)
         {
             vx_image src = 0;
-            vxQueryParameter(src_param, VX_PARAMETER_ATTRIBUTE_REF, &src, sizeof(src));
+            vxQueryParameter(src_param, VX_PARAMETER_REF, &src, sizeof(src));
             if (src)
             {
                 vx_uint32 width = 0, height = 0;
 
-                vxQueryImage(src, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(height));
-                vxQueryImage(src, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+                vxQueryImage(src, VX_IMAGE_WIDTH, &width, sizeof(height));
+                vxQueryImage(src, VX_IMAGE_HEIGHT, &height, sizeof(height));
                 /* output is equal type and size */
                 ptr->type = VX_TYPE_IMAGE;
                 ptr->dim.image.format = VX_DF_IMAGE_U8;
@@ -174,6 +174,7 @@ vx_kernel_description_t lut_kernel = {
     "org.khronos.openvx.table_lookup",
     vxTableLookupKernel,
     lut_kernel_params, dimof(lut_kernel_params),
+    NULL,
     vxTableLookupInputValidator,
     vxTableLookupOutputValidator,
     NULL,
