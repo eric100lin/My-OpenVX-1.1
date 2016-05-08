@@ -73,12 +73,15 @@ vx_status vxTargetInit(vx_target_t *target)
     char *cl_dirs = getenv("VX_CL_SOURCE_DIR");
     char cl_args[1024];
 
-    snprintf(cl_args, sizeof(cl_args), "-D VX_CL_KERNEL -I %s -I %s %s %s", (vx_incs?vx_incs:"C:\\Users\\Eric\\Desktop\\VS_OpenVX2\\example_multinode_graph\\cl_code"), cl_dirs,
+    snprintf(cl_args, sizeof(cl_args), "-D VX_CL_KERNEL -I %s -I %s %s %s ", (vx_incs?vx_incs:"C:\\Users\\Eric\\Desktop\\VS_OpenVX2\\example_multinode_graph\\cl_code"), cl_dirs,
 //#if !defined(__APPLE__)
-//        "-D CL_USE_LUMINANCE",
+//        "-D CL_USE_LUMINANCE ",
 //#else
-        "",
+        " ",
 //#endif
+#if defined(VX_VERSION_1_1) && (VX_VERSION >= VX_VERSION_1_1)
+	"-DVX_VERSION_1_1 -DVX_VERSION=VX_VERSION_1_1"
+#endif
 #if defined(VX_INCLUDE_DIR)
     "-I "VX_INCLUDE_DIR" "
 #else
@@ -96,7 +99,8 @@ vx_status vxTargetInit(vx_target_t *target)
         return status;
 #endif
     }
-
+	VX_PRINT(VX_ZONE_INFO, "cl_args: %s", cl_args);
+	
     strncpy(target->name, name, VX_MAX_TARGET_NAME);
     target->priority = VX_TARGET_PRIORITY_OPENCL;
 

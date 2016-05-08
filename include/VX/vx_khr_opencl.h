@@ -24,7 +24,9 @@
 #ifndef _VX_KHR_OPENCL_H_
 #define _VX_KHR_OPENCL_H_
 
+#if defined(VX_CL_DOCUMENTATION) || !defined(VX_CL_KERNEL)
 #include <VX/vx.h>
+#endif
 
 /*! \file
  * \brief The OpenVX to OpenCL Inter-op Extension Header.
