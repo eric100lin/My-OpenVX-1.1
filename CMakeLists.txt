@@ -45,9 +45,11 @@ if (CMAKE_TOOLCHAIN_FILE)
 else (CMAKE_TOOLCHAIN_FILE)
 	if (WIN32)
 		include( CMake_windows_tools )
-	else (WIN32)
+	elseif (ANDROID)
 		include( CMake_android_tools )
-	endif (WIN32)
+	else ()
+		include( CMake_linux_tools )
+	endif ()
 endif (CMAKE_TOOLCHAIN_FILE)
 
 project (OpenVX)
@@ -160,9 +162,12 @@ if ( EXPERIMENTAL_USE_OPENCL AND NOT USE_POCL_OPENCL)
     endif (DEFINED ENV{VX_OPENCL_LIB_PATH})
 endif ( EXPERIMENTAL_USE_OPENCL AND NOT USE_POCL_OPENCL)
 
-if (NOT　CMAKE_TOOLCHAIN_FILE)
+if (CMAKE_TOOLCHAIN_FILE)
+	## Do nothing!!
+else(CMAKE_TOOLCHAIN_FILE)
 	FIND_NUM_PROCESSORS()
-endif(NOT　CMAKE_TOOLCHAIN_FILE)
+endif(CMAKE_TOOLCHAIN_FILE)
+
 
 if ( ${PROCESSOR_COUNT} LESS "1" )
 	message(FATAL_ERROR "Num processors found is " ${PROCESSOR_COUNT})
