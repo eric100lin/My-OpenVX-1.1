@@ -73,7 +73,7 @@ extern vx_kernel_description_t remap_kernel;
 extern vx_kernel_description_t halfscale_gaussian_kernel;
 extern vx_kernel_description_t laplacian_pyramid_kernel;
 extern vx_kernel_description_t laplacian_reconstruct_kernel;
-extern vx_kernel_description_t nonlinearfilter_kernel;
+//extern vx_kernel_description_t nonlinearfilter_kernel;
 
 #endif
 

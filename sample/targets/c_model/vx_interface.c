@@ -118,7 +118,7 @@ static vx_kernel_description_t *target_kernels[] = {
     &halfscale_gaussian_kernel,
     &laplacian_pyramid_kernel,
     &laplacian_reconstruct_kernel,
-    &nonlinearfilter_kernel,
+    //&nonlinearfilter_kernel,
 };
 
 /*! \brief Declares the number of base supported kernels.
