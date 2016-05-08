@@ -45,6 +45,26 @@ VX_API_ENTRY vx_lut VX_API_CALL vxCreateLUT(vx_context context, vx_enum data_typ
                 if (vxGetStatus((vx_reference)lut) == VX_SUCCESS && lut->base.type == VX_TYPE_LUT)
                 {
                     lut->num_items = count;
+                    lut->offset = 0;
+                    vxPrintArray(lut);
+                }
+            }
+        }
+        else if (data_type == VX_TYPE_INT16)
+        {
+            if (!(count <= 65536))
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Invalid parameter to LUT\n");
+                vxAddLogEntry(&context->base, VX_ERROR_INVALID_PARAMETERS, "Invalid parameter to LUT\n");
+                lut = (vx_lut_t *)vxGetErrorObject(context, VX_ERROR_INVALID_PARAMETERS);
+            }
+            else
+            {
+                lut = (vx_lut_t *)vxCreateArrayInt(context, VX_TYPE_INT16, count, vx_false_e, VX_TYPE_LUT);
+                if (vxGetStatus((vx_reference)lut) == VX_SUCCESS && lut->base.type == VX_TYPE_LUT)
+                {
+                    lut->num_items = count;
+                    lut->offset = (vx_uint32)(count/2);
                     vxPrintArray(lut);
                 }
             }
@@ -56,6 +76,7 @@ VX_API_ENTRY vx_lut VX_API_CALL vxCreateLUT(vx_context context, vx_enum data_typ
             if (vxGetStatus((vx_reference)lut) == VX_SUCCESS && lut->base.type == VX_TYPE_LUT)
             {
                 lut->num_items = count;
+                lut->offset = 0;
                 vxPrintArray(lut);
             }
         }
@@ -92,7 +113,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryLUT(vx_lut l, vx_enum attribute, void 
 
     switch (attribute)
     {
-        case VX_LUT_ATTRIBUTE_TYPE:
+        case VX_LUT_TYPE:
             if (VX_CHECK_PARAM(ptr, size, vx_enum, 0x3))
             {
                 *(vx_enum *)ptr = lut->item_type;
@@ -102,7 +123,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryLUT(vx_lut l, vx_enum attribute, void 
                 status = VX_ERROR_INVALID_PARAMETERS;
             }
             break;
-        case VX_LUT_ATTRIBUTE_COUNT:
+        case VX_LUT_COUNT:
             if (VX_CHECK_PARAM(ptr, size, vx_size, 0x3))
             {
                 *(vx_size *)ptr = lut->num_items;
@@ -112,10 +133,20 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryLUT(vx_lut l, vx_enum attribute, void 
                 status = VX_ERROR_INVALID_PARAMETERS;
             }
             break;
-        case VX_LUT_ATTRIBUTE_SIZE:
+        case VX_LUT_SIZE:
             if (VX_CHECK_PARAM(ptr, size, vx_size, 0x3))
             {
                 *(vx_size *)ptr = lut->num_items * lut->item_size;
+            }
+            else
+            {
+                status = VX_ERROR_INVALID_PARAMETERS;
+            }
+            break;
+        case VX_LUT_OFFSET:
+            if (VX_CHECK_PARAM(ptr, size, vx_uint32, 0x3))
+            {
+                *(vx_uint32 *)ptr = lut->offset;
             }
             else
             {
@@ -151,6 +182,53 @@ VX_API_ENTRY vx_status VX_API_CALL vxCommitLUT(vx_lut l, const void *ptr)
     if (vxIsValidSpecificReference(&lut->base, VX_TYPE_LUT) == vx_true_e)
     {
         status = vxCommitArrayRangeInt((vx_array_t *)l, 0, lut->num_items, ptr);
+    }
+    else
+    {
+        VX_PRINT(VX_ZONE_ERROR, "Not a valid object!\n");
+    }
+    return status;
+}
+
+VX_API_ENTRY vx_status VX_API_CALL vxCopyLUT(vx_lut l, void *user_ptr, vx_enum usage, vx_enum user_mem_type)
+{
+    vx_status status = VX_FAILURE;
+    vx_lut_t *lut = (vx_lut_t *)l;
+    if (vxIsValidSpecificReference(&lut->base, VX_TYPE_LUT) == vx_true_e)
+    {
+        vx_size stride = lut->item_size;
+        status = vxCopyArrayRangeInt((vx_array_t *)l, 0, lut->num_items, stride, user_ptr, usage, user_mem_type);
+    }
+    else
+    {
+        VX_PRINT(VX_ZONE_ERROR, "Not a valid object!\n");
+    }
+    return status;
+}
+
+VX_API_ENTRY vx_status VX_API_CALL vxMapLUT(vx_lut l, vx_map_id *map_id, void **ptr, vx_enum usage, vx_enum mem_type, vx_bitfield flags)
+{
+    vx_status status = VX_FAILURE;
+    vx_lut_t *lut = (vx_lut_t *)l;
+    if (vxIsValidSpecificReference(&lut->base, VX_TYPE_LUT) == vx_true_e)
+    {
+        vx_size stride = lut->item_size;
+        status = vxMapArrayRangeInt((vx_array_t *)lut, 0, lut->num_items, map_id, &stride, ptr, usage, mem_type, flags);
+    }
+    else
+    {
+        VX_PRINT(VX_ZONE_ERROR, "Not a valid object!\n");
+    }
+    return status;
+}
+
+VX_API_ENTRY vx_status VX_API_CALL vxUnmapLUT(vx_lut l, vx_map_id map_id)
+{
+    vx_status status = VX_FAILURE;
+    vx_lut_t *lut = (vx_lut_t *)l;
+    if (vxIsValidSpecificReference(&lut->base, VX_TYPE_LUT) == vx_true_e)
+    {
+        status = vxUnmapArrayRangeInt((vx_array_t *)l, map_id);
     }
     else
     {

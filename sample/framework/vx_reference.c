@@ -61,6 +61,12 @@ void vxInitReference(vx_reference ref, vx_context context, vx_enum type, vx_refe
 {
     if (ref)
     {
+#if !DISABLE_ICD_COMPATIBILITY
+		if(context)
+			ref->platform = context->base.platform;
+		else
+			ref->platform = NULL;
+#endif
         ref->context = context;
         ref->scope = scope;
         ref->magic = VX_MAGIC;
@@ -129,7 +135,11 @@ vx_status vxReleaseReferenceInt(vx_reference *pref,
             vx_destructor_f destructor = special_destructor;
             vx_enum type = ref->type;
 
-            vxRemoveReference(ref->context, ref);
+            if (vxRemoveReference(ref->context, ref) == vx_false_e)
+            {
+                status = VX_ERROR_INVALID_REFERENCE;
+                return status;
+            }
 
             /* find the destructor method */
             if (!destructor)
@@ -273,9 +283,10 @@ vx_bool vxIsValidReference(vx_reference ref)
     if (ref != NULL)
     {
         vxPrintReference(ref);
-        if ((ref->magic == VX_MAGIC) &&
-            (vxIsValidType(ref->type) && ref->type != VX_TYPE_CONTEXT) &&
-            (vxIsValidContext(ref->context) == vx_true_e))
+        if ( (ref->magic == VX_MAGIC) &&
+             (vxIsValidType(ref->type) == vx_true_e) &&
+             (( (ref->type != VX_TYPE_CONTEXT) && (vxIsValidContext(ref->context) == vx_true_e) ) ||
+              ( (ref->type == VX_TYPE_CONTEXT) && (ref->context == NULL) )) )
         {
             ret = vx_true_e;
         }
@@ -476,7 +487,6 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryReference(vx_reference ref, vx_enum at
                 status = VX_ERROR_INVALID_PARAMETERS;
             }
             break;
-#ifdef OPENVX_KHR_XML
         case VX_REF_ATTRIBUTE_NAME:
             if ((size <= VX_MAX_REFERENCE_NAME) && (ptr != NULL))
             {
@@ -487,7 +497,6 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryReference(vx_reference ref, vx_enum at
                 status = VX_ERROR_INVALID_PARAMETERS;
             }
             break;
-#endif
         default:
             status = VX_ERROR_NOT_SUPPORTED;
             break;
@@ -495,3 +504,62 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryReference(vx_reference ref, vx_enum at
     return status;
 }
 
+VX_API_ENTRY vx_status VX_API_CALL vxSetReferenceName(vx_reference ref, const vx_char *name)
+{
+    vx_status status = VX_ERROR_INVALID_REFERENCE;
+    if (vxIsValidReference(ref))
+    {
+        strncpy(ref->name, name, strnlen(name, VX_MAX_REFERENCE_NAME));
+        status = VX_SUCCESS;
+    }
+    return status;
+}
+
+VX_API_ENTRY vx_status VX_API_CALL vxReleaseReference(vx_reference* ref_ptr)
+{
+    vx_status status = VX_ERROR_INVALID_REFERENCE;
+
+    vx_reference ref = (ref_ptr ? *ref_ptr : NULL);
+    if (vxIsValidReference(ref) == vx_true_e)
+    {
+        switch (ref->type)
+        {
+        case VX_TYPE_CONTEXT:      status = vxReleaseContext((vx_context*)ref_ptr); break;
+        case VX_TYPE_GRAPH:        status = vxReleaseGraph((vx_graph*)ref_ptr); break;
+        case VX_TYPE_NODE:         status = vxReleaseNode((vx_node*)ref_ptr); break;
+        case VX_TYPE_ARRAY:        status = vxReleaseArray((vx_array*)ref_ptr); break;
+        case VX_TYPE_CONVOLUTION:  status = vxReleaseConvolution((vx_convolution*)ref_ptr); break;
+        case VX_TYPE_DISTRIBUTION: status = vxReleaseDistribution((vx_distribution*)ref_ptr); break;
+        case VX_TYPE_IMAGE:        status = vxReleaseImage((vx_image*)ref_ptr); break;
+        case VX_TYPE_LUT:          status = vxReleaseLUT((vx_lut*)ref_ptr); break;
+        case VX_TYPE_MATRIX:       status = vxReleaseMatrix((vx_matrix*)ref_ptr); break;
+        case VX_TYPE_PYRAMID:      status = vxReleasePyramid((vx_pyramid*)ref_ptr); break;
+        case VX_TYPE_REMAP:        status = vxReleaseRemap((vx_remap*)ref_ptr); break;
+        case VX_TYPE_SCALAR:       status = vxReleaseScalar((vx_scalar*)ref_ptr); break;
+        case VX_TYPE_THRESHOLD:    status = vxReleaseThreshold((vx_threshold*)ref_ptr); break;
+        case VX_TYPE_DELAY:        status = vxReleaseDelay((vx_delay*)ref_ptr); break;
+        case VX_TYPE_KERNEL:       status = vxReleaseKernel((vx_kernel*)ref_ptr); break;
+        case VX_TYPE_PARAMETER:    status = vxReleaseParameter((vx_parameter*)ref_ptr); break;
+        default:
+            break;
+        }
+    }
+
+    return status;
+}
+
+VX_API_ENTRY vx_status VX_API_CALL vxRetainReference(vx_reference ref)
+{
+    vx_status status = VX_SUCCESS;
+
+    if (vxIsValidReference(ref) == vx_true_e)
+    {
+        vxIncrementReference(ref, VX_EXTERNAL);
+    }
+    else
+    {
+        status = VX_ERROR_INVALID_REFERENCE;
+    }
+
+    return status;
+}

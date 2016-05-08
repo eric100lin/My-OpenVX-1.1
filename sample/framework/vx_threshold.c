@@ -37,7 +37,12 @@ static vx_bool vxIsValidThresholdType(vx_enum thresh_type)
 static vx_bool vxIsValidThresholdDataType(vx_enum data_type)
 {
     vx_bool ret = vx_false_e;
-    if (data_type == VX_TYPE_UINT8)
+    if (data_type == VX_TYPE_INT8 ||
+        data_type == VX_TYPE_UINT8 ||
+        data_type == VX_TYPE_INT16 ||
+        data_type == VX_TYPE_UINT16 ||
+        data_type == VX_TYPE_INT32 ||
+        data_type == VX_TYPE_UINT32)
     {
         ret = vx_true_e;
     }
@@ -63,6 +68,9 @@ VX_API_ENTRY vx_threshold VX_API_CALL vxCreateThreshold(vx_context context, vx_e
                 if (vxGetStatus((vx_reference)threshold) == VX_SUCCESS && threshold->base.type == VX_TYPE_THRESHOLD)
                 {
                     threshold->thresh_type = thresh_type;
+                    threshold->data_type = data_type;
+                    threshold->true_value  = VX_DEFAULT_THRESHOLD_TRUE_VALUE;
+                    threshold->false_value = VX_DEFAULT_THRESHOLD_FALSE_VALUE;
                 }
             }
             else
@@ -90,7 +98,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxSetThresholdAttribute(vx_threshold threshol
     {
         switch (attribute)
         {
-            case VX_THRESHOLD_ATTRIBUTE_THRESHOLD_VALUE:
+            case VX_THRESHOLD_THRESHOLD_VALUE:
                 if (VX_CHECK_PARAM(ptr, size, vx_int32, 0x3) &&
                     (threshold->thresh_type == VX_THRESHOLD_TYPE_BINARY))
                 {
@@ -102,7 +110,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxSetThresholdAttribute(vx_threshold threshol
                     status = VX_ERROR_INVALID_PARAMETERS;
                 }
                 break;
-            case VX_THRESHOLD_ATTRIBUTE_THRESHOLD_LOWER:
+            case VX_THRESHOLD_THRESHOLD_LOWER:
                 if (VX_CHECK_PARAM(ptr, size, vx_int32, 0x3) &&
                     (threshold->thresh_type == VX_THRESHOLD_TYPE_RANGE))
                 {
@@ -114,7 +122,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxSetThresholdAttribute(vx_threshold threshol
                     status = VX_ERROR_INVALID_PARAMETERS;
                 }
                 break;
-            case VX_THRESHOLD_ATTRIBUTE_THRESHOLD_UPPER:
+            case VX_THRESHOLD_THRESHOLD_UPPER:
                 if (VX_CHECK_PARAM(ptr, size, vx_int32, 0x3) &&
                     (threshold->thresh_type == VX_THRESHOLD_TYPE_RANGE))
                 {
@@ -126,7 +134,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxSetThresholdAttribute(vx_threshold threshol
                     status = VX_ERROR_INVALID_PARAMETERS;
                 }
                 break;
-            case VX_THRESHOLD_ATTRIBUTE_TRUE_VALUE:
+            case VX_THRESHOLD_TRUE_VALUE:
                 if (VX_CHECK_PARAM(ptr, size, vx_int32, 0x3))
                 {
                     threshold->true_value = *(vx_int32 *)ptr;
@@ -137,7 +145,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxSetThresholdAttribute(vx_threshold threshol
                     status = VX_ERROR_INVALID_PARAMETERS;
                 }
                 break;
-            case VX_THRESHOLD_ATTRIBUTE_FALSE_VALUE:
+            case VX_THRESHOLD_FALSE_VALUE:
                 if (VX_CHECK_PARAM(ptr, size, vx_int32, 0x3))
                 {
                     threshold->false_value = *(vx_int32 *)ptr;
@@ -148,7 +156,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxSetThresholdAttribute(vx_threshold threshol
                     status = VX_ERROR_INVALID_PARAMETERS;
                 }
                 break;
-            case VX_THRESHOLD_ATTRIBUTE_TYPE:
+            case VX_THRESHOLD_TYPE:
                 if (VX_CHECK_PARAM(ptr, size, vx_enum, 0x3))
                 {
                     vx_enum thresh_type = *(vx_enum *)ptr;
@@ -186,7 +194,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryThreshold(vx_threshold threshold, vx_e
     {
         switch (attribute)
         {
-            case VX_THRESHOLD_ATTRIBUTE_THRESHOLD_VALUE:
+            case VX_THRESHOLD_THRESHOLD_VALUE:
                 if (VX_CHECK_PARAM(ptr, size, vx_int32, 0x3) &&
                     (threshold->thresh_type == VX_THRESHOLD_TYPE_BINARY))
                 {
@@ -198,7 +206,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryThreshold(vx_threshold threshold, vx_e
                     status = VX_ERROR_INVALID_PARAMETERS;
                 }
                 break;
-            case VX_THRESHOLD_ATTRIBUTE_THRESHOLD_LOWER:
+            case VX_THRESHOLD_THRESHOLD_LOWER:
                 if (VX_CHECK_PARAM(ptr, size, vx_int32, 0x3) &&
                     (threshold->thresh_type == VX_THRESHOLD_TYPE_RANGE))
                 {
@@ -210,7 +218,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryThreshold(vx_threshold threshold, vx_e
                     status = VX_ERROR_INVALID_PARAMETERS;
                 }
                 break;
-            case VX_THRESHOLD_ATTRIBUTE_THRESHOLD_UPPER:
+            case VX_THRESHOLD_THRESHOLD_UPPER:
                 if (VX_CHECK_PARAM(ptr, size, vx_int32, 0x3) &&
                     (threshold->thresh_type == VX_THRESHOLD_TYPE_RANGE))
                 {
@@ -222,7 +230,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryThreshold(vx_threshold threshold, vx_e
                     status = VX_ERROR_INVALID_PARAMETERS;
                 }
                 break;
-            case VX_THRESHOLD_ATTRIBUTE_TRUE_VALUE:
+            case VX_THRESHOLD_TRUE_VALUE:
                 if (VX_CHECK_PARAM(ptr, size, vx_int32, 0x3))
                 {
                     *(vx_int32 *)ptr = threshold->true_value;
@@ -233,7 +241,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryThreshold(vx_threshold threshold, vx_e
                     status = VX_ERROR_INVALID_PARAMETERS;
                 }
                 break;
-            case VX_THRESHOLD_ATTRIBUTE_FALSE_VALUE:
+            case VX_THRESHOLD_FALSE_VALUE:
                 if (VX_CHECK_PARAM(ptr, size, vx_int32, 0x3))
                 {
                     *(vx_int32 *)ptr = threshold->false_value;
@@ -244,7 +252,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryThreshold(vx_threshold threshold, vx_e
                     status = VX_ERROR_INVALID_PARAMETERS;
                 }
                 break;
-            case VX_THRESHOLD_ATTRIBUTE_TYPE:
+            case VX_THRESHOLD_TYPE:
                 if (VX_CHECK_PARAM(ptr, size, vx_enum, 0x3))
                 {
                     *(vx_enum *)ptr = threshold->thresh_type;
@@ -254,10 +262,10 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryThreshold(vx_threshold threshold, vx_e
                     status = VX_ERROR_INVALID_PARAMETERS;
                 }
                 break;
-            case VX_THRESHOLD_ATTRIBUTE_DATA_TYPE:
+            case VX_THRESHOLD_DATA_TYPE:
                 if (VX_CHECK_PARAM(ptr, size, vx_enum, 0x3))
                 {
-                    *(vx_enum *)ptr = VX_TYPE_UINT8;
+                    *(vx_enum *)ptr = threshold->data_type;
                 }
                 else
                 {

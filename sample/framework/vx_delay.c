@@ -24,6 +24,7 @@
 #include <vx_internal.h>
 
 #define vxIsValidDelay(d) vxIsValidSpecificReference((vx_reference)(d), VX_TYPE_DELAY)
+#define vxIsValidGraph(g) vxIsValidSpecificReference((vx_reference)(g), VX_TYPE_GRAPH)
 
 vx_bool vxAddAssociationToDelay(vx_reference value, vx_node n, vx_uint32 i)
 {
@@ -74,7 +75,7 @@ vx_bool vxRemoveAssociationToDelay(vx_reference value, vx_node n, vx_uint32 i)
 
     vx_int32 index = (delay->index + delay->count - abs(delay_index)) % (vx_int32)delay->count;
 
-    if (index >= delay->count) {
+    if (index >= (vx_int32)delay->count) {
         return vx_false_e;
     }
 
@@ -135,6 +136,11 @@ VX_API_ENTRY vx_reference VX_API_CALL vxGetReferenceFromDelay(vx_delay delay, vx
             ref = delay->refs[i];
             VX_PRINT(VX_ZONE_DELAY, "Retrieving relative index %d => " VX_FMT_REF  " from Delay (%d)\n", index, ref, i);
         }
+        else
+        {
+            vxAddLogEntry(&delay->base, VX_ERROR_INVALID_PARAMETERS, "Failed to retrieve reference from delay by index %d\n", index);
+            ref = (vx_reference_t *)vxGetErrorObject(delay->base.context, VX_ERROR_INVALID_PARAMETERS);
+        }
     }
     return ref;
 }
@@ -146,13 +152,13 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryDelay(vx_delay delay, vx_enum attribut
     {
         switch (attribute)
         {
-            case VX_DELAY_ATTRIBUTE_TYPE:
+            case VX_DELAY_TYPE:
                 if (VX_CHECK_PARAM(ptr, size, vx_size, 0x3))
                     *(vx_enum *)ptr = delay->type;
                 else
                     status = VX_ERROR_INVALID_PARAMETERS;
                 break;
-            case VX_DELAY_ATTRIBUTE_SLOTS:
+            case VX_DELAY_SLOTS:
                 if (VX_CHECK_PARAM(ptr, size, vx_size, 0x3))
                     *(vx_size *)ptr = (vx_size)delay->count;
                 else
@@ -200,6 +206,16 @@ void vxDestructDelay(vx_reference ref) {
 
 VX_API_ENTRY vx_status VX_API_CALL vxReleaseDelay(vx_delay *d)
 {
+    if (vxIsValidDelay(*d) && ((*d)->type == VX_TYPE_PYRAMID) && ((*d)->pyr != NULL))
+    {
+        vx_delay delay = *d;
+        vx_int32 i;
+        vx_int32 numLevels = ((vx_pyramid)delay->refs[0])->numLevels;
+        /* release pyramid delays */
+        for (i = 0; i < numLevels; ++i)
+            vxReleaseReferenceInt((vx_reference *)&(delay->pyr[i]), VX_TYPE_DELAY, VX_EXTERNAL, &vxDestructDelay);
+    }
+
     return vxReleaseReferenceInt((vx_reference *)d, VX_TYPE_DELAY, VX_EXTERNAL, &vxDestructDelay);
 }
 
@@ -243,6 +259,7 @@ VX_API_ENTRY vx_delay VX_API_CALL vxCreateDelay(vx_context context,
     if (vxGetStatus((vx_reference)delay) == VX_SUCCESS && delay->base.type == VX_TYPE_DELAY)
     {
         vx_size i = 0;
+        delay->pyr = NULL;
         delay->set = (vx_delay_param_t *)calloc(count, sizeof(vx_delay_param_t));
         delay->refs = (vx_reference *)calloc(count, sizeof(vx_reference));
         delay->type = exemplar->type;
@@ -281,8 +298,7 @@ VX_API_ENTRY vx_delay VX_API_CALL vxCreateDelay(vx_context context,
                 case VX_TYPE_DISTRIBUTION:
                 {
                     vx_distribution dist = (vx_distribution)exemplar;
-                    vx_uint32 range = dist->memory.dims[0][VX_DIM_X] * dist->window_x;
-                    delay->refs[i] = (vx_reference)vxCreateDistribution(context, dist->memory.dims[0][VX_DIM_X], dist->offset_x, range);
+                    delay->refs[i] = (vx_reference)vxCreateDistribution(context, dist->memory.dims[0][VX_DIM_X], dist->offset_x, dist->range_x);
                     break;
                 }
                 case VX_TYPE_REMAP:
@@ -326,6 +342,38 @@ VX_API_ENTRY vx_delay VX_API_CALL vxCreateDelay(vx_context context,
             /* set the scope to the delay */
             ((vx_reference )delay->refs[i])->scope = (vx_reference )delay;
         }
+
+        if (exemplar->type == VX_TYPE_PYRAMID)
+        {
+            /* create internal delays for each pyramid level */
+            vx_size j = 0;
+            vx_size numLevels = ((vx_pyramid)exemplar)->numLevels;
+            delay->pyr = (vx_delay *)calloc(count, sizeof(vx_delay));
+            vx_delay pyrdelay = NULL;
+            for (j = 0; j < numLevels; ++j)
+            {
+                pyrdelay = (vx_delay)vxCreateReference(context, VX_TYPE_DELAY, VX_EXTERNAL, &context->base);
+                delay->pyr[j] = pyrdelay;
+                if (vxGetStatus((vx_reference)pyrdelay) == VX_SUCCESS && pyrdelay->base.type == VX_TYPE_DELAY)
+                {
+                    pyrdelay->set = (vx_delay_param_t *)calloc(count, sizeof(vx_delay_param_t));
+                    pyrdelay->refs = (vx_reference *)calloc(count, sizeof(vx_reference));
+                    pyrdelay->type = VX_TYPE_IMAGE;
+                    pyrdelay->count = count;
+                    for (i = 0; i < count; i++)
+                    {
+                        pyrdelay->refs[i] = (vx_reference)vxGetPyramidLevel((vx_pyramid)delay->refs[i], j);
+                        /* set the object as a delay element */
+                        vxInitReferenceForDelay(pyrdelay->refs[i], pyrdelay, i);
+                        /* change the counting from external to internal */
+                        vxIncrementReference(pyrdelay->refs[i], VX_INTERNAL);
+                        vxDecrementReference(pyrdelay->refs[i], VX_EXTERNAL);
+                        /* set the scope to the delay */
+                        ((vx_reference)pyrdelay->refs[i])->scope = (vx_reference)pyrdelay;
+                    }
+                }
+            }
+        }
     }
 
     return (vx_delay)delay;
@@ -344,7 +392,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxAgeDelay(vx_delay delay)
         VX_PRINT(VX_ZONE_DELAY, "Delay has shifted by 1, base index is now %d\n", delay->index);
 
         // then reassign the parameters
-        for (i = 0; i < delay->count; i++)
+        for (i = 0; i < (vx_int32)delay->count; i++)
         {
             vx_delay_param_t *param = NULL;
 
@@ -360,10 +408,62 @@ VX_API_ENTRY vx_status VX_API_CALL vxAgeDelay(vx_delay delay)
                 param = param->next;
             } while (param != NULL);
         }
+
+        if (delay->type == VX_TYPE_PYRAMID && delay->pyr != NULL)
+        {
+            // age pyramid levels
+            vx_int32 numLevels = ((vx_pyramid)delay->refs[0])->numLevels;
+            for (i = 0; i < numLevels; ++i)
+                vxAgeDelay(delay->pyr[i]);
+        }
     }
     else
     {
         status = VX_ERROR_INVALID_REFERENCE;
     }
+    return status;
+}
+
+VX_API_ENTRY vx_status VX_API_CALL vxRegisterAutoAging(vx_graph graph, vx_delay delay)
+{
+    unsigned int i;
+    vx_status status = VX_SUCCESS;
+    vx_bool isAlreadyRegistered = vx_false_e;
+    vx_bool isRegisteredDelaysListFull = vx_true_e;
+
+    if (vxIsValidGraph(graph) == vx_false_e)
+        return VX_ERROR_INVALID_REFERENCE;
+
+    if (vxIsValidDelay(delay) == vx_false_e)
+        return VX_ERROR_INVALID_REFERENCE;
+
+    /* check if this particular delay is already registered in the graph */
+    for (i = 0; i < VX_INT_MAX_REF; i++)
+    {
+        if (vxIsValidDelay(graph->delays[i]) && graph->delays[i] == delay)
+        {
+            isAlreadyRegistered = vx_true_e;
+            break;
+        }
+    }
+
+    /* if not regisered yet, find the first empty slot and register delay */
+    if (isAlreadyRegistered == vx_false_e)
+    {
+        for (i = 0; i < VX_INT_MAX_REF; i++)
+        {
+            if (vxIsValidDelay(graph->delays[i]) == vx_false_e)
+            {
+                isRegisteredDelaysListFull = vx_false_e;
+                graph->delays[i] = delay;
+                break;
+            }
+        }
+
+        /* report error if there is no empty slots to register delay */
+        if (isRegisteredDelaysListFull == vx_true_e)
+            status = VX_ERROR_INVALID_REFERENCE;
+    }
+
     return status;
 }

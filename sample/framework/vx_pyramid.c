@@ -72,7 +72,7 @@ vx_status vxInitPyramid(vx_pyramid pyramid,
             vx_uint32 ref_w = pyramid->width;
             vx_uint32 ref_h = pyramid->height;
 
-            for (i = 0; i < pyramid->numLevels; i++)
+            for (i = 0; i < (vx_int32)pyramid->numLevels; i++)
             {
                 vx_context c = (vx_context)pyramid->base.context;
                 if (pyramid->levels[i] == 0)
@@ -227,7 +227,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryPyramid(vx_pyramid pyramid, vx_enum at
     {
         switch (attribute)
         {
-            case VX_PYRAMID_ATTRIBUTE_LEVELS:
+            case VX_PYRAMID_LEVELS:
                 if (VX_CHECK_PARAM(ptr, size, vx_size, 0x3))
                 {
                     *(vx_size *)ptr = pyramid->numLevels;
@@ -237,7 +237,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryPyramid(vx_pyramid pyramid, vx_enum at
                     status = VX_ERROR_INVALID_PARAMETERS;
                 }
                 break;
-            case VX_PYRAMID_ATTRIBUTE_SCALE:
+            case VX_PYRAMID_SCALE:
                 if (VX_CHECK_PARAM(ptr, size, vx_float32, 0x3))
                 {
                     *(vx_float32 *)ptr = pyramid->scale;
@@ -247,7 +247,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryPyramid(vx_pyramid pyramid, vx_enum at
                     status = VX_ERROR_INVALID_PARAMETERS;
                 }
                 break;
-            case VX_PYRAMID_ATTRIBUTE_WIDTH:
+            case VX_PYRAMID_WIDTH:
                 if (VX_CHECK_PARAM(ptr, size, vx_uint32, 0x3))
                 {
                     *(vx_uint32 *)ptr = pyramid->width;
@@ -257,7 +257,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryPyramid(vx_pyramid pyramid, vx_enum at
                     status = VX_ERROR_INVALID_PARAMETERS;
                 }
                 break;
-            case VX_PYRAMID_ATTRIBUTE_HEIGHT:
+            case VX_PYRAMID_HEIGHT:
                 if (VX_CHECK_PARAM(ptr, size, vx_uint32, 0x3))
                 {
                     *(vx_uint32 *)ptr = pyramid->height;
@@ -267,7 +267,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryPyramid(vx_pyramid pyramid, vx_enum at
                     status = VX_ERROR_INVALID_PARAMETERS;
                 }
                 break;
-            case VX_PYRAMID_ATTRIBUTE_FORMAT:
+            case VX_PYRAMID_FORMAT:
                 if (VX_CHECK_PARAM(ptr, size, vx_df_image, 0x3))
                 {
                     *(vx_df_image *)ptr = pyramid->format;
@@ -294,6 +294,11 @@ VX_API_ENTRY vx_image VX_API_CALL vxGetPyramidLevel(vx_pyramid pyramid, vx_uint3
         {
             image = pyramid->levels[index];
             vxIncrementReference(&image->base, VX_EXTERNAL);
+        }
+        else
+        {
+            vxAddLogEntry(&pyramid->base, VX_ERROR_INVALID_PARAMETERS, "Failed to get pyramid level %d\n", index);
+            image = (vx_image_t *)vxGetErrorObject(pyramid->base.context, VX_ERROR_INVALID_PARAMETERS);
         }
     }
     return image;

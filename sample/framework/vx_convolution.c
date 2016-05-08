@@ -79,7 +79,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryConvolution(vx_convolution convolution
     }
     switch (attribute)
     {
-        case VX_CONVOLUTION_ATTRIBUTE_ROWS:
+        case VX_CONVOLUTION_ROWS:
             if (VX_CHECK_PARAM(ptr, size, vx_size, 0x3))
             {
                 *(vx_size *)ptr = convolution->base.rows;
@@ -89,7 +89,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryConvolution(vx_convolution convolution
                 status = VX_ERROR_INVALID_PARAMETERS;
             }
             break;
-        case VX_CONVOLUTION_ATTRIBUTE_COLUMNS:
+        case VX_CONVOLUTION_COLUMNS:
             if (VX_CHECK_PARAM(ptr, size, vx_size, 0x3))
             {
                 *(vx_size *)ptr = convolution->base.columns;
@@ -99,7 +99,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryConvolution(vx_convolution convolution
                 status = VX_ERROR_INVALID_PARAMETERS;
             }
             break;
-        case VX_CONVOLUTION_ATTRIBUTE_SCALE:
+        case VX_CONVOLUTION_SCALE:
             if (VX_CHECK_PARAM(ptr, size, vx_uint32, 0x3))
             {
                 *(vx_uint32 *)ptr = convolution->scale;
@@ -109,7 +109,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryConvolution(vx_convolution convolution
                 status = VX_ERROR_INVALID_PARAMETERS;
             }
             break;
-        case VX_CONVOLUTION_ATTRIBUTE_SIZE:
+        case VX_CONVOLUTION_SIZE:
             if (VX_CHECK_PARAM(ptr, size, vx_size, 0x3))
             {
                 *(vx_size *)ptr = convolution->base.columns * convolution->base.rows * sizeof(vx_int16);
@@ -145,7 +145,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxSetConvolutionAttribute(vx_convolution conv
     }
     switch (attribute)
     {
-        case VX_CONVOLUTION_ATTRIBUTE_SCALE:
+        case VX_CONVOLUTION_SCALE:
             if (VX_CHECK_PARAM(ptr, size, vx_uint32, 0x3))
             {
                 vx_uint32 scale = *(vx_uint32 *)ptr;
@@ -212,6 +212,59 @@ VX_API_ENTRY vx_status VX_API_CALL vxWriteConvolutionCoefficients(vx_convolution
         vxSemPost(&convolution->base.base.lock);
         vxWroteToReference(&convolution->base.base);
         status = VX_SUCCESS;
+    }
+    return status;
+}
+
+vx_status VX_API_CALL vxCopyConvolutionCoefficients(vx_convolution convolution, void *ptr, vx_enum usage, vx_enum mem_type)
+{
+    vx_status status = VX_ERROR_INVALID_REFERENCE;
+    if (vxIsValidSpecificReference(&convolution->base.base, VX_TYPE_CONVOLUTION) == vx_true_e)
+    {
+        if (vxAllocateMemory(convolution->base.base.context, &convolution->base.memory) == vx_true_e)
+        {
+            if (usage == VX_READ_ONLY)
+            {
+                vxSemWait(&convolution->base.base.lock);
+                if (ptr)
+                {
+                    vx_size size = convolution->base.memory.strides[0][1] *
+                                   convolution->base.memory.dims[0][1];
+                    memcpy(ptr, convolution->base.memory.ptrs[0], size);
+                }
+                vxSemPost(&convolution->base.base.lock);
+                vxReadFromReference(&convolution->base.base);
+                status = VX_SUCCESS;
+            }
+            else if (usage == VX_WRITE_ONLY)
+            {
+                vxSemWait(&convolution->base.base.lock);
+                if (ptr)
+                {
+                    vx_size size = convolution->base.memory.strides[0][1] *
+                                   convolution->base.memory.dims[0][1];
+
+                    memcpy(convolution->base.memory.ptrs[0], ptr, size);
+                }
+                vxSemPost(&convolution->base.base.lock);
+                vxWroteToReference(&convolution->base.base);
+                status = VX_SUCCESS;
+            }
+            else
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Wrong parameters for convolution\n");
+                status = VX_ERROR_INVALID_PARAMETERS;
+            }
+        }
+        else
+        {
+            VX_PRINT(VX_ZONE_ERROR, "Failed to allocate convolution\n");
+            status = VX_ERROR_NO_MEMORY;
+        }
+    }
+    else
+    {
+        VX_PRINT(VX_ZONE_ERROR, "Invalid reference for convolution\n");
     }
     return status;
 }

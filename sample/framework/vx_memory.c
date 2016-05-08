@@ -27,7 +27,7 @@ vx_bool vxFreeMemory(vx_context context, vx_memory_t *memory)
 {
     if (memory->allocated == vx_true_e)
     {
-        vx_int32 p = 0u;
+        vx_uint32 p = 0u;
         vxPrintMemory(memory);
         for (p = 0; p < memory->nptrs; p++)
         {
@@ -52,7 +52,8 @@ vx_bool vxAllocateMemory(vx_context context, vx_memory_t *memory)
 {
     if (memory->allocated == vx_false_e)
     {
-        vx_int32 d = 0, p = 0;
+        vx_int32 d = 0;
+        vx_uint32 p = 0;
         VX_PRINT(VX_ZONE_INFO, "Allocating %u pointers of %u dimensions each.\n", memory->nptrs, memory->ndims);
         memory->allocated = vx_true_e;
         for (p = 0; p < memory->nptrs; p++)
@@ -124,7 +125,8 @@ vx_bool vxAllocateMemory(vx_context context, vx_memory_t *memory)
 
 void vxPrintMemory(vx_memory_t *mem)
 {
-    vx_int32 d = 0, p = 0;
+    vx_int32 d = 0;
+    vx_uint32 p = 0;
     for (p = 0; p < mem->nptrs; p++)
     {
         vx_bool gotlock = vxSemTryWait(&mem->locks[p]);

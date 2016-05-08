@@ -213,7 +213,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxSetParameterByIndex(vx_node node, vx_uint32
            doesn't specify that only VX_TYPE_SCALAR should be used for scalar types in
            this function. */
         if((type == VX_TYPE_SCALAR) &&
-           (vxQueryScalar((vx_scalar)value, VX_SCALAR_ATTRIBUTE_TYPE, &data_type, sizeof(data_type)) == VX_SUCCESS))
+           (vxQueryScalar((vx_scalar)value, VX_SCALAR_TYPE, &data_type, sizeof(data_type)) == VX_SUCCESS))
         {
             if(data_type != node->kernel->signature.types[index])
             {
@@ -296,31 +296,31 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryParameter(vx_parameter parameter, vx_e
     {
         switch (attribute)
         {
-            case VX_PARAMETER_ATTRIBUTE_DIRECTION:
+            case VX_PARAMETER_DIRECTION:
                 if (VX_CHECK_PARAM(ptr, size, vx_enum, 0x3))
                     *(vx_enum *)ptr = parameter->kernel->signature.directions[parameter->index];
                 else
                     status = VX_ERROR_INVALID_PARAMETERS;
                 break;
-            case VX_PARAMETER_ATTRIBUTE_INDEX:
+            case VX_PARAMETER_INDEX:
                 if (VX_CHECK_PARAM(ptr, size, vx_uint32, 0x3))
                     *(vx_uint32 *)ptr = parameter->index;
                 else
                     status = VX_ERROR_INVALID_PARAMETERS;
                 break;
-            case VX_PARAMETER_ATTRIBUTE_TYPE:
+            case VX_PARAMETER_TYPE:
                 if (VX_CHECK_PARAM(ptr, size, vx_enum, 0x3))
                     *(vx_enum *)ptr = parameter->kernel->signature.types[parameter->index];
                 else
                     status = VX_ERROR_INVALID_PARAMETERS;
                 break;
-            case VX_PARAMETER_ATTRIBUTE_STATE:
+            case VX_PARAMETER_STATE:
                 if (VX_CHECK_PARAM(ptr, size, vx_enum, 0x3))
                     *(vx_enum *)ptr = (vx_enum)parameter->kernel->signature.states[parameter->index];
                 else
                     status = VX_ERROR_INVALID_PARAMETERS;
                 break;
-            case VX_PARAMETER_ATTRIBUTE_REF:
+            case VX_PARAMETER_REF:
                 if (VX_CHECK_PARAM(ptr, size, vx_reference, 0x3))
                 {
                     if (parameter->node)

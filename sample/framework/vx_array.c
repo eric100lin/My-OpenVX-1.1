@@ -176,7 +176,7 @@ vx_status vxAccessArrayRangeInt(vx_array arr, vx_size start, vx_size end, vx_siz
             VX_PRINT(VX_ZONE_ERROR, "Can not access a virtual array\n");
             return VX_ERROR_OPTIMIZED_AWAY;
         }
-        /* framework trying to access a virtual image, this is ok. */
+        /* framework trying to access a virtual array, this is ok. */
     }
 
     /* verify has not run or will not run yet. this allows this API to "touch"
@@ -289,8 +289,8 @@ vx_status vxAccessArrayRangeInt(vx_array arr, vx_size start, vx_size end, vx_siz
                     int i;
                     vx_uint8 *pSrc, *pDest;
 
-                    for (i = start, pDest = *ptr, pSrc = &arr->memory.ptrs[0][start * arr->item_size];
-                         i < end;
+                    for (i = (int)start, pDest = *ptr, pSrc = &arr->memory.ptrs[0][start * arr->item_size];
+                         i < (int)end;
                          i++, pDest += *pStride, pSrc += arr->item_size)
                     {
                         memcpy(pDest, pSrc, arr->item_size);
@@ -333,7 +333,7 @@ vx_status vxCommitArrayRangeInt(vx_array arr, vx_size start, vx_size end, const 
             VX_PRINT(VX_ZONE_ERROR, "Can not access a virtual array\n");
             return VX_ERROR_OPTIMIZED_AWAY;
         }
-        /* framework trying to access a virtual image, this is ok. */
+        /* framework trying to access a virtual array, this is ok. */
     }
 
     /* VARIABLES:
@@ -387,8 +387,8 @@ vx_status vxCommitArrayRangeInt(vx_array arr, vx_size start, vx_size end, const 
                             int i;
                             const vx_uint8 *pSrc; vx_uint8 *pDest;
 
-                            for (i = start, pSrc = ptr, pDest= &beg_ptr[offset];
-                                 i < end;
+                            for (i = (int)start, pSrc = ptr, pDest= &beg_ptr[offset];
+                                 i < (int)end;
                                  i++, pSrc += stride, pDest += arr->item_size)
                             {
                                 memcpy(pDest, pSrc, arr->item_size);
@@ -426,6 +426,249 @@ vx_status vxCommitArrayRangeInt(vx_array arr, vx_size start, vx_size end, const 
         }
 
         vxDecrementReference(&arr->base, VX_EXTERNAL);
+    }
+
+    return status;
+}
+
+vx_status vxCopyArrayRangeInt(vx_array arr, vx_size start, vx_size end, vx_size stride, void *ptr, vx_enum usage, vx_enum mem_type)
+{
+    vx_status status = VX_FAILURE;
+
+    /* bad parameters */
+    if (((usage != VX_READ_ONLY) && (VX_WRITE_ONLY != usage)) ||
+         (ptr == NULL) || (stride < arr->item_size) ||
+         (start >= end) || (end > arr->num_items))
+    {
+        return VX_ERROR_INVALID_PARAMETERS;
+    }
+
+    /* determine if virtual before checking for memory */
+    if (arr->base.is_virtual == vx_true_e)
+    {
+        if (arr->base.is_accessible == vx_false_e)
+        {
+            /* User tried to access a "virtual" array. */
+            VX_PRINT(VX_ZONE_ERROR, "Can not access a virtual array\n");
+            return VX_ERROR_OPTIMIZED_AWAY;
+        }
+        /* framework trying to access a virtual array, this is ok. */
+    }
+
+    /* verify has not run or will not run yet. this allows this API to "touch"
+     * the array to create it.
+     */
+    if (vxAllocateArray(arr) == vx_false_e)
+    {
+        return VX_ERROR_NO_MEMORY;
+    }
+
+    vx_size offset = start * arr->item_size;
+    if (usage == VX_READ_ONLY)
+    {
+        VX_PRINT(VX_ZONE_ARRAY, "CopyArrayRange from "VX_FMT_REF" to ptr %p from %u to %u\n", arr, ptr, start, end);
+
+        vx_uint8 *pSrc = (vx_uint8 *)&arr->memory.ptrs[0][offset];
+        vx_uint8 *pDst = (vx_uint8 *)ptr;
+        if (stride == arr->item_size)
+        {
+            vx_size size = (end - start) * arr->item_size;
+            memcpy(pDst, pSrc, size);
+        }
+        else
+        {
+            /* The source is not compact, we need to copy per element */
+            for (vx_size i = start; i < end; i++)
+            {
+                memcpy(pDst, pSrc, arr->item_size);
+                pDst += stride;
+                pSrc += arr->item_size;
+            }
+        }
+
+        vxReadFromReference(&arr->base);
+        status = VX_SUCCESS;
+    }
+    else
+    {
+        VX_PRINT(VX_ZONE_ARRAY, "CopyArrayRange from ptr %p to "VX_FMT_REF" from %u to %u\n", arr, ptr, start, end);
+
+        if (vxSemWait(&arr->memory.locks[0]) == vx_true_e)
+        {
+            vx_uint8 *pSrc = (vx_uint8 *)ptr;
+            vx_uint8 *pDst = (vx_uint8 *)&arr->memory.ptrs[0][offset];
+            if (stride == arr->item_size)
+            {
+                vx_size size = (end - start) * arr->item_size;
+                memcpy(pDst, pSrc, size);
+            }
+            else
+            {
+                /* The source is not compact, we need to copy per element */
+                for (vx_size i = start; i < end; i++)
+                {
+                    memcpy(pDst, pSrc, arr->item_size);
+                    pDst += arr->item_size;
+                    pSrc += stride;
+                }
+            }
+
+            vxWroteToReference(&arr->base);
+            vxSemPost(&arr->memory.locks[0]);
+            status = VX_SUCCESS;
+        }
+        else
+        {
+            status = VX_ERROR_NO_RESOURCES;
+        }
+    }
+
+    return status;
+}
+
+vx_status vxMapArrayRangeInt(vx_array arr, vx_size start, vx_size end, vx_map_id *map_id, vx_size *stride,
+                             void **ptr, vx_enum usage, vx_enum mem_type, vx_uint32 flags)
+{
+    vx_status status = VX_FAILURE;
+
+    /* bad parameters */
+    if ((usage < VX_READ_ONLY) || (VX_READ_AND_WRITE < usage) ||
+        (ptr == NULL) || (stride == NULL) ||
+        (start >= end) || (end > arr->num_items))
+    {
+        return VX_ERROR_INVALID_PARAMETERS;
+    }
+
+    /* determine if virtual before checking for memory */
+    if (arr->base.is_virtual == vx_true_e)
+    {
+        if (arr->base.is_accessible == vx_false_e)
+        {
+            /* User tried to access a "virtual" array. */
+            VX_PRINT(VX_ZONE_ERROR, "Can not access a virtual array\n");
+            return VX_ERROR_OPTIMIZED_AWAY;
+        }
+        /* framework trying to access a virtual array, this is ok. */
+    }
+
+    /* verify has not run or will not run yet. this allows this API to "touch"
+     * the array to create it.
+     */
+    if (vxAllocateArray(arr) == vx_false_e)
+    {
+        return VX_ERROR_NO_MEMORY;
+    }
+
+    VX_PRINT(VX_ZONE_ARRAY, "MapArrayRange from "VX_FMT_REF" to ptr %p from %u to %u\n", arr, *ptr, start, end);
+
+    vx_memory_map_extra extra;
+    extra.array_data.start = start;
+    extra.array_data.end = end;
+    vx_uint8 *buf = NULL;
+    vx_size size = (end - start) * arr->item_size;
+    if (vxMemoryMap(arr->base.context, (vx_reference)arr, size, usage, mem_type, flags, &extra, (void **)&buf, map_id) == vx_true_e)
+    {
+        if (VX_READ_ONLY == usage || VX_READ_AND_WRITE == usage)
+        {
+            if (vxSemWait(&arr->memory.locks[0]) == vx_true_e)
+            {
+                *stride = arr->item_size;
+
+                vx_uint32 offset = start * arr->item_size;
+                vx_uint8 *pSrc = (vx_uint8 *)&arr->memory.ptrs[0][offset];
+                vx_uint8 *pDst = (vx_uint8 *)buf;
+                memcpy(pDst, pSrc, size);
+
+                *ptr = buf;
+                vxIncrementReference(&arr->base, VX_EXTERNAL);
+                vxSemPost(&arr->memory.locks[0]);
+
+                status = VX_SUCCESS;
+            }
+            else
+            {
+                status = VX_ERROR_NO_RESOURCES;
+            }
+        }
+        else
+        {
+            /* write only mode */
+            *stride = arr->item_size;
+            *ptr = buf;
+            vxIncrementReference(&arr->base, VX_EXTERNAL);
+            status = VX_SUCCESS;
+        }
+    }
+    else
+    {
+        status = VX_FAILURE;
+    }
+
+    return status;
+}
+
+vx_status vxUnmapArrayRangeInt(vx_array arr, vx_map_id map_id)
+{
+    vx_status status = VX_FAILURE;
+
+    /* determine if virtual before checking for memory */
+    if (arr->base.is_virtual == vx_true_e)
+    {
+        if (arr->base.is_accessible == vx_false_e)
+        {
+            /* User tried to access a "virtual" array. */
+            VX_PRINT(VX_ZONE_ERROR, "Can not access a virtual array\n");
+            return VX_ERROR_OPTIMIZED_AWAY;
+        }
+        /* framework trying to access a virtual array, this is ok. */
+    }
+
+    /* bad parameters */
+    if (vxFindMemoryMap(arr->base.context, (vx_reference)arr, map_id) != vx_true_e)
+    {
+        VX_PRINT(VX_ZONE_ERROR, "Invalid parameters to unmap array range\n");
+        return VX_ERROR_INVALID_PARAMETERS;
+    }
+
+    VX_PRINT(VX_ZONE_ARRAY, "UnmapArrayRange from "VX_FMT_REF"\n", arr);
+
+    vx_context context = arr->base.context;
+    vx_memory_map_t* map = &context->memory_maps[map_id];
+    if (map->used && map->ref == (vx_reference)arr)
+    {
+        vx_size start = map->extra.array_data.start;
+        vx_size end = map->extra.array_data.end;
+        if (VX_WRITE_ONLY == map->usage || VX_READ_AND_WRITE == map->usage)
+        {
+            if (vxSemWait(&arr->memory.locks[0]) == vx_true_e)
+            {
+                vx_uint32 offset = start * arr->item_size;
+                vx_uint8 *pSrc = (vx_uint8 *)map->ptr;
+                vx_uint8 *pDst = (vx_uint8 *)&arr->memory.ptrs[0][offset];
+                vx_size size = (end - start) * arr->item_size;
+                memcpy(pDst, pSrc, size);
+
+                vxMemoryUnmap(context, map_id);
+                vxDecrementReference(&arr->base, VX_EXTERNAL);
+                vxSemPost(&arr->memory.locks[0]);
+                status = VX_SUCCESS;
+            }
+            else
+            {
+                status = VX_ERROR_NO_RESOURCES;
+            }
+        }
+        else
+        {
+            /* rean only mode */
+            vxMemoryUnmap(arr->base.context, map_id);
+            vxDecrementReference(&arr->base, VX_EXTERNAL);
+            status = VX_SUCCESS;
+        }
+    }
+    else
+    {
+        status = VX_FAILURE;
     }
 
     return status;
@@ -502,7 +745,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryArray(vx_array arr, vx_enum attribute,
         status = VX_SUCCESS;
         switch (attribute)
         {
-            case VX_ARRAY_ATTRIBUTE_ITEMTYPE:
+            case VX_ARRAY_ITEMTYPE:
                 if (VX_CHECK_PARAM(ptr, size, vx_enum, 0x3))
                 {
                     *(vx_enum *)ptr = arr->item_type;
@@ -513,7 +756,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryArray(vx_array arr, vx_enum attribute,
                 }
                 break;
 
-            case VX_ARRAY_ATTRIBUTE_NUMITEMS:
+            case VX_ARRAY_NUMITEMS:
                 if (VX_CHECK_PARAM(ptr, size, vx_size, 0x3))
                 {
                     *(vx_size *)ptr = arr->num_items;
@@ -524,7 +767,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryArray(vx_array arr, vx_enum attribute,
                 }
                 break;
 
-            case VX_ARRAY_ATTRIBUTE_CAPACITY:
+            case VX_ARRAY_CAPACITY:
                 if (VX_CHECK_PARAM(ptr, size, vx_size, 0x3))
                 {
                     *(vx_size *)ptr = arr->capacity;
@@ -535,7 +778,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryArray(vx_array arr, vx_enum attribute,
                 }
                 break;
 
-            case VX_ARRAY_ATTRIBUTE_ITEMSIZE:
+            case VX_ARRAY_ITEMSIZE:
                 if (VX_CHECK_PARAM(ptr, size, vx_size, 0x3))
                 {
                     *(vx_size *)ptr = arr->item_size;
@@ -566,7 +809,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxAddArrayItems(vx_array arr, vx_size count, 
         {
             status = VX_ERROR_INVALID_PARAMETERS;
 
-            if ((count > 0) && (ptr != NULL) && (stride == 0 || stride >= arr->item_size))
+            if ((count > 0) && (ptr != NULL) && (stride >= arr->item_size))
             {
                 status = VX_FAILURE;
 
@@ -575,18 +818,11 @@ VX_API_ENTRY vx_status VX_API_CALL vxAddArrayItems(vx_array arr, vx_size count, 
                     vx_size offset = arr->num_items * arr->item_size;
                     vx_uint8 *dst_ptr = &arr->memory.ptrs[0][offset];
 
-                    if (stride == 0 || stride == arr->item_size)
+                    vx_size i;
+                    for (i = 0; i < count; ++i)
                     {
-                        memcpy(dst_ptr, ptr, count * arr->item_size);
-                    }
-                    else
-                    {
-                        vx_size i;
-                        for (i = 0; i < count; ++i)
-                        {
-                            vx_uint8 *tmp = (vx_uint8 *)ptr;
-                            memcpy(&dst_ptr[i * arr->item_size], &tmp[i * stride], arr->item_size);
-                        }
+                        vx_uint8 *tmp = (vx_uint8 *)ptr;
+                        memcpy(&dst_ptr[i * arr->item_size], &tmp[i * stride], arr->item_size);
                     }
 
                     arr->num_items += count;
@@ -647,4 +883,51 @@ VX_API_ENTRY vx_status VX_API_CALL vxCommitArrayRange(vx_array arr, vx_size star
         return VX_ERROR_INVALID_REFERENCE;
     }
     return vxCommitArrayRangeInt(arr, start, end, ptr);
+}
+
+VX_API_ENTRY vx_status VX_API_CALL vxCopyArrayRange(vx_array arr, vx_size start, vx_size end, vx_size stride,
+                                                    void *ptr, vx_enum usage, vx_enum mem_type)
+{
+    vx_status status = VX_FAILURE;
+    /* bad references */
+    if (vxIsValidArray(arr) == vx_false_e)
+    {
+        VX_PRINT(VX_ZONE_ERROR, "Not a valid array!\n");
+        return VX_ERROR_INVALID_REFERENCE;
+    }
+
+    status = vxCopyArrayRangeInt(arr, start, end, stride, ptr, usage, mem_type);
+
+    return status;
+}
+
+VX_API_ENTRY vx_status VX_API_CALL vxMapArrayRange(vx_array arr, vx_size start, vx_size end, vx_map_id *map_id, vx_size *stride,
+                                                   void **ptr, vx_enum usage, vx_enum mem_type, vx_uint32 flags)
+{
+    vx_status status = VX_FAILURE;
+    /* bad references */
+    if (vxIsValidArray(arr) == vx_false_e)
+    {
+        VX_PRINT(VX_ZONE_ERROR, "Not a valid array!\n");
+        return VX_ERROR_INVALID_REFERENCE;
+    }
+
+    status = vxMapArrayRangeInt(arr, start, end, map_id, stride, ptr, usage, mem_type, flags);
+
+    return status;
+}
+
+VX_API_ENTRY vx_status VX_API_CALL vxUnmapArrayRange(vx_array arr, vx_map_id map_id)
+{
+    vx_status status = VX_FAILURE;
+    /* bad references */
+    if (vxIsValidArray(arr) == vx_false_e)
+    {
+        VX_PRINT(VX_ZONE_ERROR, "Not a valid array!\n");
+        return VX_ERROR_INVALID_REFERENCE;
+    }
+
+    status = vxUnmapArrayRangeInt(arr, map_id);
+
+    return status;
 }

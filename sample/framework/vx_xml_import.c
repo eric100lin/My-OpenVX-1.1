@@ -289,6 +289,8 @@ typedef enum _vx_xml_tag_e {
     COORDINATES3D_TAG,
     RECTANGLE_TAG,
     USER_TAG,
+    ROI_TAG,
+    UNIFORM_TAG,
 
     ARRAY_TAG,
     CONVOLUTION_TAG,
@@ -320,6 +322,7 @@ typedef enum _vx_xml_tag_e {
     BINARY_TAG,
     RANGE_TAG,
     PIXELS_TAG,
+    BORDERCONST_TAG,
 
     /* PIXEL FORMAT */
     RGB_TAG,
@@ -357,6 +360,8 @@ static xml_tag_t tags[] = {
     {"COORDINATES2D", COORDINATES2D_TAG},
     {"COORDINATES3D", COORDINATES3D_TAG},
     {"USER", USER_TAG},
+    {"ROI", ROI_TAG},
+    {"UNIFORM", UNIFORM_TAG},
 
     {"SCALAR", SCALAR_TAG},
     {"CONVOLUTION", CONVOLUTION_TAG},
@@ -387,6 +392,7 @@ static xml_tag_t tags[] = {
     {"BINARY",  BINARY_TAG},
     {"RANGE",   RANGE_TAG},
     {"PIXELS",  PIXELS_TAG},
+    {"BORDERCONST",  BORDERCONST_TAG},
 
     {"RGB",     RGB_TAG},
     {"RGBA",    RGBA_TAG},
@@ -407,12 +413,53 @@ static void vxSetName(vx_reference ref, xmlNodePtr cur)
 
 static xml_struct_t *user_struct_table = NULL;
 
-static vx_status vxLoadDataForImage(vx_image image, xmlNodePtr cur)
+static vx_status vxImportFromXMLRoi(vx_image parent, xmlNodePtr cur, vx_reference refs[], vx_size total)
+{
+    vx_status status = VX_SUCCESS;
+    vx_uint32 refIdx = xml_prop_ulong(cur, "reference");
+    vx_image image = 0;
+    vx_rectangle_t rect;
+    rect.start_x = xml_prop_ulong(cur, "start_x");
+    rect.start_y = xml_prop_ulong(cur, "start_y");
+    rect.end_x = xml_prop_ulong(cur, "end_x");
+    rect.end_y = xml_prop_ulong(cur, "end_y");
+
+    if (refIdx >= total)
+        return VX_ERROR_INVALID_PARAMETERS;
+
+    image = vxCreateImageFromROI(parent, &rect);
+    status = vxGetStatus((vx_reference)image);
+
+    if (status == VX_SUCCESS) {
+        refs[refIdx] = (vx_reference)image;
+        vxSetName(refs[refIdx], cur);
+        vxInternalizeReference(refs[refIdx]);
+    }
+    else
+    {
+        VX_PRINT(VX_ZONE_ERROR, "Failed to create Image! status=%d\n", status);
+    }
+
+    if (status == VX_SUCCESS) {
+        vx_xml_tag_e tag = UNKNOWN_TAG;
+        XML_FOREACH_CHILD_TAG (cur, tag, tags) {
+            if (tag == ROI_TAG) {
+                vxImportFromXMLRoi( image, cur, refs, total);
+            }
+        }
+    }
+
+    return status;
+}
+
+static vx_status vxLoadDataForImage(vx_image image, xmlNodePtr cur, vx_reference refs[], vx_size total)
 {
     vx_status status = VX_SUCCESS;
     vx_xml_tag_e tag = UNKNOWN_TAG;
     XML_FOREACH_CHILD_TAG (cur, tag, tags) {
-        if (tag == RECTANGLE_TAG) {
+        if (tag == ROI_TAG) {
+            vxImportFromXMLRoi( image, cur, refs, total);
+        } else if (tag == RECTANGLE_TAG) {
             vx_rectangle_t rect = {0};
             vx_uint32 pIdx = xml_prop_ulong(cur, "plane");
             XML_FOREACH_CHILD_TAG (cur, tag, tags) {
@@ -507,6 +554,88 @@ static vx_status vxLoadDataForImage(vx_image image, xmlNodePtr cur)
     return status;
 }
 
+static vx_status vxLoadDataForUniformImage(xmlNodePtr cur, void *image_data)
+{
+    vx_status status = VX_FAILURE;
+    vx_xml_tag_e tag = UNKNOWN_TAG;
+    XML_FOREACH_CHILD_TAG (cur, tag, tags) {
+        if (tag == UNIFORM_TAG) {
+            /* Image is a uniform image */
+            status = VX_SUCCESS;
+            XML_FOREACH_CHILD_TAG(cur, tag, tags) {
+                if (tag == UINT8_TAG) {
+                    vx_uint8 *ptr = (vx_uint8*)image_data;
+                    ptr[0] = (vx_uint8)xml_ulong(cur);
+                } else if (tag == UINT16_TAG) {
+                    vx_uint16 *ptr = (vx_uint16*)image_data;
+                    ptr[0] = (vx_uint16)xml_ulong(cur);
+                } else if (tag == UINT32_TAG) {
+                    vx_uint32 *ptr = (vx_uint32*)image_data;
+                    ptr[0] = (vx_uint32)xml_ulong(cur);
+                } else if (tag == INT16_TAG) {
+                    vx_int16 *ptr = (vx_int16*)image_data;
+                    ptr[0] = (vx_int16)xml_long(cur);
+                } else if (tag == INT32_TAG) {
+                    vx_int32 *ptr = (vx_int32*)image_data;
+                    ptr[0] = (vx_int32)xml_long(cur);
+                } else if (tag == RGB_TAG) {
+                    vx_uint8 *ptr = (vx_uint8*)image_data;
+                    vx_uint32 tmp[3];
+                    vx_char values[13] = {0};
+                    xml_string(cur, values, sizeof(values));
+                    if (values[0] == '#') {
+                        sscanf(values, "#%02x%02x%02x", &tmp[0], &tmp[1], &tmp[2]);
+                        ptr[0] = (vx_uint8)tmp[0];
+                        ptr[1] = (vx_uint8)tmp[1];
+                        ptr[2] = (vx_uint8)tmp[2];
+                    } else {
+                        vx_char *tmp = NULL;
+                        tmp = strtok(values, " \t\n\r");
+                        sscanf(tmp, "%hhu", &ptr[0]);
+                        tmp = strtok(NULL, " \t\n\r");
+                        sscanf(tmp, "%hhu", &ptr[1]);
+                        tmp = strtok(NULL, " \t\n\r");
+                        sscanf(tmp, "%hhu", &ptr[2]);
+                    }
+                } else if (tag == RGBA_TAG) {
+                    vx_uint8 *ptr = (vx_uint8*)image_data;
+                    vx_uint32 tmp[4];
+                    vx_char values[17] = {0};
+                    xml_string(cur, values, sizeof(values));
+                    if (values[0] == '#') {
+                        sscanf(values, "#%02x%02x%02x%02x", &tmp[0], &tmp[1], &tmp[2], &tmp[3]);
+                        ptr[0] = (vx_uint8)tmp[0];
+                        ptr[1] = (vx_uint8)tmp[1];
+                        ptr[2] = (vx_uint8)tmp[2];
+                        ptr[3] = (vx_uint8)tmp[3];
+                    } else {
+                        vx_char *tmp = NULL;
+                        tmp = strtok(values, " \t\n\r");
+                        sscanf(tmp, "%hhu", &ptr[0]);
+                        tmp = strtok(NULL, " \t\n\r");
+                        sscanf(tmp, "%hhu", &ptr[1]);
+                        tmp = strtok(NULL, " \t\n\r");
+                        sscanf(tmp, "%hhu", &ptr[2]);
+                        tmp = strtok(NULL, " \t\n\r");
+                        sscanf(tmp, "%hhu", &ptr[3]);
+                    }
+                } else if (tag == YUV_TAG) {
+                    vx_uint8 *ptr = (vx_uint8*)image_data;
+                    vx_char values[13] = {0}, *tmp = NULL;
+                    xml_string(cur, values, sizeof(values));
+                    tmp = strtok(values, " \t\n\r");
+                    sscanf(tmp, "%hhu", &ptr[0]);
+                    tmp = strtok(NULL, " \t\n\r");
+                    sscanf(tmp, "%hhu", &ptr[1]);
+                    tmp = strtok(NULL, " \t\n\r");
+                    sscanf(tmp, "%hhu", &ptr[2]);
+                }
+            }
+        }
+    }
+    return status;
+}
+
 static vx_status vxLoadDataForArray(vx_array array, xmlNodePtr cur)
 {
     vx_status status = VX_SUCCESS;
@@ -514,7 +643,7 @@ static vx_status vxLoadDataForArray(vx_array array, xmlNodePtr cur)
     XML_FOREACH_CHILD_TAG (cur, tag, tags) {
         if (tag == CHAR_TAG) {
             char *str = (char *)xmlNodeListGetString(cur->doc, cur->children, 1);
-            status |= vxAddArrayItems(array, strlen(str), str, 0);
+            status |= vxAddArrayItems(array, strlen(str), str, sizeof(char));
             free(str);
         } else if (tag == KEYPOINT_TAG) {
             vx_keypoint_t kp = {0};
@@ -535,7 +664,7 @@ static vx_status vxLoadDataForArray(vx_array array, xmlNodePtr cur)
                     kp.error = xml_float(cur);
                 }
             }
-            status |= vxAddArrayItems(array, 1, &kp, 0);
+            status |= vxAddArrayItems(array, 1, &kp, sizeof(vx_keypoint_t));
         } else if (tag == COORDINATES2D_TAG) {
             vx_coordinates2d_t coord = {0};
             XML_FOREACH_CHILD_TAG(cur, tag, tags) {
@@ -545,7 +674,7 @@ static vx_status vxLoadDataForArray(vx_array array, xmlNodePtr cur)
                     coord.y = (vx_uint32)xml_ulong(cur);
                 }
             }
-            status |= vxAddArrayItems(array, 1, &coord, 0);
+            status |= vxAddArrayItems(array, 1, &coord, sizeof(vx_coordinates2d_t));
         } else if (tag == COORDINATES3D_TAG) {
             vx_coordinates3d_t coord = {0};
             XML_FOREACH_CHILD_TAG(cur, tag, tags) {
@@ -557,7 +686,7 @@ static vx_status vxLoadDataForArray(vx_array array, xmlNodePtr cur)
                     coord.z = (vx_uint32)xml_ulong(cur);
                 }
             }
-            status |= vxAddArrayItems(array, 1, &coord, 0);
+            status |= vxAddArrayItems(array, 1, &coord, sizeof(vx_coordinates3d_t));
         } else if (tag == RECTANGLE_TAG) {
             vx_rectangle_t rect = {0};
             XML_FOREACH_CHILD_TAG(cur, tag, tags) {
@@ -571,7 +700,7 @@ static vx_status vxLoadDataForArray(vx_array array, xmlNodePtr cur)
                     rect.end_y = (vx_uint32)xml_ulong(cur);
                 }
             }
-            status |= vxAddArrayItems(array, 1, &rect, 0);
+            status |= vxAddArrayItems(array, 1, &rect, sizeof(vx_rectangle_t));
         } else if (tag == USER_TAG) {
             char *string = (char *)xmlNodeListGetString(cur->doc, cur->children, 1);
             char tokens[5] = " \t\n\r";
@@ -582,7 +711,7 @@ static vx_status vxLoadDataForArray(vx_array array, xmlNodePtr cur)
                 sscanf(tmp, "%hhu", &v[j++]);
                 tmp = strtok(NULL, tokens);
             }
-            status |= vxAddArrayItems(array, 1, v, 0);
+            status |= vxAddArrayItems(array, 1, v, array->item_size);
             free(v);
             free(string);
         } else {
@@ -593,66 +722,66 @@ static vx_status vxLoadDataForArray(vx_array array, xmlNodePtr cur)
                 //if (tag == CHAR_TAG) {
                 //    vx_char v;
                 //    sscanf(tmp, "%s", &v);
-                //    status |= vxAddArrayItems(array, 1, &v, 0);
+                //    status |= vxAddArrayItems(array, 1, &v, array->item_size);
                 //} else
                 if (tag == UINT8_TAG) {
                     vx_uint8 v;
                     sscanf(tmp, "%hhu", &v);
-                    status |= vxAddArrayItems(array, 1, &v, 0);
+                    status |= vxAddArrayItems(array, 1, &v, array->item_size);
                 } else if (tag == UINT16_TAG) {
                     vx_uint16 v;
                     sscanf(tmp, "%hu", &v);
-                    status |= vxAddArrayItems(array, 1, &v, 0);
+                    status |= vxAddArrayItems(array, 1, &v, array->item_size);
                 } else if (tag == UINT32_TAG) {
                     vx_uint32 v;
                     sscanf(tmp, "%u", &v);
-                    status |= vxAddArrayItems(array, 1, &v, 0);
+                    status |= vxAddArrayItems(array, 1, &v, array->item_size);
                 } else if (tag == UINT64_TAG) {
                     vx_uint64 v;
                     sscanf(tmp, "%lu", &v);
-                    status |= vxAddArrayItems(array, 1, &v, 0);
+                    status |= vxAddArrayItems(array, 1, &v, array->item_size);
                 } else if (tag == INT8_TAG) {
                     vx_int8 v;
                     sscanf(tmp, "%hhd", &v);
-                    status |= vxAddArrayItems(array, 1, &v, 0);
+                    status |= vxAddArrayItems(array, 1, &v, array->item_size);
                 } else if (tag == INT16_TAG) {
                     vx_int16 v;
                     sscanf(tmp, "%hd", &v);
-                    status |= vxAddArrayItems(array, 1, &v, 0);
+                    status |= vxAddArrayItems(array, 1, &v, array->item_size);
                 } else if (tag == INT32_TAG) {
                     vx_int32 v;
                     sscanf(tmp, "%d", &v);
-                    status |= vxAddArrayItems(array, 1, &v, 0);
+                    status |= vxAddArrayItems(array, 1, &v, array->item_size);
                 } else if (tag == INT64_TAG) {
                     vx_int64 v;
                     sscanf(tmp, "%ld", &v);
-                    status |= vxAddArrayItems(array, 1, &v, 0);
+                    status |= vxAddArrayItems(array, 1, &v, array->item_size);
                 } else if (tag == FLOAT32_TAG) {
                     vx_float32 v;
                     sscanf(tmp, "%f", &v);
-                    status |= vxAddArrayItems(array, 1, &v, 0);
+                    status |= vxAddArrayItems(array, 1, &v, array->item_size);
                 } else if (tag == FLOAT64_TAG) {
                     vx_float64 v;
                     sscanf(tmp, "%lf", &v);
-                    status |= vxAddArrayItems(array, 1, &v, 0);
+                    status |= vxAddArrayItems(array, 1, &v, array->item_size);
                 } else if (tag == DF_IMAGE_TAG) {
                     vx_df_image v = VX_DF_IMAGE(tmp[0],tmp[1],tmp[2],tmp[3]);
-                    status |= vxAddArrayItems(array, 1, &v, 0);
+                    status |= vxAddArrayItems(array, 1, &v, array->item_size);
                 } else if (tag == ENUM_TAG) {
                     vx_enum v;
                     sscanf(tmp, "%d", &v);
-                    status |= vxAddArrayItems(array, 1, &v, 0);
+                    status |= vxAddArrayItems(array, 1, &v, array->item_size);
                 } else if (tag == SIZE_TAG) {
                     vx_size v;
                     sscanf(tmp, VX_FMT_SIZE, &v);
-                    status |= vxAddArrayItems(array, 1, &v, 0);
+                    status |= vxAddArrayItems(array, 1, &v, array->item_size);
                 } else if (tag == BOOL_TAG) {
                     vx_bool v = vx_false_e;
                     if (strcmp(tmp, "true") == 0)
                     {
                         v = vx_true_e;
                     }
-                    status |= vxAddArrayItems(array, 1, &v, 0);
+                    status |= vxAddArrayItems(array, 1, &v, array->item_size);
                 }
                 tmp = strtok(NULL, tokens);
             }
@@ -708,7 +837,7 @@ static vx_status vxLoadDataForPyramid(vx_pyramid pyr, xmlNodePtr cur, vx_referen
                         return VX_ERROR_INVALID_PARAMETERS;
                     }
                 }
-                status |= vxLoadDataForImage((vx_image)refs[refIdx], cur);
+                status |= vxLoadDataForImage((vx_image)refs[refIdx], cur, refs, total);
             } else {
                 status |= VX_ERROR_INVALID_PARAMETERS;
             }
@@ -729,7 +858,7 @@ static vx_status vxLoadDataForMatrix(vx_matrix matrix, xmlNodePtr cur, vx_size c
         void *ptr = calloc(rows*cols,vxMetaSizeOfType(type));
         if (ptr)
         {
-            if( (status = vxReadMatrix(matrix, ptr)) == VX_SUCCESS)
+            if( (status = vxCopyMatrix(matrix, ptr, VX_READ_ONLY, VX_MEMORY_TYPE_HOST)) == VX_SUCCESS)
             {
                 XML_FOREACH_CHILD_TAG (cur, tag, tags) {
                     vx_uint32 row = xml_prop_ulong(cur, "row");
@@ -751,7 +880,7 @@ static vx_status vxLoadDataForMatrix(vx_matrix matrix, xmlNodePtr cur, vx_size c
                         return VX_ERROR_INVALID_VALUE;
                     }
                 }
-                status = vxWriteMatrix(matrix, ptr);
+                status = vxCopyMatrix(matrix, ptr, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
             }
             free(ptr);
         } else {
@@ -793,7 +922,7 @@ static vx_status vxLoadDataForConvolution(vx_convolution conv, xmlNodePtr cur, v
         void *ptr = calloc(rows*cols,sizeof(vx_int16));
         if (ptr)
         {
-            if( (status = vxReadConvolutionCoefficients(conv, ptr)) == VX_SUCCESS)
+            if( (status = vxCopyConvolutionCoefficients(conv, ptr, VX_READ_ONLY, VX_MEMORY_TYPE_HOST)) == VX_SUCCESS)
             {
                 XML_FOREACH_CHILD_TAG (cur, tag, tags) {
                     vx_uint32 row = xml_prop_ulong(cur, "row");
@@ -811,7 +940,7 @@ static vx_status vxLoadDataForConvolution(vx_convolution conv, xmlNodePtr cur, v
                         return VX_ERROR_INVALID_VALUE;
                     }
                 }
-                status = vxWriteConvolutionCoefficients(conv, ptr);
+                status = vxCopyConvolutionCoefficients(conv, ptr, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
             }
             free(ptr);
         } else {
@@ -848,8 +977,9 @@ static vx_status vxLoadDataForDistribution(vx_distribution dist, xmlNodePtr cur,
 
     if (XML_HAS_CHILD(cur))
     {
+        vx_map_id map_id = 0;
         void *ptr = NULL;
-        if ((status = vxAccessDistribution(dist, &ptr, VX_WRITE_ONLY)) == VX_SUCCESS) {
+        if ((status = vxMapDistribution(dist, &map_id, &ptr, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST, 0)) == VX_SUCCESS) {
             XML_FOREACH_CHILD_TAG (cur, tag, tags) {
                 if (tag == FREQUENCY_TAG) {
                     vx_uint32 bin = xml_prop_ulong(cur, "bin");
@@ -863,7 +993,7 @@ static vx_status vxLoadDataForDistribution(vx_distribution dist, xmlNodePtr cur,
                     }
                 }
             }
-            status = vxCommitDistribution(dist, ptr);
+            status = vxUnmapDistribution(dist, map_id);
         }
     }
     return status;
@@ -880,71 +1010,71 @@ static vx_status vxLoadDataForScalar(vx_scalar scalar, xmlNodePtr cur)
             vx_char c;
             xml_string(cur, value, sizeof(value));
             sscanf(value, "%c", &c);
-            vxWriteScalarValue(scalar, &c);
+            vxCopyScalar(scalar, &c, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         } else if (tag == BOOL_TAG) {
             vx_bool v = vx_false_e;
             xml_string(cur, value, sizeof(value));
             if (strncmp(value, "true", sizeof(value)) == 0)
                 v = vx_true_e;
-            vxWriteScalarValue(scalar, &v);
+            vxCopyScalar(scalar, &v, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         } else if (tag == UINT8_TAG) {
             vx_uint8 v = 0u;
             xml_string(cur, value, sizeof(value));
             sscanf(value, "%hhu", &v);
-            vxWriteScalarValue(scalar, &v);
+            vxCopyScalar(scalar, &v, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         } else if (tag == UINT16_TAG) {
             vx_uint16 v = 0u;
             xml_string(cur, value, sizeof(value));
             sscanf(value, "%hu", &v);
-            vxWriteScalarValue(scalar, &v);
+            vxCopyScalar(scalar, &v, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         } else if (tag == UINT32_TAG) {
             vx_uint32 v = 0u;
             xml_string(cur, value, sizeof(value));
             sscanf(value, "%u", &v);
-            vxWriteScalarValue(scalar, &v);
+            vxCopyScalar(scalar, &v, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         } else if (tag == UINT64_TAG) {
             vx_uint64 v = 0u;
             xml_string(cur, value, sizeof(value));
             sscanf(value, "%lu", &v);
-            vxWriteScalarValue(scalar, &v);
+            vxCopyScalar(scalar, &v, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         } else if (tag == INT8_TAG) {
             vx_int8 v = 0u;
             xml_string(cur, value, sizeof(value));
             sscanf(value, "%hhd", &v);
-            vxWriteScalarValue(scalar, &v);
+            vxCopyScalar(scalar, &v, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         } else if (tag == INT16_TAG) {
             vx_int16 v = 0u;
             xml_string(cur, value, sizeof(value));
             sscanf(value, "%hd", &v);
-            vxWriteScalarValue(scalar, &v);
+            vxCopyScalar(scalar, &v, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         } else if (tag == INT32_TAG) {
             vx_int32 v = 0u;
             xml_string(cur, value, sizeof(value));
             sscanf(value, "%d", &v);
-            vxWriteScalarValue(scalar, &v);
+            vxCopyScalar(scalar, &v, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         } else if (tag == INT64_TAG) {
             vx_int64 v = 0u;
             xml_string(cur, value, sizeof(value));
             sscanf(value, "%ld", &v);
-            vxWriteScalarValue(scalar, &v);
+            vxCopyScalar(scalar, &v, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         } else if (tag == SIZE_TAG) {
             vx_size v = xml_ulong(cur);
-            vxWriteScalarValue(scalar, &v);
+            vxCopyScalar(scalar, &v, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         } else if (tag == ENUM_TAG) {
             vx_enum v = 0;
             xml_string(cur, value, sizeof(value));
             sscanf(value, "%d", &v);
-            vxWriteScalarValue(scalar, &v);
+            vxCopyScalar(scalar, &v, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         } else if (tag == FLOAT32_TAG) {
             vx_float32 f = xml_float(cur);
-            vxWriteScalarValue(scalar, &f);
+            vxCopyScalar(scalar, &f, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         } else if (tag == FLOAT64_TAG) {
             vx_float64 f = xml_double(cur);
-            vxWriteScalarValue(scalar, &f);
+            vxCopyScalar(scalar, &f, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         } else if (tag == DF_IMAGE_TAG) {
             vx_df_image value = 0;
             xml_string(cur, (vx_char *)&value, sizeof(value));
-            vxWriteScalarValue(scalar, &value);
+            vxCopyScalar(scalar, &value, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         }
     }
     return status;
@@ -970,10 +1100,20 @@ static vx_status vxImportFromXMLImage(vx_reference ref, xmlNodePtr cur, vx_refer
     }
     else
     {
-        image = vxCreateImage((vx_context)ref, width, height, format);
-        status = vxGetStatus((vx_reference)image);
+        vx_uint32 image_data;
+
+        /* Check if the image is a uniform image */
+        status = vxLoadDataForUniformImage(cur, &image_data);
         if (status == VX_SUCCESS) {
-            status = vxLoadDataForImage(image, cur);
+            image = vxCreateUniformImage((vx_context)ref, width, height, format, &image_data);
+            status = vxGetStatus((vx_reference)image);
+        }
+        else {
+            image = vxCreateImage((vx_context)ref, width, height, format);
+            status = vxGetStatus((vx_reference)image);
+            if (status == VX_SUCCESS) {
+                status = vxLoadDataForImage(image, cur, refs, total);
+            }
         }
     }
     if (status == VX_SUCCESS) {
@@ -1163,14 +1303,28 @@ VX_API_ENTRY vx_import VX_API_CALL vxImportFromXML(vx_context context,
             }
             XML_FOREACH_CHILD_TAG (cur, tag, tags) {
                 if (tag == NODE_TAG) {
+                    vx_char bordermode[10] = {0};
                     vx_kernel k = 0;
                     vx_node n = 0;
                     vx_uint32 refIdx = xml_prop_ulong(cur, "reference");
+                    vx_border_t border;
+                    border.constant_value = 0;
+                    xml_prop_string(cur, "bordermode", bordermode, sizeof(bordermode));
+
+                    if(strcmp(bordermode, "CONSTANT") == 0) {
+                        border.mode = VX_BORDER_CONSTANT;
+                    } else if(strcmp(bordermode, "REPLICATE") == 0) {
+                        border.mode = VX_BORDER_REPLICATE;
+                    } else {
+                        border.mode = VX_BORDER_UNDEFINED;
+                    }
+
                     XML_FOREACH_CHILD_TAG (cur, tag, tags) {
                         if (tag == KERNEL_TAG) {
                             vx_char name[VX_MAX_KERNEL_NAME];
                             xml_string(cur, name, sizeof(name));
                             k = vxGetKernelByName(context, name);
+                            status = vxGetStatus((vx_reference)k);
                             n = vxCreateGenericNode(graph, k);
                             vxReleaseKernel(&k);
                             if (refIdx < total) {
@@ -1182,10 +1336,15 @@ VX_API_ENTRY vx_import VX_API_CALL vxImportFromXML(vx_context context,
                                 REFNUM_ERROR;
                                 goto exit_error;
                             }
+                        } else if (tag == BORDERCONST_TAG) {
+                            vx_char values[17] = {0};
+                            xml_string(cur, values, sizeof(values));
+                            sscanf(values, "#%08x", &border.constant_value);
                         } else if (tag == PARAMETER_TAG) {
                             /* need to do this on second pass */
                         }
                     }
+                    vxSetNodeAttribute((vx_node)refs[refIdx], VX_NODE_BORDER, &border, sizeof(border));
                 } else if (tag == IMAGE_TAG) {
                     status |= vxImportFromXMLImage((vx_reference)graph, cur, refs, total, vx_true_e);
                 } else if (tag == ARRAY_TAG) {
@@ -1210,7 +1369,7 @@ VX_API_ENTRY vx_import VX_API_CALL vxImportFromXML(vx_context context,
             vxInternalizeReference(refs[refIdx]);
             if ((status |= vxGetStatus(refs[refIdx])) == VX_SUCCESS) {
                 vx_enum scalartype = VX_TYPE_INVALID;
-                vxQueryScalar((vx_scalar)refs[refIdx], VX_SCALAR_ATTRIBUTE_TYPE, &scalartype, sizeof(scalartype));
+                vxQueryScalar((vx_scalar)refs[refIdx], VX_SCALAR_TYPE, &scalartype, sizeof(scalartype));
                 if (type != scalartype)
                 {
                     status = VX_ERROR_INVALID_TYPE;
@@ -1250,7 +1409,7 @@ VX_API_ENTRY vx_import VX_API_CALL vxImportFromXML(vx_context context,
             vxInternalizeReference(refs[refIdx]);
             if ((status |= vxGetStatus(refs[refIdx])) == VX_SUCCESS) {
                 if(!scale) scale = 1;
-                status |= vxSetConvolutionAttribute((vx_convolution)refs[refIdx], VX_CONVOLUTION_ATTRIBUTE_SCALE,
+                status |= vxSetConvolutionAttribute((vx_convolution)refs[refIdx], VX_CONVOLUTION_SCALE,
                                                     &scale, sizeof(scale));
                 status |= vxLoadDataForConvolution((vx_convolution)refs[refIdx], cur, cols, rows);
             }
@@ -1309,7 +1468,7 @@ VX_API_ENTRY vx_import VX_API_CALL vxImportFromXML(vx_context context,
             xml_prop_string(cur, "elemType", typename, sizeof(typename));
             vxTypeFromString(typename, &type);
             status = VX_SUCCESS;
-            if (refIdx < total && type == VX_TYPE_UINT8) {
+            if (refIdx < total) {
                 vx_int32 true_value = (vx_int32)xml_prop_ulong(cur, "true_value");
                 vx_int32 false_value = (vx_int32)xml_prop_ulong(cur, "false_value");
                 XML_FOREACH_CHILD_TAG (cur, tag, tags) {
@@ -1318,18 +1477,18 @@ VX_API_ENTRY vx_import VX_API_CALL vxImportFromXML(vx_context context,
                         refs[refIdx] = (vx_reference)vxCreateThreshold(context, VX_THRESHOLD_TYPE_BINARY, type);
                         vxSetName(refs[refIdx], cur);
                         vxInternalizeReference(refs[refIdx]);
-                        status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_ATTRIBUTE_THRESHOLD_VALUE, &value, sizeof(value));
+                        status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_THRESHOLD_VALUE, &value, sizeof(value));
                     } else if (tag == RANGE_TAG) {
                         vx_int32 upper = (vx_int32)xml_prop_ulong(cur, "upper");
                         vx_int32 lower = (vx_int32)xml_prop_ulong(cur, "lower");
                         refs[refIdx] = (vx_reference)vxCreateThreshold(context, VX_THRESHOLD_TYPE_RANGE, type);
                         vxSetName(refs[refIdx], cur);
                         vxInternalizeReference(refs[refIdx]);
-                        status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_ATTRIBUTE_THRESHOLD_UPPER, &upper, sizeof(upper));
-                        status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_ATTRIBUTE_THRESHOLD_LOWER, &lower, sizeof(lower));
+                        status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_THRESHOLD_UPPER, &upper, sizeof(upper));
+                        status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_THRESHOLD_LOWER, &lower, sizeof(lower));
                     }
-                    status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_ATTRIBUTE_TRUE_VALUE , &true_value, sizeof(true_value));
-                    status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_ATTRIBUTE_FALSE_VALUE , &false_value, sizeof(false_value));
+                    status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_TRUE_VALUE , &true_value, sizeof(true_value));
+                    status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_FALSE_VALUE , &false_value, sizeof(false_value));
                 }
             } else {
                 status = VX_ERROR_INVALID_VALUE;
@@ -1391,7 +1550,7 @@ VX_API_ENTRY vx_import VX_API_CALL vxImportFromXML(vx_context context,
                                 goto exit_error;
                             }
                             childNum++;
-                            status |= vxLoadDataForImage((vx_image)refs[refIdx], cur);
+                            status |= vxLoadDataForImage((vx_image)refs[refIdx], cur, refs, total);
                             break;
                         }
                         case ARRAY_TAG:
@@ -1620,7 +1779,7 @@ VX_API_ENTRY vx_import VX_API_CALL vxImportFromXML(vx_context context,
                                 status |= vxGetStatus((vx_reference)exemplar);
                                 if (status == VX_SUCCESS) {
                                     if(!scale) scale = 1;
-                                    status |= vxSetConvolutionAttribute(exemplar, VX_CONVOLUTION_ATTRIBUTE_SCALE,
+                                    status |= vxSetConvolutionAttribute(exemplar, VX_CONVOLUTION_SCALE,
                                                                         &scale, sizeof(scale));
                                     delay = vxCreateDelay(context, (vx_reference)exemplar, count);
                                     status = vxGetStatus((vx_reference)delay);
@@ -1731,7 +1890,8 @@ VX_API_ENTRY vx_import VX_API_CALL vxImportFromXML(vx_context context,
                             if (refIdx < total)
                             {
                                 if(childNum < count) {
-                                    if(((vx_distribution)delay->refs[childNum])->window_x == (vx_uint32)range/(vx_uint32)bins &&
+                                    if(((vx_distribution)delay->refs[childNum])->range_x == (vx_uint32)range &&
+                                       ((vx_distribution)delay->refs[childNum])->memory.dims[0][VX_DIM_X] == (vx_uint32)bins &&
                                        ((vx_distribution)delay->refs[childNum])->offset_x == offset) {
                                         refs[refIdx] = (vx_reference)delay->refs[childNum];
                                         vxSetName(refs[refIdx], cur);
@@ -1768,16 +1928,16 @@ VX_API_ENTRY vx_import VX_API_CALL vxImportFromXML(vx_context context,
                                     if (tag == BINARY_TAG) {
                                         vx_int32 value = (vx_int32)xml_ulong(cur);
                                         exemplar = vxCreateThreshold(context, VX_THRESHOLD_TYPE_BINARY, type);
-                                        status |= vxSetThresholdAttribute(exemplar, VX_THRESHOLD_ATTRIBUTE_THRESHOLD_VALUE, &value, sizeof(value));
+                                        status |= vxSetThresholdAttribute(exemplar, VX_THRESHOLD_THRESHOLD_VALUE, &value, sizeof(value));
                                     } else if (tag == RANGE_TAG) {
                                         vx_int32 upper = (vx_int32)xml_prop_ulong(cur, "upper");
                                         vx_int32 lower = (vx_int32)xml_prop_ulong(cur, "lower");
                                         exemplar = vxCreateThreshold(context, VX_THRESHOLD_TYPE_RANGE, type);
-                                        status |= vxSetThresholdAttribute(exemplar, VX_THRESHOLD_ATTRIBUTE_THRESHOLD_UPPER, &upper, sizeof(upper));
-                                        status |= vxSetThresholdAttribute(exemplar, VX_THRESHOLD_ATTRIBUTE_THRESHOLD_LOWER, &lower, sizeof(lower));
+                                        status |= vxSetThresholdAttribute(exemplar, VX_THRESHOLD_THRESHOLD_UPPER, &upper, sizeof(upper));
+                                        status |= vxSetThresholdAttribute(exemplar, VX_THRESHOLD_THRESHOLD_LOWER, &lower, sizeof(lower));
                                     }
-                                    status |= vxSetThresholdAttribute(exemplar, VX_THRESHOLD_ATTRIBUTE_TRUE_VALUE , &true_value, sizeof(true_value));
-                                    status |= vxSetThresholdAttribute(exemplar, VX_THRESHOLD_ATTRIBUTE_FALSE_VALUE , &false_value, sizeof(false_value));
+                                    status |= vxSetThresholdAttribute(exemplar, VX_THRESHOLD_TRUE_VALUE , &true_value, sizeof(true_value));
+                                    status |= vxSetThresholdAttribute(exemplar, VX_THRESHOLD_FALSE_VALUE , &false_value, sizeof(false_value));
                                 }
                                 status |= vxReleaseReferences(context, count+1);
                                 status |= vxGetStatus((vx_reference)exemplar);
@@ -1824,15 +1984,15 @@ VX_API_ENTRY vx_import VX_API_CALL vxImportFromXML(vx_context context,
                             XML_FOREACH_CHILD_TAG (cur, tag, tags) {
                                 if (tag == BINARY_TAG) {
                                     vx_int32 value = (vx_int32)xml_ulong(cur);
-                                    status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_ATTRIBUTE_THRESHOLD_VALUE, &value, sizeof(value));
+                                    status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_THRESHOLD_VALUE, &value, sizeof(value));
                                 } else if (tag == RANGE_TAG) {
                                     vx_int32 upper = (vx_int32)xml_prop_ulong(cur, "upper");
                                     vx_int32 lower = (vx_int32)xml_prop_ulong(cur, "lower");
-                                    status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_ATTRIBUTE_THRESHOLD_UPPER, &upper, sizeof(upper));
-                                    status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_ATTRIBUTE_THRESHOLD_LOWER, &lower, sizeof(lower));
+                                    status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_THRESHOLD_UPPER, &upper, sizeof(upper));
+                                    status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_THRESHOLD_LOWER, &lower, sizeof(lower));
                                 }
-                                status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_ATTRIBUTE_TRUE_VALUE , &true_value, sizeof(true_value));
-                                status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_ATTRIBUTE_FALSE_VALUE , &false_value, sizeof(false_value));
+                                status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_TRUE_VALUE , &true_value, sizeof(true_value));
+                                status |= vxSetThresholdAttribute((vx_threshold)refs[refIdx], VX_THRESHOLD_FALSE_VALUE , &false_value, sizeof(false_value));
                             }
                             break;
                         }
@@ -1905,18 +2065,39 @@ VX_API_ENTRY vx_import VX_API_CALL vxImportFromXML(vx_context context,
             vx_uint32 gidx = xml_prop_ulong(cur, "reference");
             XML_FOREACH_CHILD_TAG (cur, tag, tags) {
                 if (tag == NODE_TAG) {
+                    vx_char replicated[10] = {0};
+                    vx_bool replicate_flags[10] = {0};
                     vx_uint32 nidx = xml_prop_ulong(cur, "reference");
+                    xml_prop_string(cur, "is_replicated", replicated, sizeof(replicated));
                     XML_FOREACH_CHILD_TAG (cur, tag, tags) {
                         if (tag == PARAMETER_TAG) {
                             vx_uint32 index = xml_prop_ulong(cur, "index");
                             vx_uint32 refIdx = xml_prop_ulong(cur, "reference");
-
+                            if(strcmp(replicated, "true") == 0) {
+                                vx_char replicateFlag[10] = {0};
+                                xml_prop_string(cur, "replicate_flag", replicateFlag, sizeof(replicateFlag));
+                                if(strcmp(replicateFlag, "true") == 0) {
+                                    replicate_flags[index] = vx_true_e;
+                                } else {
+                                    replicate_flags[index] = vx_false_e;
+                                }
+                            }
                             status = vxSetParameterByIndex((vx_node)refs[nidx], index, refs[refIdx]);
                             if (status != VX_SUCCESS)
                             {
                                 VX_PRINT(VX_ZONE_ERROR, "Failed to set parameter %u on node[%u] in graph[%u] reference=%u\n", index, nidx, gidx, refIdx);
                                 goto exit_error;
                             }
+                        }
+                    }
+                    if(strcmp(replicated, "true") == 0) {
+                        vx_uint32 numParams = 0;
+                        vxQueryNode((vx_node)refs[nidx], VX_NODE_PARAMETERS, &numParams, sizeof(numParams));
+                        status = vxReplicateNode((vx_graph)refs[gidx], (vx_node)refs[nidx], replicate_flags, numParams);
+                        if (status != VX_SUCCESS)
+                        {
+                            VX_PRINT(VX_ZONE_ERROR, "Failed to replicate node[%u] in graph[%u]\n", nidx, gidx);
+                            goto exit_error;
                         }
                     }
                 }

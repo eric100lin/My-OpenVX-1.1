@@ -78,7 +78,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryRemap(vx_remap remap, vx_enum attribut
 
     switch (attribute)
     {
-        case VX_REMAP_ATTRIBUTE_SOURCE_WIDTH:
+        case VX_REMAP_SOURCE_WIDTH:
             if (VX_CHECK_PARAM(ptr, size, vx_uint32, 0x3))
             {
                 *(vx_uint32 *)ptr = remap->src_width;
@@ -88,7 +88,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryRemap(vx_remap remap, vx_enum attribut
                 status = VX_ERROR_INVALID_PARAMETERS;
             }
             break;
-        case VX_REMAP_ATTRIBUTE_SOURCE_HEIGHT:
+        case VX_REMAP_SOURCE_HEIGHT:
             if (VX_CHECK_PARAM(ptr, size, vx_uint32, 0x3))
             {
                 *(vx_uint32 *)ptr = remap->src_height;
@@ -98,7 +98,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryRemap(vx_remap remap, vx_enum attribut
                 status = VX_ERROR_INVALID_PARAMETERS;
             }
             break;
-        case VX_REMAP_ATTRIBUTE_DESTINATION_WIDTH:
+        case VX_REMAP_DESTINATION_WIDTH:
             if (VX_CHECK_PARAM(ptr, size, vx_uint32, 0x3))
             {
                 *(vx_uint32 *)ptr = remap->dst_width;
@@ -108,7 +108,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryRemap(vx_remap remap, vx_enum attribut
                 status = VX_ERROR_INVALID_PARAMETERS;
             }
             break;
-        case VX_REMAP_ATTRIBUTE_DESTINATION_HEIGHT:
+        case VX_REMAP_DESTINATION_HEIGHT:
             if (VX_CHECK_PARAM(ptr, size, vx_uint32, 0x3))
             {
                 *(vx_uint32 *)ptr = remap->dst_height;

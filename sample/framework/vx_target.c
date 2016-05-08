@@ -86,32 +86,38 @@ vx_status vxLoadTarget(vx_context context, vx_char *name)
         {
             vxInitReference(&context->targets[index].base, context, VX_TYPE_TARGET, &context->base);
             vxIncrementReference(&context->targets[index].base, VX_INTERNAL);
-            vxAddReference(context, &context->targets[index].base);
-
-            context->targets[index].funcs.init     = (vx_target_init_f)    vxGetSymbol(context->targets[index].module.handle, "vxTargetInit");
-            context->targets[index].funcs.deinit   = (vx_target_deinit_f)  vxGetSymbol(context->targets[index].module.handle, "vxTargetDeinit");
-            context->targets[index].funcs.supports = (vx_target_supports_f)vxGetSymbol(context->targets[index].module.handle, "vxTargetSupports");
-            context->targets[index].funcs.process  = (vx_target_process_f) vxGetSymbol(context->targets[index].module.handle, "vxTargetProcess");
-            context->targets[index].funcs.verify   = (vx_target_verify_f)  vxGetSymbol(context->targets[index].module.handle, "vxTargetVerify");
-            context->targets[index].funcs.addkernel= (vx_target_addkernel_f)vxGetSymbol(context->targets[index].module.handle, "vxTargetAddKernel");
-#ifdef OPENVX_KHR_TILING
-            context->targets[index].funcs.addtilingkernel = (vx_target_addtilingkernel_f)vxGetSymbol(context->targets[index].module.handle, "vxTargetAddTilingKernel");
-#endif
-            if (context->targets[index].funcs.init &&
-                context->targets[index].funcs.deinit &&
-                context->targets[index].funcs.supports &&
-                context->targets[index].funcs.process &&
-                context->targets[index].funcs.verify &&
-                context->targets[index].funcs.addkernel)
-                /* tiling kernel function can be NULL */
+            if (vxAddReference(context, &context->targets[index].base) == vx_true_e)
             {
-                VX_PRINT(VX_ZONE_TARGET, "Loaded target %s\n", module);
-                status = VX_SUCCESS;
+                context->targets[index].funcs.init     = (vx_target_init_f)    vxGetSymbol(context->targets[index].module.handle, "vxTargetInit");
+                context->targets[index].funcs.deinit   = (vx_target_deinit_f)  vxGetSymbol(context->targets[index].module.handle, "vxTargetDeinit");
+                context->targets[index].funcs.supports = (vx_target_supports_f)vxGetSymbol(context->targets[index].module.handle, "vxTargetSupports");
+                context->targets[index].funcs.process  = (vx_target_process_f) vxGetSymbol(context->targets[index].module.handle, "vxTargetProcess");
+                context->targets[index].funcs.verify   = (vx_target_verify_f)  vxGetSymbol(context->targets[index].module.handle, "vxTargetVerify");
+                context->targets[index].funcs.addkernel= (vx_target_addkernel_f)vxGetSymbol(context->targets[index].module.handle, "vxTargetAddKernel");
+#ifdef OPENVX_KHR_TILING
+                context->targets[index].funcs.addtilingkernel = (vx_target_addtilingkernel_f)vxGetSymbol(context->targets[index].module.handle, "vxTargetAddTilingKernel");
+#endif
+                if (context->targets[index].funcs.init &&
+                    context->targets[index].funcs.deinit &&
+                    context->targets[index].funcs.supports &&
+                    context->targets[index].funcs.process &&
+                    context->targets[index].funcs.verify &&
+                    context->targets[index].funcs.addkernel)
+                    /* tiling kernel function can be NULL */
+                {
+                    VX_PRINT(VX_ZONE_TARGET, "Loaded target %s\n", module);
+                    status = VX_SUCCESS;
+                }
+                else
+                {
+                    VX_PRINT(VX_ZONE_ERROR, "Failed to load target %s due to missing symbols!\n", module);
+                    vxUnloadTarget(context, index, vx_true_e);
+                    status = VX_ERROR_NO_RESOURCES;
+                }
             }
             else
             {
-                VX_PRINT(VX_ZONE_ERROR, "Failed to load target %s due to missing symbols!\n", module);
-                vxUnloadTarget(context, index, vx_true_e);
+                VX_PRINT(VX_ZONE_ERROR, "Failed to load target %s\n", module);
                 status = VX_ERROR_NO_RESOURCES;
             }
         }
@@ -155,18 +161,19 @@ vx_status vxInitializeTarget(vx_target target,
                                    kernels[k]->name,
                                    kernels[k]->parameters,
                                    kernels[k]->numParams,
+                                   kernels[k]->validate,
                                    kernels[k]->input_validate,
                                    kernels[k]->output_validate,
                                    kernels[k]->initialize,
                                    kernels[k]->deinitialize);
         VX_PRINT(VX_ZONE_KERNEL, "Initialized Kernel %s, %d\n", kernels[k]->name, status);
-        if (status == VX_SUCCESS) {
-            if (vxIsKernelUnique(&target->kernels[k]) == vx_true_e) {
-                VX_PRINT(VX_ZONE_KERNEL, "Kernel %s is unique\n", kernels[k]->name);
-                target->base.context->num_unique_kernels++;
-            }
-            target->base.context->num_kernels++;
-            target->num_kernels++;
+        if (status != VX_SUCCESS) {
+            break;
+        }
+        target->num_kernels++;
+        status = vxFinalizeKernel(&target->kernels[k]);
+        if (status != VX_SUCCESS) {
+            break;
         }
     }
     return status;
@@ -197,6 +204,43 @@ vx_status vxDeinitializeTarget(vx_target target)
     return status;
 }
 
+static const char* reverse_strstr(const char* string, const char* substr)
+{
+    const char* last = NULL;
+    const char* cur = string;
+    do {
+        cur = (const char*) strstr(cur, substr);
+        if (cur != NULL)
+        {
+            last = cur;
+            cur = cur+1;
+        }
+    } while (cur != NULL);
+    return last;
+}
+
+vx_bool vxMatchTargetNameWithString(const char* target_name, const char* target_string)
+{
+    /* 1. find latest occurrence of target_string in target_name;
+       2. match only the cases: target_name == "[smth.]<target_string>[.smth]"
+     */
+    const char dot = '.';
+    vx_bool match = vx_false_e;
+    const char* ptr = reverse_strstr(target_name, target_string);
+    if (ptr != NULL)
+    {
+        vx_size name_len = strlen(target_name);
+        vx_size string_len = strlen(target_string);
+        vx_size begin = (vx_size)(ptr - target_name);
+        vx_size end = begin + string_len;
+        if ((!(begin > 0) || ((begin > 0) && (target_name[begin-1] == dot))) ||
+            (!(end < name_len) || ((end < name_len) && (target_name[end] == dot))))
+        {
+            match = vx_true_e;
+        }
+    }
+    return match;
+}
 
 /******************************************************************************/
 /* PUBLIC API */

@@ -88,7 +88,57 @@ static void vxGetName(vx_reference ref)
     }
 }
 
-static vx_status vxExportToXMLImage(FILE* fp, vx_reference refs[], vx_uint32 r, vx_uint32 id)
+static void vxComputeROIStartXY(vx_image parent, vx_image roi, vx_uint32 p, vx_uint32 *x, vx_uint32 *y)
+{
+    vx_uint32 offset = roi->memory.ptrs[p] - parent->memory.ptrs[p];
+    *y = offset * roi->scale[p][VX_DIM_Y] / roi->memory.strides[p][VX_DIM_Y];
+    *x = (offset - ((*y * roi->memory.strides[p][VX_DIM_Y]) / roi->scale[p][VX_DIM_Y]) )
+                * roi->scale[p][VX_DIM_X] / roi->memory.strides[p][VX_DIM_X];
+}
+
+static vx_status vxExportToXMLROI(FILE* fp, vx_reference refs[], vx_uint32 r, vx_uint32 id, vx_uint32 numrefs)
+{
+    vx_status status = VX_SUCCESS;
+    vx_image_t *image = (vx_image_t *)refs[r];
+    vx_char indent[10] = {0};
+    vx_uint32 i, start_x, start_y;
+    for (i = 0; i < (dimof(indent)-1) && i < id; i++)
+        indent[i] = '\t';
+    indent[i] = '\0';
+
+    vxComputeROIStartXY(image->parent, image, 0, &start_x, &start_y);
+    fprintf(fp, "%s<roi reference=\"%u\" start_x=\"%u\" start_y=\"%u\" end_x=\"%u\" end_y=\"%u\"%s",
+                    indent, r, start_x, start_y, start_x+image->width, start_y+image->height, refNameStr);
+
+    if (refs[r]->is_virtual == vx_true_e)
+    {
+        fprintf(fp, " />\n");
+    } else {
+        vx_uint32 r2 = 0;
+        vx_uint32 roiFound = 0;
+
+        /* List ROIs, if any */
+        for (r2 = 0u; r2 < numrefs; r2++)
+        {
+            if ((vx_reference_t *)image == refs[r2]->scope)
+            {
+                if(roiFound == 0) {
+                    roiFound = 1;
+                    fprintf(fp, ">\n");
+                }
+                vxGetName(refs[r2]);
+                status |= vxExportToXMLROI(fp, refs, r2, id+1, numrefs);
+            }
+        }
+        if(roiFound)
+            fprintf(fp, "%s</roi>\n",indent);
+        else
+            fprintf(fp, " />\n");
+    }
+    return status;
+}
+
+static vx_status vxExportToXMLImage(FILE* fp, vx_reference refs[], vx_uint32 r, vx_uint32 id, vx_uint32 numrefs)
 {
     vx_status status = VX_SUCCESS;
     vx_image_t *image = (vx_image_t *)refs[r];
@@ -105,9 +155,124 @@ static vx_status vxExportToXMLImage(FILE* fp, vx_reference refs[], vx_uint32 r, 
     {
         fprintf(fp, " />\n");
     } else {
+        vx_uint32 r2 = 0;
         fprintf(fp, ">\n");
 
-        if (image->base.write_count > 0)
+        /* List ROIs, if any */
+        for (r2 = 0u; r2 < numrefs; r2++)
+        {
+            if ((vx_reference_t *)image == refs[r2]->scope)
+            {
+                vxGetName(refs[r2]);
+                status |= vxExportToXMLROI(fp, refs, r2, id+1, numrefs);
+            }
+        }
+
+        if (vx_true_e == image->constant)
+        {
+            vx_uint32 p;
+            vx_rectangle_t rect;
+            vx_imagepatch_addressing_t addr;
+            vxGetValidRegionImage((vx_image)image, &rect);
+            fprintf(fp, "%s\t<uniform>\n", indent);
+            for (p = 0u; p < image->planes; p++)
+            {
+                void *base = NULL;
+                status |= vxAccessImagePatch((vx_image)image, &rect, p, &addr, &base, VX_READ_ONLY);
+
+                if (image->format == VX_DF_IMAGE_U8)
+                {
+                    vx_uint8 *ptr = vxFormatImagePatchAddress2d(base, 0, 0, &addr);
+                    fprintf(fp, "%s\t\t<uint8>%hhu</uint8>\n",
+                            indent, *ptr);
+                }
+                else if (image->format == VX_DF_IMAGE_S16)
+                {
+                    vx_int16 *ptr = vxFormatImagePatchAddress2d(base, 0, 0, &addr);
+                    fprintf(fp, "%s\t\t<int16>%hd</int16>\n",
+                            indent, *ptr);
+                }
+                else if (image->format == VX_DF_IMAGE_U16)
+                {
+                    vx_uint16 *ptr = vxFormatImagePatchAddress2d(base, 0, 0, &addr);
+                    fprintf(fp, "%s\t\t<uint16>%hu</uint16>\n",
+                            indent, *ptr);
+                }
+                else if (image->format == VX_DF_IMAGE_S32)
+                {
+                    vx_int32 *ptr = vxFormatImagePatchAddress2d(base, 0, 0, &addr);
+                    fprintf(fp, "%s\t\t<int32>%d</int32>\n",
+                            indent, *ptr);
+                }
+                else if (image->format == VX_DF_IMAGE_U32)
+                {
+                    vx_uint32 *ptr = vxFormatImagePatchAddress2d(base, 0, 0, &addr);
+                    fprintf(fp, "%s\t\t<uint32>%u</uint32>\n",
+                            indent, *ptr);
+                }
+                else if (image->format == VX_DF_IMAGE_RGB)
+                {
+                    vx_uint8 *ptr = vxFormatImagePatchAddress2d(base, 0, 0, &addr);
+                    fprintf(fp, "%s\t\t<rgb>#%02x%02x%02x</rgb>\n",
+                            indent, ptr[0], ptr[1], ptr[2]);
+                }
+                else if (image->format == VX_DF_IMAGE_RGBX)
+                {
+                    vx_uint8 *ptr = vxFormatImagePatchAddress2d(base, 0, 0, &addr);
+                    fprintf(fp, "%s\t\t<rgba>#%02x%02x%02x%02x</rgba>\n",
+                            indent, ptr[0], ptr[1], ptr[2], ptr[3]);
+                }
+                else if (image->format == VX_DF_IMAGE_UYVY )
+                {
+                    vx_uint8 *ptr = vxFormatImagePatchAddress2d(base, 0, 0, &addr);
+                    fprintf(fp, "%s\t\t<yuv>%hhu %hhu %hhu </yuv>\n",
+                            indent, ptr[1], ptr[0], ptr[2]);
+                }
+                else if (image->format == VX_DF_IMAGE_YUYV )
+                {
+                    vx_uint8 *ptr = vxFormatImagePatchAddress2d(base, 0, 0, &addr);
+                    fprintf(fp, "%s\t\t<yuv>%hhu %hhu %hhu </yuv>\n",
+                            indent, ptr[0], ptr[1], ptr[3]);
+                }
+                else if (image->format == VX_DF_IMAGE_YUV4 ||
+                          image->format == VX_DF_IMAGE_IYUV)
+                {
+                    vx_uint8 *ptr = vxFormatImagePatchAddress2d(base, 0, 0, &addr);
+                    if(p == 0) {
+                        fprintf(fp, "%s\t\t<yuv>", indent);
+                    }
+
+                    fprintf(fp, "%hhu ", ptr[0]);
+
+                    if(p == 2) {
+                        fprintf(fp, "</yuv>\n");
+                    }
+                }
+                else if ((image->format == VX_DF_IMAGE_NV12) ||
+                          (image->format == VX_DF_IMAGE_NV21))
+                {
+                    vx_uint8 *ptr = vxFormatImagePatchAddress2d(base, 0, 0, &addr);
+                    if(p == 0)
+                    {
+                        fprintf(fp, "%s\t\t<yuv>%hhu ", indent, ptr[0]);
+                    }
+                    else
+                    {
+                        if(image->format == VX_DF_IMAGE_NV12)
+                        {
+                            fprintf(fp, "%hhu %hhu </yuv>\n", ptr[0], ptr[1]);
+                        }
+                        else
+                        {
+                            fprintf(fp, "%hhu %hhu </yuv>\n", ptr[1], ptr[0]);
+                        }
+                    }
+                }
+                status |= vxCommitImagePatch((vx_image)image, NULL, 0, &addr, base);
+            }
+            fprintf(fp, "%s\t</uniform>\n", indent);
+        }
+        else if (image->base.write_count > 0)
         {
             vx_uint32 p, x, y;
             vx_rectangle_t rect;
@@ -122,7 +287,7 @@ static vx_status vxExportToXMLImage(FILE* fp, vx_reference refs[], vx_uint32 r, 
                 fprintf(fp, "%s\t\t<end_x>%u</end_x>\n", indent, rect.end_x);
                 fprintf(fp, "%s\t\t<end_y>%u</end_y>\n", indent, rect.end_y);
                 fprintf(fp, "%s\t\t<pixels>\n", indent);
-                status |= vxAccessImagePatch((vx_image)image, &rect, p, &addr, &base, VX_READ_AND_WRITE);
+                status |= vxAccessImagePatch((vx_image)image, &rect, p, &addr, &base, VX_READ_ONLY);
                 for (y = 0u; y < addr.dim_y; y+=addr.step_y)
                 {
                     for (x = 0u; x < addr.dim_x; x+=addr.step_x)
@@ -234,7 +399,7 @@ static vx_status vxExportToXMLPyramid(FILE* fp, vx_reference refs[], vx_uint32 r
                 if (refs[r2] == (vx_reference)pyr->levels[level])
                 {
                     vxGetName(refs[r2]);
-                    status |= vxExportToXMLImage(fp, refs, r2, id+1);
+                    status |= vxExportToXMLImage(fp, refs, r2, id+1, numrefs);
                 }
             }
         }
@@ -653,7 +818,7 @@ static vx_status vxExportToXMLDistribution(FILE* fp, vx_reference refs[], vx_uin
     indent[i] = '\0';
 
     fprintf(fp, "%s<distribution reference=\"%u\" bins=\"%u\" offset=\"%u\" range=\"%u\"%s",
-            indent, r, bins, dist->offset_x, dist->window_x*bins, refNameStr);
+            indent, r, bins, dist->offset_x, dist->range_x, refNameStr);
 
     if (refs[r]->is_virtual == vx_true_e) /* is not virtual in 1.0, but check anyway */
     {
@@ -723,6 +888,7 @@ static vx_status vxExportToXMLThreshold(FILE* fp, vx_reference refs[], vx_uint32
 {
     vx_status status = VX_SUCCESS;
     vx_threshold thresh = (vx_threshold)refs[r];
+    vx_int32 j = vxStringFromType(thresh->data_type);
     vx_char indent[10] = {0};
     vx_uint32 i;
 
@@ -730,8 +896,8 @@ static vx_status vxExportToXMLThreshold(FILE* fp, vx_reference refs[], vx_uint32
         indent[i] = '\t';
     indent[i] = '\0';
 
-    fprintf(fp, "%s<threshold reference=\"%u\" elemType=\"VX_TYPE_UINT8\" true_value=\"%hhu\" false_value=\"%hhu\"%s", 
-                 indent, r, thresh->true_value, thresh->false_value, refNameStr);
+    fprintf(fp, "%s<threshold reference=\"%u\" elemType=\"%s\" true_value=\"%d\" false_value=\"%d\"%s",
+                 indent, r, type_pairs[j].name, thresh->true_value, thresh->false_value, refNameStr);
 
     if (refs[r]->is_virtual == vx_true_e) /* is not virtual in 1.0, but check anyway */
     {
@@ -742,11 +908,11 @@ static vx_status vxExportToXMLThreshold(FILE* fp, vx_reference refs[], vx_uint32
 
         if (thresh->thresh_type == VX_THRESHOLD_TYPE_RANGE)
         {
-            fprintf(fp, "%s\t<range lower=\"%hhu\" upper=\"%hhu\" />\n", indent, thresh->lower, thresh->upper);
+            fprintf(fp, "%s\t<range lower=\"%d\" upper=\"%d\" />\n", indent, thresh->lower, thresh->upper);
         }
         else if (thresh->thresh_type == VX_THRESHOLD_TYPE_BINARY)
         {
-            fprintf(fp, "%s\t<binary>%hhu</binary>\n", indent, thresh->value);
+            fprintf(fp, "%s\t<binary>%d</binary>\n", indent, thresh->value);
         }
         fprintf(fp, "%s</threshold>\n", indent);
     }
@@ -927,18 +1093,53 @@ VX_API_ENTRY vx_status VX_API_CALL vxExportToXML(vx_context context, vx_char xml
                         if (refs[r2] == (vx_reference)graph->nodes[n])
                         {
                             vxGetName(refs[r2]);
-                            fprintf(fp, "\t\t<node reference=\"%u\"%s>\n", r2, refNameStr);
-                            fprintf(fp, "\t\t\t<kernel>%s</kernel>\n", graph->nodes[n]->kernel->name);
+                            fprintf(fp, "\t\t<node reference=\"%u\"%s", r2, refNameStr);
+                            if(graph->nodes[n]->attributes.borders.mode != VX_BORDER_MODE_UNDEFINED)
+                            {
+                                char *bordermodeStrings[] = {"CONSTANT", "REPLICATE"};
+                                char *bordermode;
+                                if(graph->nodes[n]->attributes.borders.mode == VX_BORDER_MODE_CONSTANT)
+                                {
+                                    bordermode = bordermodeStrings[0];
+                                }
+                                else
+                                {
+                                    bordermode = bordermodeStrings[1];
+                                }
+
+                                fprintf(fp, " bordermode=\"%s\"", bordermode);
+                            }
+                            if(graph->nodes[n]->is_replicated == vx_true_e)
+                            {
+                                fprintf(fp, " is_replicated=\"true\"");
+                            }
+                            fprintf(fp, ">\n\t\t\t<kernel>%s</kernel>\n", graph->nodes[n]->kernel->name);
                             for (p = 0u; p < graph->nodes[n]->kernel->signature.num_parameters; p++)
                             {
                                 for (r3 = 0u; r3 < numrefs; r3++)
                                 {
                                     if (refs[r3] == graph->nodes[n]->parameters[p])
                                     {
-                                        fprintf(fp, "\t\t\t<parameter index=\"%u\" reference=\"%u\" />\n", p, r3);
+                                        fprintf(fp, "\t\t\t<parameter index=\"%u\" reference=\"%u\"", p, r3);
+                                        if(graph->nodes[n]->is_replicated == vx_true_e)
+                                        {
+                                            if(graph->nodes[n]->replicated_flags[p] == vx_true_e)
+                                            {
+                                                fprintf(fp, " replicate_flag=\"true\"");
+                                            }
+                                            else
+                                            {
+                                                fprintf(fp, " replicate_flag=\"false\"");
+                                            }
+                                        }
+                                        fprintf(fp, " />\n");
                                         break;
                                     }
                                 }
+                            }
+                            if(graph->nodes[n]->attributes.borders.mode == VX_BORDER_MODE_CONSTANT)
+                            {
+                                fprintf(fp, "\t\t\t<borderconst>#%08x</borderconst>\n", graph->nodes[n]->attributes.borders.constant_value);
                             }
                             fprintf(fp, "\t\t</node>\n");
                             break;
@@ -965,7 +1166,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxExportToXML(vx_context context, vx_char xml
                         vxGetName(refs[r2]);
                         if (refs[r2]->type == VX_TYPE_IMAGE)
                         {
-                            status |= vxExportToXMLImage(fp, refs, r2, 2);
+                            status |= vxExportToXMLImage(fp, refs, r2, 2, numrefs);
                         }
                         else if (refs[r2]->type == VX_TYPE_ARRAY)
                         {
@@ -987,9 +1188,10 @@ VX_API_ENTRY vx_status VX_API_CALL vxExportToXML(vx_context context, vx_char xml
             {
                 if(refs[r]->scope->type != VX_TYPE_PYRAMID &&
                    refs[r]->scope->type != VX_TYPE_GRAPH &&
-                   refs[r]->scope->type != VX_TYPE_DELAY)
+                   refs[r]->scope->type != VX_TYPE_DELAY &&
+                   refs[r]->scope->type != VX_TYPE_IMAGE)
                 {
-                    status |= vxExportToXMLImage(fp, refs, r, 1);
+                    status |= vxExportToXMLImage(fp, refs, r, 1, numrefs);
                 }
             }
             else if (refs[r]->type == VX_TYPE_PYRAMID)
@@ -1079,7 +1281,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxExportToXML(vx_context context, vx_char xml
                             vxGetName(refs[r2]);
                             switch (refs[r2]->type) {
                                 case VX_TYPE_IMAGE:
-                                    status |= vxExportToXMLImage(fp, refs, r2, 2);
+                                    status |= vxExportToXMLImage(fp, refs, r2, 2, numrefs);
                                     break;
                                 case VX_TYPE_ARRAY:
                                     status |= vxExportToXMLArray(fp, refs, r2, 2);

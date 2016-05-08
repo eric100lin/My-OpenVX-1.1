@@ -80,8 +80,66 @@ VX_API_ENTRY vx_matrix VX_API_CALL vxCreateMatrix(vx_context context, vx_enum da
         matrix->memory.nptrs = 1;
         matrix->memory.dims[0][0] = (vx_int32)dim;
         matrix->memory.dims[0][1] = (vx_int32)(columns*rows);
+        matrix->origin.x = columns / 2;
+        matrix->origin.y = rows / 2;
+        matrix->pattern = VX_PATTERN_OTHER;
     }
     return (vx_matrix)matrix;
+}
+
+VX_API_ENTRY vx_matrix VX_API_CALL vxCreateMatrixFromPattern(vx_context context, vx_enum pattern, vx_size columns, vx_size rows)
+{
+    if (vxIsValidContext(context) == vx_false_e)
+        return 0;
+
+    if ((columns > VX_INT_MAX_NONLINEAR_DIM) || (rows > VX_INT_MAX_NONLINEAR_DIM))
+    {
+        VX_PRINT(VX_ZONE_ERROR, "Invalid dimensions to matrix\n");
+        vxAddLogEntry(&context->base, VX_ERROR_INVALID_DIMENSION, "Invalid dimensions to matrix\n");
+        return (vx_matrix)vxGetErrorObject(context, VX_ERROR_INVALID_DIMENSION);
+    }
+
+    vx_matrix matrix = vxCreateMatrix(context, VX_TYPE_UINT8, columns, rows);
+    if (vxIsValidSpecificReference(&matrix->base, VX_TYPE_MATRIX) == vx_true_e)
+    {
+        if (vxAllocateMemory(matrix->base.context, &matrix->memory) == vx_true_e)
+        {
+            vxSemWait(&matrix->base.lock);
+            vx_uint8* ptr = matrix->memory.ptrs[0];
+            vx_size x, y;
+            for (y = 0; y < rows; ++y)
+            {
+                for (x = 0; x < columns; ++x)
+                {
+                    vx_uint8 value = 0;
+                    switch (pattern)
+                    {
+                    case VX_PATTERN_BOX: value = 255; break;
+                    case VX_PATTERN_CROSS: value = ((y == rows / 2) || (x == columns / 2)) ? 255 : 0; break;
+                    case VX_PATTERN_DISK:
+                        value = (((y - rows / 2.0 + 0.5) * (y - rows / 2.0 + 0.5)) / ((rows / 2.0) * (rows / 2.0)) +
+                            ((x - columns / 2.0 + 0.5) * (x - columns / 2.0 + 0.5)) / ((columns / 2.0) * (columns / 2.0)))
+                            <= 1 ? 255 : 0;
+                        break;
+                    }
+                    ptr[x + y * columns] = value;
+                }
+            }
+
+            vxSemPost(&matrix->base.lock);
+            vxWroteToReference(&matrix->base);
+            matrix->pattern = pattern;
+        }
+        else
+        {
+            vxReleaseMatrix(&matrix);
+            VX_PRINT(VX_ZONE_ERROR, "Failed to allocate matrix\n");
+            vxAddLogEntry(&context->base, VX_ERROR_NO_MEMORY, "Failed to allocate matrix\n");
+            matrix = (vx_matrix)vxGetErrorObject(context, VX_ERROR_NO_MEMORY);
+        }
+    }
+
+    return matrix;
 }
 
 VX_API_ENTRY vx_status VX_API_CALL vxQueryMatrix(vx_matrix matrix, vx_enum attribute, void *ptr, vx_size size)
@@ -93,7 +151,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryMatrix(vx_matrix matrix, vx_enum attri
     }
     switch (attribute)
     {
-        case VX_MATRIX_ATTRIBUTE_TYPE:
+        case VX_MATRIX_TYPE:
             if (VX_CHECK_PARAM(ptr, size, vx_enum, 0x3))
             {
                 *(vx_enum *)ptr = matrix->data_type;
@@ -103,7 +161,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryMatrix(vx_matrix matrix, vx_enum attri
                 status = VX_ERROR_INVALID_PARAMETERS;
             }
             break;
-        case VX_MATRIX_ATTRIBUTE_ROWS:
+        case VX_MATRIX_ROWS:
             if (VX_CHECK_PARAM(ptr, size, vx_size, 0x3))
             {
                 *(vx_size *)ptr = matrix->rows;
@@ -113,7 +171,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryMatrix(vx_matrix matrix, vx_enum attri
                 status = VX_ERROR_INVALID_PARAMETERS;
             }
             break;
-        case VX_MATRIX_ATTRIBUTE_COLUMNS:
+        case VX_MATRIX_COLUMNS:
             if (VX_CHECK_PARAM(ptr, size, vx_size, 0x3))
             {
                 *(vx_size *)ptr = matrix->columns;
@@ -123,10 +181,30 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryMatrix(vx_matrix matrix, vx_enum attri
                 status = VX_ERROR_INVALID_PARAMETERS;
             }
             break;
-        case VX_MATRIX_ATTRIBUTE_SIZE:
+        case VX_MATRIX_SIZE:
             if (VX_CHECK_PARAM(ptr, size, vx_size, 0x3))
             {
                 *(vx_size *)ptr = matrix->columns * matrix->rows * matrix->memory.dims[0][0];
+            }
+            else
+            {
+                status = VX_ERROR_INVALID_PARAMETERS;
+            }
+            break;
+        case VX_MATRIX_ORIGIN:
+            if (VX_CHECK_PARAM(ptr, size, vx_coordinates2d_t, 0x3))
+            {
+                *(vx_coordinates2d_t*)ptr = matrix->origin;
+            }
+            else
+            {
+                status = VX_ERROR_INVALID_PARAMETERS;
+            }
+            break;
+        case VX_MATRIX_PATTERN:
+            if (VX_CHECK_PARAM(ptr, size, vx_enum, 0x3))
+            {
+                *(vx_enum*)ptr = matrix->pattern;
             }
             else
             {
@@ -188,6 +266,58 @@ VX_API_ENTRY vx_status VX_API_CALL vxWriteMatrix(vx_matrix matrix, const void *a
             vxSemPost(&matrix->base.lock);
             vxWroteToReference(&matrix->base);
             status = VX_SUCCESS;
+        }
+        else
+        {
+            VX_PRINT(VX_ZONE_ERROR, "Failed to allocate matrix\n");
+            status = VX_ERROR_NO_MEMORY;
+        }
+    }
+    else
+    {
+        VX_PRINT(VX_ZONE_ERROR, "Invalid reference for matrix\n");
+    }
+    return status;
+}
+
+vx_status VX_API_CALL vxCopyMatrix(vx_matrix matrix, void *ptr, vx_enum usage, vx_enum mem_type)
+{
+    vx_status status = VX_ERROR_INVALID_REFERENCE;
+    if (vxIsValidSpecificReference(&matrix->base, VX_TYPE_MATRIX) == vx_true_e)
+    {
+        if (vxAllocateMemory(matrix->base.context, &matrix->memory) == vx_true_e)
+        {
+            if (usage == VX_READ_ONLY)
+            {
+                vxSemWait(&matrix->base.lock);
+                if (ptr)
+                {
+                    vx_size size = matrix->memory.strides[0][1] *
+                                   matrix->memory.dims[0][1];
+                    memcpy(ptr, matrix->memory.ptrs[0], size);
+                }
+                vxSemPost(&matrix->base.lock);
+                vxReadFromReference(&matrix->base);
+                status = VX_SUCCESS;
+            }
+            else if (usage == VX_WRITE_ONLY)
+            {
+                vxSemWait(&matrix->base.lock);
+                if (ptr)
+                {
+                    vx_size size = matrix->memory.strides[0][1] *
+                                   matrix->memory.dims[0][1];
+                    memcpy(matrix->memory.ptrs[0], ptr, size);
+                }
+                vxSemPost(&matrix->base.lock);
+                vxWroteToReference(&matrix->base);
+                status = VX_SUCCESS;
+            }
+            else
+            {
+                VX_PRINT(VX_ZONE_ERROR, "Wrong parameters for matrix\n");
+                status = VX_ERROR_INVALID_PARAMETERS;
+            }
         }
         else
         {

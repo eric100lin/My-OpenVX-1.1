@@ -61,18 +61,6 @@ void vxDestructImport(vx_reference ref) {
 /******************************************************************************/
 /* PUBLIC API */
 /******************************************************************************/
-
-VX_API_ENTRY vx_status VX_API_CALL vxSetReferenceName(vx_reference ref, const vx_char *name)
-{
-    vx_status status = VX_ERROR_INVALID_REFERENCE;
-    if (vxIsValidReference(ref))
-    {
-        strncpy(ref->name, name, strnlen(name, VX_MAX_REFERENCE_NAME));
-        status = VX_SUCCESS;
-    }
-    return status;
-}
-
 VX_API_ENTRY vx_reference VX_API_CALL vxGetImportReferenceByIndex(vx_import import, vx_uint32 index)
 {
     vx_reference ref = NULL;
@@ -158,15 +146,4 @@ VX_API_ENTRY vx_status VX_API_CALL vxReleaseImport(vx_import *import)
     return vxReleaseReferenceInt((vx_reference *)import, VX_TYPE_IMPORT, VX_EXTERNAL, NULL);
 }
 
-VX_API_ENTRY vx_status VX_API_CALL vxReleaseReference(vx_reference *ref)
-{
-    if(vxIsValidReference(*ref))
-    {
-        return vxReleaseReferenceInt((vx_reference *)ref, (*ref)->type, VX_EXTERNAL, NULL);
-    } else {
-        return VX_ERROR_INVALID_REFERENCE;
-    }
-}
-
 #endif
-

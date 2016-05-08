@@ -104,6 +104,8 @@ EXPORTS
 ;    vxReleaseTarget
 ;    vxReleaseThreshold
 ;    vxRegisterUserStruct
+;    vxAllocateUserKernelId
+;    vxAllocateUserKernelLibraryId
 ;    vxRemoveKernel
 ;    vxRemoveNode
 ;    vxRetrieveNodeCallback
@@ -120,6 +122,7 @@ EXPORTS
 ;    vxSetRemapPoint
 ;    vxSetThresholdAttribute
 ;    vxTruncateArray
+;    vxUnloadKernels
 ;    vxVerifyGraph
 ;    vxWaitGraph
 
