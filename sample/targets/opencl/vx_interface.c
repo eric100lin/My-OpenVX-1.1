@@ -315,6 +315,7 @@ vx_status vxTargetInit(vx_target_t *target)
                                     cl_kernels[k]->description.name,
                                     cl_kernels[k]->description.parameters,
                                     cl_kernels[k]->description.numParams,
+									NULL,
                                     cl_kernels[k]->description.input_validate,
                                     cl_kernels[k]->description.output_validate,
                                     cl_kernels[k]->description.initialize,
@@ -467,7 +468,7 @@ vx_kernel vxTargetAddKernel(vx_target_t *target,
                                kernel,
                                enumeration, func_ptr, name,
                                NULL, numParams,
-                               input, output, initialize, deinitialize);
+                               NULL, input, output, initialize, deinitialize);
             VX_PRINT(VX_ZONE_KERNEL, "Reserving %s Kernel[%u] for %s\n", target->name, k, kernel->name);
             target->num_kernels++;
             break;
