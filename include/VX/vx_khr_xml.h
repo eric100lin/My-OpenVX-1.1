@@ -49,7 +49,7 @@
  */
 enum vx_ext_import_reference_attribute_e {
     /*! \brief Used to query the reference for its name. Use a <tt>\ref *vx_char</tt> parameter. */
-    VX_REF_ATTRIBUTE_NAME = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_REFERENCE) + 0x2,
+    VX_XML_REF_ATTRIBUTE_NAME = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_REFERENCE) + 0x2,
 };
 
 /*! \brief The Object Type Enumeration for Imports.
