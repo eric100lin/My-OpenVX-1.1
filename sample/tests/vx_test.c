@@ -2737,7 +2737,7 @@ vx_status vx_xml_fullexport(int argc, char *argv[])
 
             vx_border_t border;
             border.mode = VX_BORDER_MODE_CONSTANT;
-            border.constant_value = 5;
+            border.constant_value.U32 = 5;
             vxSetNodeAttribute(sobelNode, VX_NODE_BORDER, &border, sizeof(border));
 
             vx_parameter parameters[] = {
@@ -2786,9 +2786,9 @@ vx_status vx_xml_fullexport(int argc, char *argv[])
             vx_coordinates2d_t ary7[] = {{1,2},{55,66}};
             vxAddArrayItems(array7, 2, &ary7, sizeof(vx_coordinates2d_t));
 
-            vx_array array8 = vxCreateArray(context, VX_TYPE_COORDINATES3D, 6);
-            vx_coordinates3d_t ary8[] = {{1,2,3},{55,66,77}};
-            vxAddArrayItems(array8, 2, &ary8, sizeof(vx_coordinates_3d_t));
+            //vx_array array8 = vxCreateArray(context, VX_TYPE_COORDINATES3D, 6);
+            //vx_coordinates3d_t ary8[] = {{1,2,3},{55,66,77}};
+            //vxAddArrayItems(array8, 2, &ary8, sizeof(vx_coordinates_3d_t));
 
             vx_array array9 = vxCreateArray(context, VX_TYPE_INT8, 8);
             vx_int8 ary9[] = {5, 0, -3, -8};

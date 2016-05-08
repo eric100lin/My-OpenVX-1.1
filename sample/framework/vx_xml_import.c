@@ -1308,7 +1308,7 @@ VX_API_ENTRY vx_import VX_API_CALL vxImportFromXML(vx_context context,
                     vx_node n = 0;
                     vx_uint32 refIdx = xml_prop_ulong(cur, "reference");
                     vx_border_t border;
-                    border.constant_value = 0;
+                    border.constant_value.U32 = 0;
                     xml_prop_string(cur, "bordermode", bordermode, sizeof(bordermode));
 
                     if(strcmp(bordermode, "CONSTANT") == 0) {
@@ -1339,7 +1339,7 @@ VX_API_ENTRY vx_import VX_API_CALL vxImportFromXML(vx_context context,
                         } else if (tag == BORDERCONST_TAG) {
                             vx_char values[17] = {0};
                             xml_string(cur, values, sizeof(values));
-                            sscanf(values, "#%08x", &border.constant_value);
+                            sscanf(values, "#%08x", &border.constant_value.U32);
                         } else if (tag == PARAMETER_TAG) {
                             /* need to do this on second pass */
                         }
