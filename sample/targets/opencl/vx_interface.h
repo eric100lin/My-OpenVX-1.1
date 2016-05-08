@@ -79,8 +79,8 @@ typedef struct _vx_cl_context_t {
     vx_uint32 num_kernels;
 } vx_cl_context_t;
 
-#define INIT_PROGRAMS {{0,0}}
-#define INIT_KERNELS  {{0,0}}
+#define INIT_PROGRAMS {0}
+#define INIT_KERNELS  {0}
 #define INIT_NUMKERNELS {0}
 #define INIT_RETURNS  {{0,0}}
 
@@ -88,8 +88,8 @@ typedef struct _vx_cl_kernel_description_t {
     vx_kernel_description_t description;
     char             sourcepath[VX_CL_MAX_PATH];
     char             kernelname[VX_MAX_KERNEL_NAME];
-    cl_program       program[VX_CL_MAX_PLATFORMS][VX_CL_MAX_DEVICES];
-    cl_kernel        kernels[VX_CL_MAX_PLATFORMS][VX_CL_MAX_DEVICES];
+    cl_program       program[VX_CL_MAX_PLATFORMS];
+    cl_kernel        kernels[VX_CL_MAX_PLATFORMS];
     cl_uint          num_kernels[VX_CL_MAX_PLATFORMS];
     cl_int           returns[VX_CL_MAX_PLATFORMS][VX_CL_MAX_DEVICES];
     void            *reserved; /* for additional data */

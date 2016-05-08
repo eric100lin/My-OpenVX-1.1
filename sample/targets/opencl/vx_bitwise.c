@@ -45,11 +45,11 @@ static vx_status vxBinaryBitwiseInputValidator(vx_node node, vx_uint32 index)
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
             if (format == VX_DF_IMAGE_U8)
                 status = VX_SUCCESS;
             vxReleaseImage(&input);
@@ -63,19 +63,19 @@ static vx_status vxBinaryBitwiseInputValidator(vx_node node, vx_uint32 index)
             vxGetParameterByIndex(node, 0),
             vxGetParameterByIndex(node, 1),
         };
-        vxQueryParameter(param[0], VX_PARAMETER_ATTRIBUTE_REF, &images[0], sizeof(images[0]));
-        vxQueryParameter(param[1], VX_PARAMETER_ATTRIBUTE_REF, &images[1], sizeof(images[1]));
+        vxQueryParameter(param[0], VX_PARAMETER_REF, &images[0], sizeof(images[0]));
+        vxQueryParameter(param[1], VX_PARAMETER_REF, &images[1], sizeof(images[1]));
         if (images[0] && images[1])
         {
             vx_uint32 width[2], height[2];
             vx_df_image format[2];
 
-            vxQueryImage(images[0], VX_IMAGE_ATTRIBUTE_WIDTH, &width[0], sizeof(width[0]));
-            vxQueryImage(images[1], VX_IMAGE_ATTRIBUTE_WIDTH, &width[1], sizeof(width[1]));
-            vxQueryImage(images[0], VX_IMAGE_ATTRIBUTE_HEIGHT, &height[0], sizeof(height[0]));
-            vxQueryImage(images[1], VX_IMAGE_ATTRIBUTE_HEIGHT, &height[1], sizeof(height[1]));
-            vxQueryImage(images[0], VX_IMAGE_ATTRIBUTE_FORMAT, &format[0], sizeof(format[0]));
-            vxQueryImage(images[1], VX_IMAGE_ATTRIBUTE_FORMAT, &format[1], sizeof(format[1]));
+            vxQueryImage(images[0], VX_IMAGE_WIDTH, &width[0], sizeof(width[0]));
+            vxQueryImage(images[1], VX_IMAGE_WIDTH, &width[1], sizeof(width[1]));
+            vxQueryImage(images[0], VX_IMAGE_HEIGHT, &height[0], sizeof(height[0]));
+            vxQueryImage(images[1], VX_IMAGE_HEIGHT, &height[1], sizeof(height[1]));
+            vxQueryImage(images[0], VX_IMAGE_FORMAT, &format[0], sizeof(format[0]));
+            vxQueryImage(images[1], VX_IMAGE_FORMAT, &format[1], sizeof(format[1]));
             if (width[0] == width[1] && height[0] == height[1] && format[0] == format[1])
                 status = VX_SUCCESS;
             vxReleaseImage(&images[1]);
@@ -96,7 +96,7 @@ static vx_status vxBinaryBitwiseOutputValidator(vx_node node, vx_uint32 index, v
         if (param0)
         {
             vx_image image0 = 0;
-            vxQueryParameter(param0, VX_PARAMETER_ATTRIBUTE_REF, &image0, sizeof(image0));
+            vxQueryParameter(param0, VX_PARAMETER_REF, &image0, sizeof(image0));
             /*
              * When passing on the geometry to the output image, we only look at image 0, as
              * both input images are verified to match, at input validation.
@@ -104,8 +104,8 @@ static vx_status vxBinaryBitwiseOutputValidator(vx_node node, vx_uint32 index, v
             if (image0)
             {
                 vx_uint32 width = 0, height = 0;
-                vxQueryImage(image0, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxQueryImage(image0, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+                vxQueryImage(image0, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxQueryImage(image0, VX_IMAGE_HEIGHT, &height, sizeof(height));
                 ptr->type = VX_TYPE_IMAGE;
                 ptr->dim.image.format = VX_DF_IMAGE_U8;
                 ptr->dim.image.width = width;
@@ -134,7 +134,7 @@ vx_cl_kernel_description_t and_kernel = {
         vxBinaryBitwiseInputValidator,
         vxBinaryBitwiseOutputValidator,
     },
-    FILE_JOINER"vx_and.cl",
+    VX_CL_SOURCE_DIR""FILE_JOINER"vx_and.cl",
     "vx_and",
     INIT_PROGRAMS,
     INIT_KERNELS,
@@ -152,7 +152,7 @@ vx_cl_kernel_description_t orr_kernel = {
         vxBinaryBitwiseInputValidator,
         vxBinaryBitwiseOutputValidator,
     },
-    FILE_JOINER"vx_orr.cl",
+    VX_CL_SOURCE_DIR""FILE_JOINER"vx_orr.cl",
     "vx_orr",
     INIT_PROGRAMS,
     INIT_KERNELS,
@@ -170,7 +170,7 @@ vx_cl_kernel_description_t xor_kernel = {
         vxBinaryBitwiseInputValidator,
         vxBinaryBitwiseOutputValidator,
     },
-    FILE_JOINER"vx_xor.cl",
+    VX_CL_SOURCE_DIR""FILE_JOINER"vx_xor.cl",
     "vx_xor",
     INIT_PROGRAMS,
     INIT_KERNELS,
@@ -189,11 +189,11 @@ static vx_status vxUnaryBitwiseInputValidator(vx_node node, vx_uint32 index)
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
             if (format == VX_DF_IMAGE_U8)
                 status = VX_SUCCESS;
             vxReleaseImage(&input);
@@ -212,12 +212,12 @@ static vx_status vxUnaryBitwiseOutputValidator(vx_node node, vx_uint32 index, vx
         if (param)
         {
             vx_image inimage = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &inimage, sizeof(inimage));
+            vxQueryParameter(param, VX_PARAMETER_REF, &inimage, sizeof(inimage));
             if (inimage)
             {
                 vx_uint32 width = 0, height = 0;
-                vxQueryImage(inimage, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxQueryImage(inimage, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+                vxQueryImage(inimage, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxQueryImage(inimage, VX_IMAGE_HEIGHT, &height, sizeof(height));
                 ptr->type = VX_TYPE_IMAGE;
                 ptr->dim.image.format = VX_DF_IMAGE_U8;
                 ptr->dim.image.width = width;
@@ -245,7 +245,7 @@ vx_cl_kernel_description_t not_kernel = {
         vxUnaryBitwiseInputValidator,
         vxUnaryBitwiseOutputValidator,
     },
-    FILE_JOINER"vx_not.cl",
+    VX_CL_SOURCE_DIR""FILE_JOINER"vx_not.cl",
     "vx_not",
     INIT_PROGRAMS,
     INIT_KERNELS,
