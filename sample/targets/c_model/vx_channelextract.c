@@ -53,14 +53,14 @@ static vx_status VX_CALLBACK vxChannelExtractInputValidator(vx_node node, vx_uin
     if (index == 0)
     {
         vx_image image = 0;
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &image, sizeof(image));
+        vxQueryParameter(param, VX_PARAMETER_REF, &image, sizeof(image));
         if (image)
         {
             vx_df_image format = 0;
             vx_uint32 width, height;
-            vxQueryImage(image, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
-            vxQueryImage(image, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-            vxQueryImage(image, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+            vxQueryImage(image, VX_IMAGE_FORMAT, &format, sizeof(format));
+            vxQueryImage(image, VX_IMAGE_WIDTH, &width, sizeof(width));
+            vxQueryImage(image, VX_IMAGE_HEIGHT, &height, sizeof(height));
             // check to make sure the input format is supported.
             switch (format)
             {
@@ -100,28 +100,28 @@ static vx_status VX_CALLBACK vxChannelExtractInputValidator(vx_node node, vx_uin
     else if (index == 1)
     {
         vx_scalar scalar;
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &scalar, sizeof(scalar));
+        vxQueryParameter(param, VX_PARAMETER_REF, &scalar, sizeof(scalar));
         if (scalar)
         {
             vx_enum type = 0;
-            vxQueryScalar(scalar, VX_SCALAR_ATTRIBUTE_TYPE, &type, sizeof(type));
+            vxQueryScalar(scalar, VX_SCALAR_TYPE, &type, sizeof(type));
             if (type == VX_TYPE_ENUM)
             {
                 vx_enum channel = 0;
                 vx_parameter param0;
 
-                vxReadScalarValue(scalar, &channel);
+                vxCopyScalar(scalar, &channel, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
                 param0 = vxGetParameterByIndex(node, 0);
 
-                if (param0)
+                if (vxGetStatus((vx_reference)param0) == VX_SUCCESS)
                 {
                     vx_image image = 0;
-                    vxQueryParameter(param0, VX_PARAMETER_ATTRIBUTE_REF, &image, sizeof(image));
+                    vxQueryParameter(param0, VX_PARAMETER_REF, &image, sizeof(image));
 
                     if (image)
                     {
                         vx_df_image format = VX_DF_IMAGE_VIRT;
-                        vxQueryImage(image, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                        vxQueryImage(image, VX_IMAGE_FORMAT, &format, sizeof(format));
 
                         status = VX_ERROR_INVALID_VALUE;
                         switch (format)
@@ -180,23 +180,24 @@ static vx_status VX_CALLBACK vxChannelExtractOutputValidator(vx_node node, vx_ui
         vx_parameter param0 = vxGetParameterByIndex(node, 0);
         vx_parameter param1 = vxGetParameterByIndex(node, 1);
 
-        if ((param0) && (param1))
+        if ((vxGetStatus((vx_reference)param0) == VX_SUCCESS) &&
+            (vxGetStatus((vx_reference)param1) == VX_SUCCESS))
         {
             vx_image input = 0;
             vx_scalar chan = 0;
             vx_enum channel = 0;
-            vxQueryParameter(param0, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
-            vxQueryParameter(param1, VX_PARAMETER_ATTRIBUTE_REF, &chan, sizeof(chan));
-            vxReadScalarValue(chan, &channel);
+            vxQueryParameter(param0, VX_PARAMETER_REF, &input, sizeof(input));
+            vxQueryParameter(param1, VX_PARAMETER_REF, &chan, sizeof(chan));
+            vxCopyScalar(chan, &channel, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
 
             if ((input) && (chan))
             {
                 vx_uint32 width = 0, height = 0;
                 vx_df_image format = VX_DF_IMAGE_VIRT;
 
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxQueryImage(input, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxQueryImage(input, VX_IMAGE_HEIGHT, &height, sizeof(height));
+                vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
 
                 if (channel != VX_CHANNEL_Y)
                     switch (format) {
@@ -248,6 +249,7 @@ vx_kernel_description_t channelextract_kernel = {
     "org.khronos.openvx.channel_extract",
     vxChannelExtractKernel,
     channel_extract_kernel_params, dimof(channel_extract_kernel_params),
+    NULL,
     vxChannelExtractInputValidator,
     vxChannelExtractOutputValidator,
     NULL,

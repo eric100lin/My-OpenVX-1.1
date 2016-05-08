@@ -54,7 +54,7 @@ static vx_status VX_CALLBACK vxMeanStdDevInputValidator(vx_node node, vx_uint32 
         vx_image image = 0;
         vx_df_image format = 0;
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &image, sizeof(image));
+        vxQueryParameter(param, VX_PARAMETER_REF, &image, sizeof(image));
         if (image == 0)
         {
             status = VX_ERROR_INVALID_PARAMETERS;
@@ -62,7 +62,7 @@ static vx_status VX_CALLBACK vxMeanStdDevInputValidator(vx_node node, vx_uint32 
         else
         {
             status = VX_SUCCESS;
-            vxQueryImage(image, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxQueryImage(image, VX_IMAGE_FORMAT, &format, sizeof(format));
             if (format != VX_DF_IMAGE_U8
 #if defined(EXPERIMENTAL_USE_S16)
                 && format != VX_DF_IMAGE_U16
@@ -107,6 +107,7 @@ vx_kernel_description_t mean_stddev_kernel = {
     "org.khronos.openvx.mean_stddev",
     vxMeanStdDevKernel,
     mean_stddev_kernel_params, dimof(mean_stddev_kernel_params),
+    NULL,
     vxMeanStdDevInputValidator,
     vxMeanStdDevOutputValidator,
     NULL,

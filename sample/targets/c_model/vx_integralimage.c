@@ -52,11 +52,11 @@ static vx_status VX_CALLBACK vxIntegralInputValidator(vx_node node, vx_uint32 in
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
             if (format == VX_DF_IMAGE_U8)
             {
                 status = VX_SUCCESS;
@@ -74,15 +74,15 @@ static vx_status VX_CALLBACK vxIntegralOutputValidator(vx_node node, vx_uint32 i
     if (index == 1)
     {
         vx_parameter param = vxGetParameterByIndex(node, 0); /* we reference the input image */
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_image input = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+            vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
             if (input)
             {
                 vx_uint32 width = 0, height = 0;
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+                vxQueryImage(input, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxQueryImage(input, VX_IMAGE_HEIGHT, &height, sizeof(height));
                 ptr->type = VX_TYPE_IMAGE;
                 ptr->dim.image.format = VX_DF_IMAGE_U32;
                 ptr->dim.image.width = width;
@@ -106,6 +106,7 @@ vx_kernel_description_t integral_image_kernel = {
     "org.khronos.openvx.integral_image",
     vxIntegralImageKernel,
     integral_image_kernel_params, dimof(integral_image_kernel_params),
+    NULL,
     vxIntegralInputValidator,
     vxIntegralOutputValidator,
     NULL,

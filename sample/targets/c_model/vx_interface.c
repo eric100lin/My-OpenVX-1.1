@@ -53,11 +53,13 @@ static vx_status VX_CALLBACK vxAllFailOutputValidator(vx_node node, vx_uint32 in
 }
 
 static vx_param_description_t invalid_kernel_params[1];
-static vx_kernel_description_t invalid_kernel = {
+static vx_kernel_description_t invalid_kernel =
+{
     VX_KERNEL_INVALID,
     "org.khronos.openvx.invalid",
     vxInvalidKernel,
     invalid_kernel_params, 0,
+    NULL,
     vxAllFailInputValidator,
     vxAllFailOutputValidator,
     NULL,
@@ -93,7 +95,7 @@ static vx_kernel_description_t *target_kernels[] = {
     &box3x3_kernel_2,
     &gaussian3x3_kernel,
     &convolution_kernel,
-    &pyramid_kernel,
+    &gaussian_pyramid_kernel,
     &accumulate_kernel,
     &accumulate_weighted_kernel,
     &accumulate_square_kernel,
@@ -114,6 +116,9 @@ static vx_kernel_description_t *target_kernels[] = {
     &optpyrlk_kernel,
     &remap_kernel,
     &halfscale_gaussian_kernel,
+    &laplacian_pyramid_kernel,
+    &laplacian_reconstruct_kernel,
+    &nonlinearfilter_kernel,
 };
 
 /*! \brief Declares the number of base supported kernels.
@@ -137,7 +142,7 @@ vx_status vxTargetInit(vx_target target)
 
 vx_status vxTargetDeinit(vx_target target)
 {
-    return vxDeinitializeTarget(target);;
+    return vxDeinitializeTarget(target);
 }
 
 vx_status vxTargetSupports(vx_target target,
@@ -155,17 +160,20 @@ vx_status vxTargetSupports(vx_target target,
         strncmp(targetName, "performance", VX_MAX_TARGET_NAME) == 0)
     {
         vx_uint32 k = 0u;
-        for (k = 0u; k < target->num_kernels; k++)
+        for (k = 0u; k < VX_INT_MAX_KERNELS; k++)
         {
             vx_char targetKernelName[VX_MAX_KERNEL_NAME];
             vx_char *kernel;
+            vx_char def[8] = "default";
 #if defined(EXPERIMENTAL_USE_VARIANTS)
             vx_char *variant;
-            vx_char def[8] = "default";
 #endif
 
             strncpy(targetKernelName, target->kernels[k].name, VX_MAX_KERNEL_NAME);
             kernel = strtok(targetKernelName, ":");
+            if (kernel == NULL)
+                kernel = def;
+
 #if defined(EXPERIMENTAL_USE_VARIANTS)
             variant = strtok(NULL, ":");
 
@@ -240,6 +248,7 @@ vx_kernel vxTargetAddKernel(vx_target target,
                             vx_enum enumeration,
                             vx_kernel_f func_ptr,
                             vx_uint32 numParams,
+                            vx_kernel_validate_f validate,
                             vx_kernel_input_validate_f input,
                             vx_kernel_output_validate_f output,
                             vx_kernel_initialize_f initialize,
@@ -248,7 +257,7 @@ vx_kernel vxTargetAddKernel(vx_target target,
     vx_uint32 k = 0u;
     vx_kernel_t *kernel = NULL;
     // vxSemWait(&target->base.lock);
-    for (k = target->num_kernels; k < VX_INT_MAX_KERNELS; k++)
+    for (k = 0; k < VX_INT_MAX_KERNELS; k++)
     {
         kernel = &(target->kernels[k]);
         if ((kernel->enabled == vx_false_e) &&
@@ -258,7 +267,7 @@ vx_kernel vxTargetAddKernel(vx_target target,
                                kernel,
                                enumeration, func_ptr, name,
                                NULL, numParams,
-                               input, output, initialize, deinitialize);
+                               validate, input, output, initialize, deinitialize);
             VX_PRINT(VX_ZONE_KERNEL, "Reserving %s Kernel[%u] for %s\n", target->name, k, kernel->name);
             target->num_kernels++;
             break;
@@ -281,7 +290,7 @@ vx_kernel vxTargetAddTilingKernel(vx_target target,
 {
     vx_uint32 k = 0u;
     vx_kernel_t *kernel = NULL;
-    for (k = target->num_kernels; k < VX_INT_MAX_KERNELS; k++)
+    for (k = 0; k < VX_INT_MAX_KERNELS; k++)
     {
         kernel = &(target->kernels[k]);
         if ((kernel->enabled == vx_false_e) &&
@@ -292,7 +301,7 @@ vx_kernel vxTargetAddTilingKernel(vx_target target,
                                kernel,
                                enumeration, vxTilingKernel, name,
                                NULL, numParams,
-                               input, output, NULL, NULL);
+                               NULL, input, output, NULL, NULL);
             VX_PRINT(VX_ZONE_KERNEL, "Reserving %s Kernel[%u] for %s\n", target->name, k, kernel->name);
             target->num_kernels++;
             break;
@@ -342,7 +351,7 @@ vx_status VX_CALLBACK vxTilingKernel(vx_node node, vx_reference parameters[], vx
     vx_uint32 tile_size_y = 0u, tile_size_x = 0u;
     vx_uint32 block_multiple = 64;
     vx_uint32 height = 0u, width = 0u;
-    vx_border_mode_t borders = {VX_BORDER_MODE_UNDEFINED, 0};
+    vx_border_t borders = {VX_BORDER_UNDEFINED, 0};
     vx_neighborhood_size_t nbhd;
     void *tile_memory = NULL;
     vx_size size = 0;
@@ -355,24 +364,24 @@ vx_status VX_CALLBACK vxTilingKernel(vx_node node, vx_reference parameters[], vx
     for (p = 0u; p < num; p++)
     {
         vx_parameter param = vxGetParameterByIndex(node, p);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_DIRECTION, &dirs[p], sizeof(dirs[p]));
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_TYPE, &types[p], sizeof(types[p]));
+            vxQueryParameter(param, VX_PARAMETER_DIRECTION, &dirs[p], sizeof(dirs[p]));
+            vxQueryParameter(param, VX_PARAMETER_TYPE, &types[p], sizeof(types[p]));
             vxReleaseParameter(&param);
         }
         //printf("Tiling Kernel Parameter[%u] dir:%d type:0%08x\n", p, dirs[p], types[p]);
         if (types[p] == VX_TYPE_IMAGE)
         {
-            vxQueryNode(node, VX_NODE_ATTRIBUTE_OUTPUT_TILE_BLOCK_SIZE, &tiles[p].tile_block, sizeof(vx_tile_block_size_t));
-            vxQueryNode(node, VX_NODE_ATTRIBUTE_INPUT_NEIGHBORHOOD, &tiles[p].neighborhood, sizeof(vx_neighborhood_size_t));
+            vxQueryNode(node, VX_NODE_OUTPUT_TILE_BLOCK_SIZE, &tiles[p].tile_block, sizeof(vx_tile_block_size_t));
+            vxQueryNode(node, VX_NODE_INPUT_NEIGHBORHOOD, &tiles[p].neighborhood, sizeof(vx_neighborhood_size_t));
             vxPrintImage((vx_image_t *)parameters[p]);
             images[p] = (vx_image)parameters[p];
-            vxQueryImage(images[p], VX_IMAGE_ATTRIBUTE_WIDTH, &tiles[p].image.width, sizeof(vx_uint32));
-            vxQueryImage(images[p], VX_IMAGE_ATTRIBUTE_HEIGHT, &tiles[p].image.height, sizeof(vx_uint32));
-            vxQueryImage(images[p], VX_IMAGE_ATTRIBUTE_FORMAT, &tiles[p].image.format, sizeof(vx_df_image));
-            vxQueryImage(images[p], VX_IMAGE_ATTRIBUTE_SPACE, &tiles[p].image.space, sizeof(vx_enum));
-            vxQueryImage(images[p], VX_IMAGE_ATTRIBUTE_RANGE, &tiles[p].image.range, sizeof(vx_enum));
+            vxQueryImage(images[p], VX_IMAGE_WIDTH, &tiles[p].image.width, sizeof(vx_uint32));
+            vxQueryImage(images[p], VX_IMAGE_HEIGHT, &tiles[p].image.height, sizeof(vx_uint32));
+            vxQueryImage(images[p], VX_IMAGE_FORMAT, &tiles[p].image.format, sizeof(vx_df_image));
+            vxQueryImage(images[p], VX_IMAGE_SPACE, &tiles[p].image.space, sizeof(vx_enum));
+            vxQueryImage(images[p], VX_IMAGE_RANGE, &tiles[p].image.range, sizeof(vx_enum));
             params[p] = &tiles[p];
             if ((dirs[p] == VX_OUTPUT) && (index == UINT32_MAX))
             {
@@ -382,7 +391,7 @@ vx_status VX_CALLBACK vxTilingKernel(vx_node node, vx_reference parameters[], vx
         }
         else if (types[p] == VX_TYPE_SCALAR)
         {
-            vxReadScalarValue((vx_scalar)parameters[p], (void *)&scalars[p]);
+            vxCopyScalar((vx_scalar)parameters[p], (void *)&scalars[p], VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
             params[p] = &scalars[p];
         }
 #if defined(OPENVX_TILING_1_1)
@@ -391,11 +400,11 @@ vx_status VX_CALLBACK vxTilingKernel(vx_node node, vx_reference parameters[], vx
     }
 
     /* choose the index of the first output image to based the tiling on */
-    status |= vxQueryImage(images[index], VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-    status |= vxQueryImage(images[index], VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-    status |= vxQueryNode(node, VX_NODE_ATTRIBUTE_BORDER_MODE, &borders, sizeof(borders));
-    status |= vxQueryNode(node, VX_NODE_ATTRIBUTE_INPUT_NEIGHBORHOOD, &nbhd, sizeof(nbhd));
-    status |= vxQueryNode(node, VX_NODE_ATTRIBUTE_TILE_MEMORY_SIZE, &size, sizeof(size));
+    status |= vxQueryImage(images[index], VX_IMAGE_WIDTH, &width, sizeof(width));
+    status |= vxQueryImage(images[index], VX_IMAGE_HEIGHT, &height, sizeof(height));
+    status |= vxQueryNode(node, VX_NODE_BORDER, &borders, sizeof(borders));
+    status |= vxQueryNode(node, VX_NODE_INPUT_NEIGHBORHOOD, &nbhd, sizeof(nbhd));
+    status |= vxQueryNode(node, VX_NODE_TILE_MEMORY_SIZE, &size, sizeof(size));
 
 #if 0
     tile_size_y = (height - (nbhd.y[1] + abs(nbhd.y[0]))) / block_multiple;
@@ -405,7 +414,7 @@ vx_status VX_CALLBACK vxTilingKernel(vx_node node, vx_reference parameters[], vx
     tile_size_x = width;
 #endif
 
-    if ((borders.mode != VX_BORDER_MODE_UNDEFINED) &&
+    if ((borders.mode != VX_BORDER_UNDEFINED) &&
         (borders.mode != VX_BORDER_MODE_SELF))
     {
         return VX_ERROR_NOT_SUPPORTED;
@@ -439,7 +448,7 @@ vx_status VX_CALLBACK vxTilingKernel(vx_node node, vx_reference parameters[], vx
             if (status == VX_SUCCESS)
             {
                 //printf("Calling Tile{%u,%u} with %s\n", tx, ty, ((vx_node_t *)node)->kernel->name);
-                vxQueryNode(node, VX_NODE_ATTRIBUTE_TILE_MEMORY_PTR, &tile_memory, sizeof(void *));
+                vxQueryNode(node, VX_NODE_TILE_MEMORY_PTR, &tile_memory, sizeof(void *));
                 ((vx_node_t *)node)->kernel->tiling_function(params, tile_memory, size);
             }
             else

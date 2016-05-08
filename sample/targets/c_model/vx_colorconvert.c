@@ -52,18 +52,18 @@ static vx_status VX_CALLBACK vxColorConvertInputValidator(vx_node node, vx_uint3
     if (index == 0)
     {
         vx_parameter param = vxGetParameterByIndex(node, 0);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_image image = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &image, sizeof(image));
+            vxQueryParameter(param, VX_PARAMETER_REF, &image, sizeof(image));
             if (image)
             {
                 vx_df_image format = 0;
                 vx_uint32 width = 0, height = 0;
 
-                vxQueryImage(image, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
-                vxQueryImage(image, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxQueryImage(image, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+                vxQueryImage(image, VX_IMAGE_FORMAT, &format, sizeof(format));
+                vxQueryImage(image, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxQueryImage(image, VX_IMAGE_HEIGHT, &height, sizeof(height));
                 // check to make sure the input format is supported.
                 switch (format)
                 {
@@ -152,17 +152,18 @@ static vx_status VX_CALLBACK vxColorConvertOutputValidator(vx_node node, vx_uint
     {
         vx_parameter param0 = vxGetParameterByIndex(node, 0);
         vx_parameter param1 = vxGetParameterByIndex(node, 1);
-        if (param0 && param1)
+        if ((vxGetStatus((vx_reference)param0) == VX_SUCCESS) &&
+            (vxGetStatus((vx_reference)param1) == VX_SUCCESS))
         {
             vx_image output = 0, input = 0;
-            vxQueryParameter(param0, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
-            vxQueryParameter(param1, VX_PARAMETER_ATTRIBUTE_REF, &output, sizeof(output));
+            vxQueryParameter(param0, VX_PARAMETER_REF, &input, sizeof(input));
+            vxQueryParameter(param1, VX_PARAMETER_REF, &output, sizeof(output));
             if (input && output)
             {
                 vx_df_image src = VX_DF_IMAGE_VIRT;
                 vx_df_image dst = VX_DF_IMAGE_VIRT;
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &src, sizeof(src));
-                vxQueryImage(output, VX_IMAGE_ATTRIBUTE_FORMAT, &dst, sizeof(dst));
+                vxQueryImage(input, VX_IMAGE_FORMAT, &src, sizeof(src));
+                vxQueryImage(output, VX_IMAGE_FORMAT, &dst, sizeof(dst));
                 if (dst != VX_DF_IMAGE_VIRT) /* can't be a unspecified format */
                 {
                     vx_uint32 i = 0;
@@ -173,8 +174,8 @@ static vx_status VX_CALLBACK vxColorConvertOutputValidator(vx_node node, vx_uint
                         {
                             ptr->type = VX_TYPE_IMAGE;
                             ptr->dim.image.format = dst;
-                            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_WIDTH, &ptr->dim.image.width, sizeof(ptr->dim.image.width));
-                            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_HEIGHT, &ptr->dim.image.height, sizeof(ptr->dim.image.height));
+                            vxQueryImage(input, VX_IMAGE_WIDTH, &ptr->dim.image.width, sizeof(ptr->dim.image.width));
+                            vxQueryImage(input, VX_IMAGE_HEIGHT, &ptr->dim.image.height, sizeof(ptr->dim.image.height));
                             status = VX_SUCCESS;
                             break;
                         }
@@ -206,6 +207,7 @@ vx_kernel_description_t colorconvert_kernel = {
     "org.khronos.openvx.color_convert",
     vxColorConvertKernel,
     color_convert_kernel_params, dimof(color_convert_kernel_params),
+    NULL,
     vxColorConvertInputValidator,
     vxColorConvertOutputValidator,
     NULL,

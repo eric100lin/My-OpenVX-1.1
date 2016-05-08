@@ -52,14 +52,14 @@ static vx_status VX_CALLBACK vxThresholdInputValidator(vx_node node, vx_uint32 i
     if (index == 0)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_image input = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+            vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
             if (input)
             {
                 vx_df_image format = 0;
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
                 if (format == VX_DF_IMAGE_U8)
                 {
                     status = VX_SUCCESS;
@@ -76,18 +76,27 @@ static vx_status VX_CALLBACK vxThresholdInputValidator(vx_node node, vx_uint32 i
     else if (index == 1)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_threshold threshold = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &threshold, sizeof(threshold));
+            vxQueryParameter(param, VX_PARAMETER_REF, &threshold, sizeof(threshold));
             if (threshold)
             {
                 vx_enum type = 0;
-                vxQueryThreshold(threshold, VX_THRESHOLD_ATTRIBUTE_TYPE, &type, sizeof(type));
+                vxQueryThreshold(threshold, VX_THRESHOLD_TYPE, &type, sizeof(type));
                 if ((type == VX_THRESHOLD_TYPE_BINARY) ||
                      (type == VX_THRESHOLD_TYPE_RANGE))
                 {
-                    status = VX_SUCCESS;
+                    vx_enum data_type = 0;
+                    vxQueryThreshold(threshold, VX_THRESHOLD_DATA_TYPE, &data_type, sizeof(data_type));
+                    if (data_type == VX_TYPE_UINT8)
+                    {
+                        status = VX_SUCCESS;
+                    }
+                    else
+                    {
+                        status = VX_ERROR_INVALID_TYPE;
+                    }
                 }
                 else
                 {
@@ -107,16 +116,16 @@ static vx_status VX_CALLBACK vxThresholdOutputValidator(vx_node node, vx_uint32 
     if (index == 2)
     {
         vx_parameter src_param = vxGetParameterByIndex(node, 0);
-        if (src_param)
+        if (vxGetStatus((vx_reference)src_param) == VX_SUCCESS)
         {
             vx_image src = 0;
-            vxQueryParameter(src_param, VX_PARAMETER_ATTRIBUTE_REF, &src, sizeof(src));
+            vxQueryParameter(src_param, VX_PARAMETER_REF, &src, sizeof(src));
             if (src)
             {
                 vx_uint32 width = 0, height = 0;
 
-                vxQueryImage(src, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(height));
-                vxQueryImage(src, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+                vxQueryImage(src, VX_IMAGE_WIDTH, &width, sizeof(height));
+                vxQueryImage(src, VX_IMAGE_HEIGHT, &height, sizeof(height));
 
                 /* fill in the meta data with the attributes so that the checker will pass */
                 ptr->type = VX_TYPE_IMAGE;
@@ -143,6 +152,7 @@ vx_kernel_description_t threshold_kernel = {
     "org.khronos.openvx.threshold",
     vxThresholdKernel,
     threshold_kernel_params, dimof(threshold_kernel_params),
+    NULL,
     vxThresholdInputValidator,
     vxThresholdOutputValidator,
     NULL,

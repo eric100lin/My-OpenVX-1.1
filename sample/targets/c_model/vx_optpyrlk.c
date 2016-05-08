@@ -33,37 +33,37 @@
 #include <vx_internal.h>
 #include <c_model.h>
 
-typedef struct _vx_keypoint_t_optpyrlk_internal {
-    vx_float32 x;                 /*!< \brief The x coordinate. */
-    vx_float32 y;                 /*!< \brief The y coordinate. */
+typedef struct _vx_keypoint_t_optpyrlk_internal
+{
+    vx_float32 x;               /*!< \brief The x coordinate. */
+    vx_float32 y;               /*!< \brief The y coordinate. */
     vx_float32 strength;        /*!< \brief The strength of the keypoint. */
     vx_float32 scale;           /*!< \brief Unused field reserved for future use. */
     vx_float32 orientation;     /*!< \brief Unused field reserved for future use. */
-    vx_int32 tracking_status;   /*!< \brief A zero indicates a lost point. */
+    vx_int32   tracking_status; /*!< \brief A zero indicates a lost point. */
     vx_float32 error;           /*!< \brief An tracking method specific error. */
+
 } vx_keypoint_t_optpyrlk_internal;
 
 #define  INT_ROUND(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
 static vx_status LKTracker(
-        const vx_image prevImg, const vx_image prevDerivIx, const vx_image prevDerivIy, const vx_image nextImg,
-        const vx_array prevPts, vx_array nextPts,
-        vx_scalar winSize_s, vx_scalar criteria_s,
-        vx_uint32 level,vx_scalar epsilon,
-        vx_scalar num_iterations)
+    const vx_image prevImg, const vx_image prevDerivIx, const vx_image prevDerivIy, const vx_image nextImg,
+    const vx_array prevPts, vx_array nextPts,
+    vx_scalar winSize_s, vx_scalar criteria_s, vx_uint32 level, vx_scalar epsilon, vx_scalar num_iterations)
 {
     vx_status status = VX_FAILURE;
 
+    int j;
     vx_size winSize;
-    vxReadScalarValue(winSize_s,&winSize);
-    vx_size halfWin = winSize*0.5f;
-    vx_size list_length,list_indx;
-    const vx_image I = prevImg;
-    const vx_image J = nextImg;
+    vx_size list_length;
+    vx_size list_indx;
+    vx_size halfWin;
+    const vx_image I       = prevImg;
+    const vx_image J       = nextImg;
     const vx_image derivIx = prevDerivIx;
     const vx_image derivIy = prevDerivIy;
 
-    int j;
     vx_enum termination_Criteria;
 
     vx_image IWinBuf;
@@ -71,93 +71,116 @@ static vx_status LKTracker(
     vx_image derivIWinBuf_y;
 
     vx_df_image derivIx_format = 0;
-    vx_df_image J_format = 0;
+    vx_df_image J_format       = 0;
     vx_df_image derivIy_format = 0;
-    vx_df_image I_format = 0;
+    vx_df_image I_format       = 0;
     vx_rectangle_t rect;
 
-    void *derivIx_base = 0,*J_base = 0,*derivIy_base = 0,*I_base = 0;
-    vx_imagepatch_addressing_t  derivIx_addr,J_addr,derivIy_addr,I_addr;
+    void* derivIx_base = 0;
+    void* J_base       = 0;
+    void* derivIy_base = 0;
+    void* I_base       = 0;
+
+    vx_imagepatch_addressing_t derivIx_addr;
+    vx_imagepatch_addressing_t J_addr;
+    vx_imagepatch_addressing_t derivIy_addr;
+    vx_imagepatch_addressing_t I_addr;
 
 
-    void *IWinBuf_base = 0,*derivIWinBuf_x_base = 0,*derivIWinBuf_y_base = 0;
-    vx_df_image IWinBuf_format = 0;
+    void* IWinBuf_base        = 0;
+    void* derivIWinBuf_x_base = 0;
+    void* derivIWinBuf_y_base = 0;
+
+    vx_df_image IWinBuf_format        = 0;
     vx_df_image derivIWinBuf_x_format = 0;
     vx_df_image derivIWinBuf_y_format = 0;
-    vx_imagepatch_addressing_t  IWinBuf_addr,derivIWinBuf_x_addr,derivIWinBuf_y_addr;
+
+    vx_imagepatch_addressing_t IWinBuf_addr;
+    vx_imagepatch_addressing_t derivIWinBuf_x_addr;
+    vx_imagepatch_addressing_t derivIWinBuf_y_addr;
 
     /* TODO: prevPts_stride and nextPts_stride should be used to access array elements as
            it may differ from sizeof(vx_keypoint_t_optpyrlk_internal)
     */
     vx_size prevPts_stride = 0;
     vx_size nextPts_stride = 0;
-    void *prevPtsFirstItem = NULL;
-    void *nextPtsFirstItem = NULL;
-    vxQueryArray(prevPts,VX_ARRAY_ATTRIBUTE_NUMITEMS,&list_length,sizeof(list_length));
-    vxAccessArrayRange(prevPts, 0, list_length, &prevPts_stride, &prevPtsFirstItem, VX_READ_ONLY);
-    vxAccessArrayRange(nextPts, 0, list_length, &nextPts_stride, &nextPtsFirstItem, VX_READ_AND_WRITE);
+    void* prevPtsFirstItem = NULL;
+    void* nextPtsFirstItem = NULL;
+    vx_map_id prevPtsFirstItem_map_id;
+    vx_map_id nextPtsFirstItem_map_id;
+    vxQueryArray(prevPts, VX_ARRAY_NUMITEMS, &list_length, sizeof(list_length));
 
-    vx_keypoint_t_optpyrlk_internal *nextPt_item = (vx_keypoint_t_optpyrlk_internal*)nextPtsFirstItem;
-    vx_keypoint_t_optpyrlk_internal *prevPt_item = (vx_keypoint_t_optpyrlk_internal*)prevPtsFirstItem;
+    vxMapArrayRange(prevPts, 0, list_length, &prevPtsFirstItem_map_id, &prevPts_stride, &prevPtsFirstItem, VX_READ_ONLY, VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
+    vxMapArrayRange(nextPts, 0, list_length, &nextPtsFirstItem_map_id, &nextPts_stride, &nextPtsFirstItem, VX_READ_AND_WRITE, VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
+
+    vx_keypoint_t_optpyrlk_internal* nextPt_item = (vx_keypoint_t_optpyrlk_internal*)nextPtsFirstItem;
+    vx_keypoint_t_optpyrlk_internal* prevPt_item = (vx_keypoint_t_optpyrlk_internal*)prevPtsFirstItem;
 
     int num_iterations_i;
     vx_float32 epsilon_f;
 
-    vxReadScalarValue(num_iterations,&num_iterations_i);
-    vxReadScalarValue(epsilon,&epsilon_f);
-    vxReadScalarValue(criteria_s,&termination_Criteria);
+    vxCopyScalar(winSize_s, &winSize, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+    vxCopyScalar(num_iterations, &num_iterations_i, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+    vxCopyScalar(epsilon,&epsilon_f,VX_READ_ONLY,VX_MEMORY_TYPE_HOST);
+    vxCopyScalar(criteria_s,&termination_Criteria,VX_READ_ONLY,VX_MEMORY_TYPE_HOST);
+
+    halfWin = (vx_size)(winSize*0.5f);
 
     vx_context context_lk_internal = vxCreateContext();
 
-    IWinBuf = vxCreateImage(context_lk_internal,winSize,winSize,VX_DF_IMAGE_S16);
-    derivIWinBuf_x = vxCreateImage(context_lk_internal,winSize,winSize,VX_DF_IMAGE_S16);
-    derivIWinBuf_y = vxCreateImage(context_lk_internal,winSize,winSize,VX_DF_IMAGE_S16);
+    IWinBuf        = vxCreateImage(context_lk_internal, winSize,winSize, VX_DF_IMAGE_S16);
+    derivIWinBuf_x = vxCreateImage(context_lk_internal, winSize,winSize, VX_DF_IMAGE_S16);
+    derivIWinBuf_y = vxCreateImage(context_lk_internal, winSize,winSize, VX_DF_IMAGE_S16);
 
-    vxInitImage((vx_image_t*)IWinBuf,winSize,winSize,VX_DF_IMAGE_S16);
+    vxInitImage((vx_image_t*)IWinBuf, winSize, winSize, VX_DF_IMAGE_S16);
     vxAllocateImage((vx_image_t*)IWinBuf);
-    vxInitImage((vx_image_t*)derivIWinBuf_x,winSize,winSize,VX_DF_IMAGE_S16);
+    vxInitImage((vx_image_t*)derivIWinBuf_x, winSize, winSize, VX_DF_IMAGE_S16);
     vxAllocateImage((vx_image_t*)derivIWinBuf_x);
-    vxInitImage((vx_image_t*)derivIWinBuf_y,winSize,winSize,VX_DF_IMAGE_S16);
+    vxInitImage((vx_image_t*)derivIWinBuf_y, winSize,winSize, VX_DF_IMAGE_S16);
     vxAllocateImage((vx_image_t*)derivIWinBuf_y);
 
-    vxQueryImage(derivIx, VX_IMAGE_ATTRIBUTE_FORMAT, &derivIx_format, sizeof(derivIx_format));
-    vxQueryImage(J, VX_IMAGE_ATTRIBUTE_FORMAT, &J_format, sizeof(J_format));
-    vxQueryImage(derivIy, VX_IMAGE_ATTRIBUTE_FORMAT, &derivIy_format, sizeof(derivIy_format));
-    vxQueryImage(I, VX_IMAGE_ATTRIBUTE_FORMAT, &I_format, sizeof(I_format));
+    vxQueryImage(derivIx, VX_IMAGE_FORMAT, &derivIx_format, sizeof(derivIx_format));
+    vxQueryImage(J, VX_IMAGE_FORMAT, &J_format, sizeof(J_format));
+    vxQueryImage(derivIy, VX_IMAGE_FORMAT, &derivIy_format, sizeof(derivIy_format));
+    vxQueryImage(I, VX_IMAGE_FORMAT, &I_format, sizeof(I_format));
 
     //vxGetValidRegionImage(derivIx,&rect);
-    rect.start_x = 0; rect.start_y = 0;
-    vxQueryImage(derivIx, VX_IMAGE_ATTRIBUTE_WIDTH, &rect.end_x, sizeof(rect.end_x));
-    vxQueryImage(derivIx, VX_IMAGE_ATTRIBUTE_HEIGHT, &rect.end_y, sizeof(rect.end_y));
+    rect.start_x = 0;
+    rect.start_y = 0;
+    vxQueryImage(derivIx, VX_IMAGE_WIDTH,  &rect.end_x, sizeof(rect.end_x));
+    vxQueryImage(derivIx, VX_IMAGE_HEIGHT, &rect.end_y, sizeof(rect.end_y));
 
     status = VX_SUCCESS;
 
-    status |= vxAccessImagePatch(derivIx, &rect, 0, &derivIx_addr, (void **)&derivIx_base,VX_READ_ONLY);
-    status |= vxAccessImagePatch(J, &rect, 0, &J_addr, (void **)&J_base,VX_READ_ONLY);
-    status |= vxAccessImagePatch(derivIy, &rect, 0, &derivIy_addr, (void **)&derivIy_base,VX_READ_ONLY);
-    status |= vxAccessImagePatch(I, &rect, 0, &I_addr, (void **)&I_base,VX_READ_ONLY);
+    status |= vxAccessImagePatch(derivIx, &rect, 0, &derivIx_addr, (void**)&derivIx_base, VX_READ_ONLY);
+    status |= vxAccessImagePatch(J, &rect, 0, &J_addr, (void**)&J_base,VX_READ_ONLY);
+    status |= vxAccessImagePatch(derivIy, &rect, 0, &derivIy_addr, (void**)&derivIy_base, VX_READ_ONLY);
+    status |= vxAccessImagePatch(I, &rect, 0, &I_addr, (void**)&I_base, VX_READ_ONLY);
 
-    vxQueryImage(IWinBuf, VX_IMAGE_ATTRIBUTE_FORMAT, &IWinBuf_format, sizeof(IWinBuf_format));
-    vxQueryImage(derivIWinBuf_x, VX_IMAGE_ATTRIBUTE_FORMAT, &derivIWinBuf_x_format, sizeof(derivIWinBuf_x_format));
-    vxQueryImage(derivIWinBuf_y, VX_IMAGE_ATTRIBUTE_FORMAT, &derivIWinBuf_y_format, sizeof(derivIWinBuf_y_format));
+    vxQueryImage(IWinBuf,        VX_IMAGE_FORMAT, &IWinBuf_format,        sizeof(IWinBuf_format));
+    vxQueryImage(derivIWinBuf_x, VX_IMAGE_FORMAT, &derivIWinBuf_x_format, sizeof(derivIWinBuf_x_format));
+    vxQueryImage(derivIWinBuf_y, VX_IMAGE_FORMAT, &derivIWinBuf_y_format, sizeof(derivIWinBuf_y_format));
 
     //vxGetValidRegionImage(IWinBuf,&rect);
-    rect.start_x = 0; rect.start_y = 0;
-    vxQueryImage(IWinBuf, VX_IMAGE_ATTRIBUTE_WIDTH, &rect.end_x, sizeof(rect.end_x));
-    vxQueryImage(IWinBuf, VX_IMAGE_ATTRIBUTE_HEIGHT, &rect.end_y, sizeof(rect.end_y));
+    rect.start_x = 0;
+    rect.start_y = 0;
+    vxQueryImage(IWinBuf, VX_IMAGE_WIDTH,  &rect.end_x, sizeof(rect.end_x));
+    vxQueryImage(IWinBuf, VX_IMAGE_HEIGHT, &rect.end_y, sizeof(rect.end_y));
 
-    status |= vxAccessImagePatch(IWinBuf, &rect, 0, &IWinBuf_addr, (void **)&IWinBuf_base,VX_READ_AND_WRITE);
-    status |= vxAccessImagePatch(derivIWinBuf_x, &rect, 0, &derivIWinBuf_x_addr, (void **)&derivIWinBuf_x_base,VX_READ_AND_WRITE);
-    status |= vxAccessImagePatch(derivIWinBuf_y, &rect, 0, &derivIWinBuf_y_addr, (void **)&derivIWinBuf_y_base,VX_READ_AND_WRITE);
+    status |= vxAccessImagePatch(IWinBuf,        &rect, 0, &IWinBuf_addr,        (void**)&IWinBuf_base,        VX_READ_AND_WRITE);
+    status |= vxAccessImagePatch(derivIWinBuf_x, &rect, 0, &derivIWinBuf_x_addr, (void**)&derivIWinBuf_x_base, VX_READ_AND_WRITE);
+    status |= vxAccessImagePatch(derivIWinBuf_y, &rect, 0, &derivIWinBuf_y_addr, (void**)&derivIWinBuf_y_base, VX_READ_AND_WRITE);
 
-    for(list_indx=0;list_indx<list_length;list_indx++)
+    for(list_indx = 0; list_indx < list_length; list_indx++)
     {
         // Does not compute a point that shouldn't be tracked
         if (prevPt_item[list_indx].tracking_status == 0)
             continue;
 
-        vx_keypoint_t_optpyrlk_internal nextPt,prevPt;
-        vx_keypoint_t_optpyrlk_internal iprevPt, inextPt;
+        vx_keypoint_t_optpyrlk_internal nextPt;
+        vx_keypoint_t_optpyrlk_internal prevPt;
+        vx_keypoint_t_optpyrlk_internal iprevPt;
+        vx_keypoint_t_optpyrlk_internal inextPt;
 
         prevPt.x = prevPt_item[list_indx].x - halfWin;
         prevPt.y = prevPt_item[list_indx].y - halfWin;
@@ -165,8 +188,8 @@ static vx_status LKTracker(
         nextPt.x = nextPt_item[list_indx].x - halfWin;
         nextPt.y = nextPt_item[list_indx].y - halfWin;
 
-        iprevPt.x = floor(prevPt.x);
-        iprevPt.y = floor(prevPt.y);
+        iprevPt.x = floorf(prevPt.x);
+        iprevPt.y = floorf(prevPt.y);
 
         if( iprevPt.x < 0 || iprevPt.x >= derivIx_addr.dim_x - winSize-1 ||
             iprevPt.y < 0 || iprevPt.y >= derivIx_addr.dim_y - winSize-1 )
@@ -174,15 +197,17 @@ static vx_status LKTracker(
             if( level == 0 )
             {
                 nextPt_item[list_indx].tracking_status = 0;
-                nextPt_item[list_indx].error = 0;
+                nextPt_item[list_indx].error           = 0;
             }
             continue;
         }
 
         float a = prevPt.x - iprevPt.x;
         float b = prevPt.y - iprevPt.y;
-        const int W_BITS = 14, W_BITS1 = 14;
+        const int W_BITS  = 14;
+        const int W_BITS1 = 14;
         const float FLT_SCALE = 1.f/(1 << 20);
+
         int iw00 = (int)(((1.f - a)*(1.f - b)*(1 << W_BITS))+0.5f);
         int iw01 = (int)((a*(1.f - b)*(1 << W_BITS))+0.5f);
         int iw10 = (int)(((1.f - a)*b*(1 << W_BITS))+0.5f);
@@ -190,34 +215,38 @@ static vx_status LKTracker(
 
         int dstep_x = (int)(derivIx_addr.stride_y)/2;
         int dstep_y = (int)(derivIy_addr.stride_y)/2;
-        int stepJ = (int)(J_addr.stride_y);
-        int stepI = (int)(I_addr.stride_y);
-        double A11 = 0, A12 = 0, A22 = 0;
+        int stepJ   = (int)(J_addr.stride_y);
+        int stepI   = (int)(I_addr.stride_y);
+
+        double A11 = 0;
+        double A12 = 0;
+        double A22 = 0;
 
         // extract the patch from the first image, compute covariation matrix of derivatives
-        int x, y;
-        for( y = 0; y < winSize; y++ )
+        int x;
+        int y;
+        for( y = 0; y < (int)winSize; y++ )
         {
-            unsigned char *src = (unsigned char*)vxFormatImagePatchAddress2d(I_base, iprevPt.x, y + iprevPt.y, &I_addr);
-            short *dsrc_x = (short*)vxFormatImagePatchAddress2d(derivIx_base, iprevPt.x, y + iprevPt.y, &derivIx_addr);
-            short *dsrc_y = (short*)vxFormatImagePatchAddress2d(derivIy_base, iprevPt.x, y + iprevPt.y, &derivIy_addr);
+            unsigned char* src = (unsigned char*)vxFormatImagePatchAddress2d(I_base, (vx_uint32)iprevPt.x, (vx_uint32)(y + iprevPt.y), &I_addr);
+            short* dsrc_x = (short*)vxFormatImagePatchAddress2d(derivIx_base, (vx_uint32)iprevPt.x, (vx_uint32)(y + iprevPt.y), &derivIx_addr);
+            short* dsrc_y = (short*)vxFormatImagePatchAddress2d(derivIy_base, (vx_uint32)iprevPt.x, (vx_uint32)(y + iprevPt.y), &derivIy_addr);
 
-            short* Iptr = (short*)vxFormatImagePatchAddress2d(IWinBuf_base,0, y,&IWinBuf_addr);
-            short* dIptr_x = (short*)vxFormatImagePatchAddress2d(derivIWinBuf_x_base,0, y,&derivIWinBuf_x_addr);
-            short* dIptr_y = (short*)vxFormatImagePatchAddress2d(derivIWinBuf_y_base,0, y,&derivIWinBuf_y_addr);
+            short* Iptr    = (short*)vxFormatImagePatchAddress2d(IWinBuf_base,       0, y, &IWinBuf_addr);
+            short* dIptr_x = (short*)vxFormatImagePatchAddress2d(derivIWinBuf_x_base,0, y, &derivIWinBuf_x_addr);
+            short* dIptr_y = (short*)vxFormatImagePatchAddress2d(derivIWinBuf_y_base,0, y, &derivIWinBuf_y_addr);
 
             x = 0;
 
-            for( ; x < winSize; x++, dsrc_x ++, dsrc_y ++)
+            for( ; x < (int)winSize; x++, dsrc_x ++, dsrc_y ++)
             {
-                int ival = INT_ROUND(src[x]*iw00 + src[x+1]*iw01 +
+                int ival  = INT_ROUND(src[x]*iw00 + src[x+1]*iw01 +
                                       src[x+stepI]*iw10 + src[x+stepI+1]*iw11, W_BITS1-5);
                 int ixval = INT_ROUND(dsrc_x[0]*iw00 + dsrc_x[1]*iw01 +
-                                       dsrc_x[dstep_x]*iw10 + dsrc_x[dstep_x+1]*iw11, W_BITS1);
+                                      dsrc_x[dstep_x]*iw10 + dsrc_x[dstep_x+1]*iw11, W_BITS1);
                 int iyval = INT_ROUND(dsrc_y[0]*iw00 + dsrc_y[1]*iw01 + dsrc_y[dstep_y]*iw10 +
-                                       dsrc_y[dstep_y+1]*iw11, W_BITS1);
+                                      dsrc_y[dstep_y+1]*iw11, W_BITS1);
 
-                Iptr[x] = (short)ival;
+                Iptr[x]    = (short)ival;
                 dIptr_x[x] = (short)ixval;
                 dIptr_y[x] = (short)iyval;
 
@@ -232,34 +261,37 @@ static vx_status LKTracker(
         A22 *= FLT_SCALE;
 
         double D = A11*A22 - A12*A12;
-        float minEig = (A22 + A11 - sqrt((A11-A22)*(A11-A22) +
+        float minEig = (float)(A22 + A11 - sqrt((A11-A22)*(A11-A22) +
                         4.f*A12*A12))/(2*winSize*winSize);
 
-        if( minEig < 1.0e-04F || D < 1.0e-07F  )
+        if( minEig < 1.0e-04F || D < 1.0e-07F )
         {
-            if( level == 0 ) {
+            if( level == 0 )
+            {
                 nextPt_item[list_indx].tracking_status = 0;
-                nextPt_item[list_indx].error = 0;
+                nextPt_item[list_indx].error           = 0;
             }
             continue;
         }
 
         D = 1.f/D;
 
-        float prevDelta_x = 0.0f, prevDelta_y = 0.0f;
+        float prevDelta_x = 0.0f;
+        float prevDelta_y = 0.0f;
 
         j = 0;
         while(j < num_iterations_i || termination_Criteria == VX_TERM_CRITERIA_EPSILON)
         {
-            inextPt.x = floor(nextPt.x);
-            inextPt.y = floor(nextPt.y);
+            inextPt.x = floorf(nextPt.x);
+            inextPt.y = floorf(nextPt.y);
 
-            if( inextPt.x < 0 || inextPt.x >= J_addr.dim_x-winSize-1 ||
-               inextPt.y < 0 || inextPt.y >= J_addr.dim_y- winSize-1 )
+            if( inextPt.x < 0 || inextPt.x >= J_addr.dim_x - winSize-1 ||
+                inextPt.y < 0 || inextPt.y >= J_addr.dim_y - winSize-1 )
             {
-                if( level == 0  ) {
+                if( level == 0  )
+                {
                     nextPt_item[list_indx].tracking_status = 0;
-                    nextPt_item[list_indx].error = 0;
+                    nextPt_item[list_indx].error           = 0;
                 }
                 break;
             }
@@ -270,23 +302,24 @@ static vx_status LKTracker(
             iw01 = (int)((a*(1.f - b)*(1 << W_BITS))+0.5);
             iw10 = (int)(((1.f - a)*b*(1 << W_BITS))+0.5);
             iw11 = (1 << W_BITS) - iw00 - iw01 - iw10;
-            double b1 = 0, b2 = 0;
 
-            for( y = 0; y < winSize; y++ )
+            double b1 = 0;
+            double b2 = 0;
+
+            for( y = 0; y < (int)winSize; y++ )
             {
-                unsigned char* Jptr = (unsigned char*)vxFormatImagePatchAddress2d(J_base, inextPt.x, y + inextPt.y, &J_addr);
-                short* Iptr = (short*)vxFormatImagePatchAddress2d(IWinBuf_base,0, y,&IWinBuf_addr);
-                short* dIptr_x = (short*)vxFormatImagePatchAddress2d(derivIWinBuf_x_base,0, y,&derivIWinBuf_x_addr);
-                short* dIptr_y = (short*)vxFormatImagePatchAddress2d(derivIWinBuf_y_base,0, y,&derivIWinBuf_y_addr);
+                unsigned char* Jptr = (unsigned char*)vxFormatImagePatchAddress2d(J_base, (vx_uint32)inextPt.x, (vx_uint32)(y + inextPt.y), &J_addr);
+                short* Iptr    = (short*)vxFormatImagePatchAddress2d(IWinBuf_base,        0, y, &IWinBuf_addr);
+                short* dIptr_x = (short*)vxFormatImagePatchAddress2d(derivIWinBuf_x_base, 0, y, &derivIWinBuf_x_addr);
+                short* dIptr_y = (short*)vxFormatImagePatchAddress2d(derivIWinBuf_y_base, 0, y, &derivIWinBuf_y_addr);
 
                 x = 0;
 
-
-                for( ; x < winSize; x++)
+                for( ; x < (int)winSize; x++)
                 {
                     int diff = INT_ROUND(Jptr[x]*iw00 + Jptr[x+1]*iw01 +
-                                          Jptr[x+stepJ]*iw10 + Jptr[x+stepJ+1]*iw11,
-                                          W_BITS1-5) - Iptr[x];
+                                         Jptr[x+stepJ]*iw10 + Jptr[x+stepJ+1]*iw11,
+                                         W_BITS1-5) - Iptr[x];
                     b1 += (float)(diff*dIptr_x[x]);
                     b2 += (float)(diff*dIptr_y[x]);
                 }
@@ -305,7 +338,8 @@ static vx_status LKTracker(
             nextPt_item[list_indx].x = nextPt.x + halfWin;
             nextPt_item[list_indx].y = nextPt.y + halfWin;
 
-            if( (delta_x*delta_x + delta_y*delta_y) <= epsilon_f && (termination_Criteria == VX_TERM_CRITERIA_EPSILON || termination_Criteria == VX_TERM_CRITERIA_BOTH))
+            if( (delta_x*delta_x + delta_y*delta_y) <= epsilon_f &&
+                (termination_Criteria == VX_TERM_CRITERIA_EPSILON || termination_Criteria == VX_TERM_CRITERIA_BOTH))
                 break;
 
             if( j > 0 && fabs(delta_x + prevDelta_x) < 0.01 &&
@@ -320,17 +354,18 @@ static vx_status LKTracker(
             j++;
         }
     }
-    status |= vxCommitArrayRange(prevPts, 0, list_length,prevPtsFirstItem);
-    status |= vxCommitArrayRange(nextPts, 0, list_length,nextPtsFirstItem);
 
-    status |= vxCommitImagePatch(IWinBuf, &rect, 0, &IWinBuf_addr, (void *)IWinBuf_base);
-    status |= vxCommitImagePatch(derivIWinBuf_x, &rect, 0, &derivIWinBuf_x_addr, (void *)derivIWinBuf_x_base);
-    status |= vxCommitImagePatch(derivIWinBuf_y, &rect, 0, &derivIWinBuf_y_addr, (void *)derivIWinBuf_y_base);
-
-    status |= vxCommitImagePatch(derivIx, &rect, 0, &derivIx_addr, (void *)derivIx_base);
-    status |= vxCommitImagePatch(J, &rect, 0, &J_addr, (void *)J_base);
-    status |= vxCommitImagePatch(derivIy, &rect, 0, &derivIy_addr, (void *)derivIy_base);
-    status |= vxCommitImagePatch(I, &rect, 0, &I_addr, (void *)I_base);
+    status |= vxUnmapArrayRange(prevPts, prevPtsFirstItem_map_id);
+    status |= vxUnmapArrayRange(nextPts, nextPtsFirstItem_map_id);
+    /* no needs to commit changes in temporary images */
+    status |= vxCommitImagePatch(IWinBuf, NULL, 0, &IWinBuf_addr, (void*)IWinBuf_base);
+    status |= vxCommitImagePatch(derivIWinBuf_x, NULL, 0, &derivIWinBuf_x_addr, (void*)derivIWinBuf_x_base);
+    status |= vxCommitImagePatch(derivIWinBuf_y, NULL, 0, &derivIWinBuf_y_addr, (void*)derivIWinBuf_y_base);
+    /* no needs to commit for read-only images */
+    status |= vxCommitImagePatch(derivIx, NULL, 0, &derivIx_addr, (void*)derivIx_base);
+    status |= vxCommitImagePatch(J, NULL, 0, &J_addr, (void*)J_base);
+    status |= vxCommitImagePatch(derivIy, NULL, 0, &derivIy_addr, (void*)derivIy_base);
+    status |= vxCommitImagePatch(I, NULL, 0, &I_addr, (void*)I_base);
 
     vxFreeImage((vx_image_t*)IWinBuf);
     vxFreeImage((vx_image_t*)derivIWinBuf_x);
@@ -346,52 +381,60 @@ static vx_status LKTracker(
 }
 
 
-static vx_status VX_CALLBACK vxOpticalFlowPyrLKKernel(vx_node node, const vx_reference *parameters, vx_uint32 num)
+static vx_status VX_CALLBACK vxOpticalFlowPyrLKKernel(vx_node node, const vx_reference* parameters, vx_uint32 num)
 {
     vx_status status = VX_FAILURE;
+
     if (num == 10)
     {
-        vx_size maxLevel, list_length,list_indx;
+        vx_size maxLevel;
+        vx_size list_length;
+        vx_size list_indx;
         vx_int32 level;
-        vx_pyramid old_pyramid = (vx_pyramid)parameters[0];
-        vx_pyramid new_pyramid = (vx_pyramid)parameters[1];
-        vx_array prevPts =  (vx_array)parameters[2];
-        vx_array estimatedPts =  (vx_array)parameters[3];
-        vx_array nextPts =  (vx_array)parameters[4];
-        vx_scalar termination =  (vx_scalar)parameters[5];
-        vx_scalar epsilon =  (vx_scalar)parameters[6];
-        vx_scalar num_iterations =  (vx_scalar)parameters[7];
-        vx_scalar use_initial_estimate =  (vx_scalar)parameters[8];
-        vx_scalar window_dimension =  (vx_scalar)parameters[9];
+        vx_pyramid old_pyramid          = (vx_pyramid)parameters[0];
+        vx_pyramid new_pyramid          = (vx_pyramid)parameters[1];
+        vx_array   prevPts              = (vx_array)parameters[2];
+        vx_array   estimatedPts         = (vx_array)parameters[3];
+        vx_array   nextPts              = (vx_array)parameters[4];
+        vx_scalar  termination          = (vx_scalar)parameters[5];
+        vx_scalar  epsilon              = (vx_scalar)parameters[6];
+        vx_scalar  num_iterations       = (vx_scalar)parameters[7];
+        vx_scalar  use_initial_estimate = (vx_scalar)parameters[8];
+        vx_scalar  window_dimension     = (vx_scalar)parameters[9];
         vx_size prevPts_stride = 0;
         vx_size estimatedPts_stride = 0;
         vx_size nextPts_stride = 0;
-        void *prevPtsFirstItem;
-        void *initialPtsFirstItem;
-        void *nextPtsFirstItem;
+        void* prevPtsFirstItem;
+        void* initialPtsFirstItem;
+        void* nextPtsFirstItem;
 
         vx_bool use_initial_estimate_b;
         vx_float32 pyramid_scale;
-        vx_keypoint_t_optpyrlk_internal *prevPt;
-        vx_keypoint_t *initialPt = NULL;
-        vx_keypoint_t_optpyrlk_internal *nextPt = NULL;
+        vx_keypoint_t* initialPt = NULL;
+        vx_keypoint_t_optpyrlk_internal* prevPt;
+        vx_keypoint_t_optpyrlk_internal* nextPt = NULL;
 
-        vxReadScalarValue(use_initial_estimate,&use_initial_estimate_b);
-        vxQueryPyramid(old_pyramid, VX_PYRAMID_ATTRIBUTE_LEVELS, &maxLevel, sizeof(maxLevel));
-        vxQueryPyramid(old_pyramid, VX_PYRAMID_ATTRIBUTE_SCALE , &pyramid_scale, sizeof(pyramid_scale));
+        vxCopyScalar(use_initial_estimate,&use_initial_estimate_b,VX_READ_ONLY,VX_MEMORY_TYPE_HOST);
+
+        vxQueryPyramid(old_pyramid, VX_PYRAMID_LEVELS, &maxLevel, sizeof(maxLevel));
+        vxQueryPyramid(old_pyramid, VX_PYRAMID_SCALE, &pyramid_scale, sizeof(pyramid_scale));
 
         // the point in the list are in integer coordinates of x,y
-        // The algorithm demand  a float so we convert the point first.
-        vxQueryArray(prevPts, VX_ARRAY_ATTRIBUTE_NUMITEMS, &list_length,sizeof(list_length));
+        // The algorithm demand a float so we convert the point first.
+        vxQueryArray(prevPts, VX_ARRAY_NUMITEMS, &list_length, sizeof(list_length));
 
         for( level = maxLevel; level > 0; level-- )
         {
             vx_image old_image = vxGetPyramidLevel(old_pyramid, level-1);
             vx_image new_image = vxGetPyramidLevel(new_pyramid, level-1);
             vx_rectangle_t rect;
+            vx_map_id nextPtsFirstItem_map_id;
+            vx_map_id initialPtsFirstItem_map_id;
+            vx_map_id prevPtsFirstItem_map_id;
 
             prevPtsFirstItem = NULL;
-            vxAccessArrayRange(prevPts, 0, list_length, &prevPts_stride, &prevPtsFirstItem, VX_READ_AND_WRITE);
+            vxMapArrayRange(prevPts, 0, list_length, &prevPtsFirstItem_map_id, &prevPts_stride, &prevPtsFirstItem,
+                               VX_READ_AND_WRITE, VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
             prevPt = (vx_keypoint_t_optpyrlk_internal*)prevPtsFirstItem;
 
             if (level == maxLevel)
@@ -399,17 +442,18 @@ static vx_status VX_CALLBACK vxOpticalFlowPyrLKKernel(vx_node node, const vx_ref
                 if (use_initial_estimate_b)
                 {
                     vx_size list_length2 = 0;
-                    vxQueryArray(estimatedPts, VX_ARRAY_ATTRIBUTE_NUMITEMS, &list_length2,sizeof(list_length2));
+                    vxQueryArray(estimatedPts, VX_ARRAY_NUMITEMS, &list_length2, sizeof(list_length2));
                     if (list_length2 != list_length)
                         return VX_ERROR_INVALID_PARAMETERS;
 
                     initialPtsFirstItem = NULL;
-                    vxAccessArrayRange(estimatedPts, 0, list_length, &estimatedPts_stride, &initialPtsFirstItem, VX_READ_ONLY);
-                    initialPt = (vx_keypoint_t *)initialPtsFirstItem;
+                    vxMapArrayRange(estimatedPts, 0, list_length, &initialPtsFirstItem_map_id, &estimatedPts_stride, &initialPtsFirstItem,
+                                       VX_READ_ONLY, VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
+                    initialPt = (vx_keypoint_t*)initialPtsFirstItem;
                 }
                 else
                 {
-                    initialPt = (vx_keypoint_t *)prevPt;
+                    initialPt = (vx_keypoint_t*)prevPt;
                 }
 
                 vxTruncateArray(nextPts, 0);
@@ -417,25 +461,26 @@ static vx_status VX_CALLBACK vxOpticalFlowPyrLKKernel(vx_node node, const vx_ref
             else
             {
                 nextPtsFirstItem = NULL;
-                vxAccessArrayRange(nextPts, 0, list_length, &nextPts_stride, &nextPtsFirstItem, VX_READ_AND_WRITE);
+                vxMapArrayRange(nextPts, 0, list_length, &nextPtsFirstItem_map_id,  &nextPts_stride, &nextPtsFirstItem,
+                                VX_READ_AND_WRITE, VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
                 nextPt = (vx_keypoint_t_optpyrlk_internal*)nextPtsFirstItem;
             }
 
-            for(list_indx=0;list_indx<list_length;list_indx++)
+            for(list_indx = 0; list_indx < list_length; list_indx++)
             {
                 if(level == maxLevel)
                 {
                     vx_keypoint_t_optpyrlk_internal keypoint;
 
                     /* Adjust the prevPt coordinates to the level */
-                    (prevPt)->x = (((vx_keypoint_t*)prevPt))->x *(float)((pow(pyramid_scale,level-1)));
-                    (prevPt)->y = (((vx_keypoint_t*)prevPt))->y *(float)((pow(pyramid_scale,level-1)));
+                    (prevPt)->x = (((vx_keypoint_t*)prevPt))->x * (float)((pow(pyramid_scale, level-1)));
+                    (prevPt)->y = (((vx_keypoint_t*)prevPt))->y * (float)((pow(pyramid_scale, level-1)));
 
                     if (use_initial_estimate_b)
                     {
                         /* Estimate point coordinates not already adjusted */
-                        keypoint.x = (initialPt)->x*(float)((pow(pyramid_scale,level-1)));
-                        keypoint.y = (initialPt)->y*(float)((pow(pyramid_scale,level-1)));
+                        keypoint.x = (initialPt)->x * (float)((pow(pyramid_scale, level-1)));
+                        keypoint.y = (initialPt)->y * (float)((pow(pyramid_scale, level-1)));
                     }
                     else
                     {
@@ -443,38 +488,44 @@ static vx_status VX_CALLBACK vxOpticalFlowPyrLKKernel(vx_node node, const vx_ref
                         keypoint.x = (prevPt)->x;
                         keypoint.y = (prevPt)->y;
                     }
-                    keypoint.strength = (initialPt)->strength;
-                    keypoint.tracking_status = (initialPt)->tracking_status;
-                    keypoint.error = (initialPt)->error;
 
-                    status |= vxAddArrayItems(nextPts, 1, &keypoint, 0);
+                    keypoint.strength        = (initialPt)->strength;
+                    keypoint.tracking_status = (initialPt)->tracking_status;
+                    keypoint.error           = (initialPt)->error;
+                    keypoint.scale           = 0.0f; // init unused field
+                    keypoint.orientation     = 0.0f; // init unused field
+
+                    status |= vxAddArrayItems(nextPts, 1, &keypoint, sizeof(keypoint));
                 }
                 else
                 {
-                    (prevPt)->x = (prevPt)->x *(1.0f/pyramid_scale);
-                    (prevPt)->y = (prevPt)->y *(1.0f/pyramid_scale);
-                    (nextPt)->x = (nextPt)->x *(1.0f/pyramid_scale);
-                    (nextPt)->y = (nextPt)->y *(1.0f/pyramid_scale);
+                    (prevPt)->x = (prevPt)->x * (1.0f/pyramid_scale);
+                    (prevPt)->y = (prevPt)->y * (1.0f/pyramid_scale);
+                    (nextPt)->x = (nextPt)->x * (1.0f/pyramid_scale);
+                    (nextPt)->y = (nextPt)->y * (1.0f/pyramid_scale);
+
                     nextPt++;
                 }
+
                 prevPt++;
                 initialPt++;
             }
-            vxCommitArrayRange(prevPts, 0, list_length,prevPtsFirstItem);
+            vxUnmapArrayRange(prevPts, prevPtsFirstItem_map_id);
 
-            if (level !=maxLevel)
+            if (level != maxLevel)
             {
-                vxCommitArrayRange(nextPts, 0, list_length, nextPtsFirstItem);
+                vxUnmapArrayRange(nextPts, nextPtsFirstItem_map_id);
             }
             else if (use_initial_estimate_b)
             {
-                vxCommitArrayRange(estimatedPts, 0, list_length,initialPtsFirstItem);
+                vxUnmapArrayRange(estimatedPts, initialPtsFirstItem_map_id);
             }
 
             //vxGetValidRegionImage(old_image,&rect);
-            rect.start_x = 0; rect.start_y = 0;
-            vxQueryImage(old_image, VX_IMAGE_ATTRIBUTE_WIDTH, &rect.end_x, sizeof(rect.end_x));
-            vxQueryImage(old_image, VX_IMAGE_ATTRIBUTE_HEIGHT, &rect.end_y, sizeof(rect.end_y));
+            rect.start_x = 0;
+            rect.start_y = 0;
+            vxQueryImage(old_image, VX_IMAGE_WIDTH,  &rect.end_x, sizeof(rect.end_x));
+            vxQueryImage(old_image, VX_IMAGE_HEIGHT, &rect.end_y, sizeof(rect.end_y));
 
             // printf("%ux%u - %ux%u\n", rec.start_x, rec.start_y, rec.end_x, rec.end_y);
 
@@ -482,61 +533,78 @@ static vx_status VX_CALLBACK vxOpticalFlowPyrLKKernel(vx_node node, const vx_ref
                 vx_context context_scharr = vxCreateContext();
                 if(vxGetStatus((vx_reference)context_scharr) == VX_SUCCESS)
                 {
-                    vx_uint32 width,height,n;
+                    vx_uint32 n;
+                    vx_uint32 width;
+                    vx_uint32 height;
 
-                    width = rect.end_x - rect.start_x;
+                    width  = rect.end_x - rect.start_x;
                     height = rect.end_y - rect.start_y;
 
-                    vx_image shar_images[] = {
-                            old_image,     // index 0: Input 1
-                            vxCreateImage(context_scharr, width, height, VX_DF_IMAGE_S16),     // index 1: Input 2
-                            vxCreateImage(context_scharr, width, height, VX_DF_IMAGE_S16),       // index 2: Get Y channel
-                    };
-                    vx_graph graph_scharr = vxCreateGraph(context_scharr);
                     vx_status extras_status = vxLoadKernels(context_scharr, "openvx-extras");
+
+                    vx_graph graph_scharr = vxCreateGraph(context_scharr);
+
                     if (vxGetStatus((vx_reference)graph_scharr) == VX_SUCCESS && extras_status == VX_SUCCESS)
                     {
-                        vx_node scharr_nodes[] = {
+                        vx_image shar_images[] =
+                        {
+                            old_image,                                                     // index 0: Input
+                            vxCreateImage(context_scharr, width, height, VX_DF_IMAGE_S16), // index 1: Output dx
+                            vxCreateImage(context_scharr, width, height, VX_DF_IMAGE_S16), // index 2: Output dy
+                        };
+
+                        vx_node scharr_nodes[] =
+                        {
                             vxScharr3x3Node(graph_scharr, shar_images[0], shar_images[1], shar_images[2]),
                         };
+
                         status = vxVerifyGraph(graph_scharr);
                         if (status == VX_SUCCESS)
                         {
 
                             status = vxProcessGraph(graph_scharr);
 
-                            status |= LKTracker(old_image, shar_images[1], shar_images[2],
-                                        new_image, prevPts, nextPts,
-                                        window_dimension, termination, level-1,
-                                        epsilon,num_iterations);
+                            status |= LKTracker(
+                                old_image, shar_images[1], shar_images[2],
+                                new_image,
+                                prevPts, nextPts,
+                                window_dimension, termination, level-1, epsilon, num_iterations);
                         }
+
+                        for (n = 1; n < dimof(shar_images); n++)
+                        {
+                            vxReleaseImage(&shar_images[n]);
+                        }
+
                         for (n = 0; n < dimof(scharr_nodes); n++)
                         {
                             vxReleaseNode(&scharr_nodes[n]);
                         }
+
                         vxReleaseGraph(&graph_scharr);
                     }
-                    for (n = 1; n < dimof(shar_images); n++)
-                    {
-                        vxReleaseImage(&shar_images[n]);
-                    }
-                    vxReleaseContext(&context_scharr);
 
+                    vxReleaseContext(&context_scharr);
                 }
             }
 
             vxReleaseImage(&new_image);
             vxReleaseImage(&old_image);
         }
-
+        vx_map_id prevPtsFirstItem_map_id;
+        vx_map_id nextPtsFirstItem_map_id;
+        prevPtsFirstItem = NULL;
         nextPtsFirstItem = NULL;
-        vxAccessArrayRange(nextPts, 0, list_length, &nextPts_stride, &nextPtsFirstItem, VX_READ_AND_WRITE);
-        nextPt = (vx_keypoint_t_optpyrlk_internal*)nextPtsFirstItem;
 
-        prevPt = (vx_keypoint_t_optpyrlk_internal*)prevPtsFirstItem;
-        initialPt = (vx_keypoint_t *)initialPtsFirstItem;
-        nextPt = (vx_keypoint_t_optpyrlk_internal*)nextPtsFirstItem;
-        for(list_indx=0;list_indx<list_length;list_indx++)
+        vxMapArrayRange(prevPts, 0, list_length, &prevPtsFirstItem_map_id, &prevPts_stride, &prevPtsFirstItem,
+                        VX_READ_AND_WRITE, VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
+        vxMapArrayRange(nextPts, 0, list_length, &nextPtsFirstItem_map_id, &nextPts_stride, &nextPtsFirstItem,
+                        VX_READ_AND_WRITE, VX_MEMORY_TYPE_HOST, VX_NOGAP_X);
+
+        nextPt    = (vx_keypoint_t_optpyrlk_internal*)nextPtsFirstItem;
+        prevPt    = (vx_keypoint_t_optpyrlk_internal*)prevPtsFirstItem;
+
+        for(list_indx = 0; list_indx < list_length; list_indx++)
         {
             (((vx_keypoint_t*)nextPt))->x = (vx_int32)((nextPt)->x + 0.5f);
             (((vx_keypoint_t*)nextPt))->y = (vx_int32)((nextPt)->y + 0.5f);
@@ -546,10 +614,12 @@ static vx_status VX_CALLBACK vxOpticalFlowPyrLKKernel(vx_node node, const vx_ref
             prevPt++;
         }
 
-        vxCommitArrayRange(nextPts, 0, list_length,nextPtsFirstItem);
+        vxUnmapArrayRange(prevPts, prevPtsFirstItem_map_id);
+        vxUnmapArrayRange(nextPts, nextPtsFirstItem_map_id);
 
        return status;
     }
+
     return VX_ERROR_INVALID_PARAMETERS;
 }
 
@@ -559,14 +629,14 @@ static vx_status VX_CALLBACK vxOpticalFlowPyrLKInputValidator(vx_node node, vx_u
     if (index == 0 || index == 1)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_pyramid input = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+            vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
             if (input)
             {
                 vx_size level = 0;
-                vxQueryPyramid(input, VX_PYRAMID_ATTRIBUTE_LEVELS, &level, sizeof(level));
+                vxQueryPyramid(input, VX_PYRAMID_LEVELS, &level, sizeof(level));
                 if (level !=0)
                 {
                     status = VX_SUCCESS;
@@ -579,14 +649,14 @@ static vx_status VX_CALLBACK vxOpticalFlowPyrLKInputValidator(vx_node node, vx_u
     else if (index == 2 || index == 3)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_array arr = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &arr, sizeof(arr));
+            vxQueryParameter(param, VX_PARAMETER_REF, &arr, sizeof(arr));
             if (arr)
             {
                 vx_enum item_type = 0;
-                vxQueryArray(arr, VX_ARRAY_ATTRIBUTE_ITEMTYPE, &item_type, sizeof(item_type));
+                vxQueryArray(arr, VX_ARRAY_ITEMTYPE, &item_type, sizeof(item_type));
                 if (item_type == VX_TYPE_KEYPOINT)
                 {
                     status = VX_SUCCESS;
@@ -599,14 +669,14 @@ static vx_status VX_CALLBACK vxOpticalFlowPyrLKInputValidator(vx_node node, vx_u
     else if (index == 5)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-         if (param)
+         if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
          {
              vx_scalar sens = 0;
-             status = vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &sens, sizeof(sens));
+             status = vxQueryParameter(param, VX_PARAMETER_REF, &sens, sizeof(sens));
              if ((status == VX_SUCCESS) && (sens))
              {
                  vx_enum type = 0;
-                 vxQueryScalar(sens, VX_SCALAR_ATTRIBUTE_TYPE, &type, sizeof(type));
+                 vxQueryScalar(sens, VX_SCALAR_TYPE, &type, sizeof(type));
                  if (type == VX_TYPE_ENUM)
                  {
                      status = VX_SUCCESS;
@@ -620,17 +690,17 @@ static vx_status VX_CALLBACK vxOpticalFlowPyrLKInputValidator(vx_node node, vx_u
              vxReleaseParameter(&param);
          }
     }
-    else if (index ==6)
+    else if (index == 6)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-         if (param)
+         if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
          {
              vx_scalar sens = 0;
-             status = vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &sens, sizeof(sens));
+             status = vxQueryParameter(param, VX_PARAMETER_REF, &sens, sizeof(sens));
              if ((status == VX_SUCCESS) && (sens))
              {
                  vx_enum type = 0;
-                 vxQueryScalar(sens, VX_SCALAR_ATTRIBUTE_TYPE, &type, sizeof(type));
+                 vxQueryScalar(sens, VX_SCALAR_TYPE, &type, sizeof(type));
                  if (type == VX_TYPE_FLOAT32)
                  {
                      status = VX_SUCCESS;
@@ -644,17 +714,17 @@ static vx_status VX_CALLBACK vxOpticalFlowPyrLKInputValidator(vx_node node, vx_u
              vxReleaseParameter(&param);
          }
     }
-    else if (index ==7)
+    else if (index == 7)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-         if (param)
+         if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
          {
              vx_scalar sens = 0;
-             status = vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &sens, sizeof(sens));
+             status = vxQueryParameter(param, VX_PARAMETER_REF, &sens, sizeof(sens));
              if ((status == VX_SUCCESS) && (sens))
              {
                  vx_enum type = 0;
-                 vxQueryScalar(sens, VX_SCALAR_ATTRIBUTE_TYPE, &type, sizeof(type));
+                 vxQueryScalar(sens, VX_SCALAR_TYPE, &type, sizeof(type));
                  if (type == VX_TYPE_UINT32)
                  {
                      status = VX_SUCCESS;
@@ -668,17 +738,17 @@ static vx_status VX_CALLBACK vxOpticalFlowPyrLKInputValidator(vx_node node, vx_u
              vxReleaseParameter(&param);
          }
     }
-    else if (index ==8)
+    else if (index == 8)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_scalar sens = 0;
-            status = vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &sens, sizeof(sens));
+            status = vxQueryParameter(param, VX_PARAMETER_REF, &sens, sizeof(sens));
             if ((status == VX_SUCCESS) && (sens))
             {
                 vx_enum type = 0;
-                vxQueryScalar(sens, VX_SCALAR_ATTRIBUTE_TYPE, &type, sizeof(type));
+                vxQueryScalar(sens, VX_SCALAR_TYPE, &type, sizeof(type));
                 if (type == VX_TYPE_BOOL)
                 {
                     status = VX_SUCCESS;
@@ -695,14 +765,14 @@ static vx_status VX_CALLBACK vxOpticalFlowPyrLKInputValidator(vx_node node, vx_u
     else if (index == 9)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-         if (param)
+         if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
          {
              vx_scalar sens = 0;
-             status = vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &sens, sizeof(sens));
+             status = vxQueryParameter(param, VX_PARAMETER_REF, &sens, sizeof(sens));
              if ((status == VX_SUCCESS) && (sens))
              {
                  vx_enum type = 0;
-                 vxQueryScalar(sens, VX_SCALAR_ATTRIBUTE_TYPE, &type, sizeof(type));
+                 vxQueryScalar(sens, VX_SCALAR_TYPE, &type, sizeof(type));
                  if (type == VX_TYPE_SIZE)
                  {
                      status = VX_SUCCESS;
@@ -727,8 +797,8 @@ static vx_status VX_CALLBACK vxOpticalFlowPyrLKOutputValidator(vx_node node, vx_
         vx_array arr = 0;
         vx_size capacity = 0;
         vx_parameter param = vxGetParameterByIndex(node, 2);
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &arr, sizeof(arr));
-        vxQueryArray(arr, VX_ARRAY_ATTRIBUTE_CAPACITY, &capacity, sizeof(capacity));
+        vxQueryParameter(param, VX_PARAMETER_REF, &arr, sizeof(arr));
+        vxQueryArray(arr, VX_ARRAY_CAPACITY, &capacity, sizeof(capacity));
 
         ptr->type = VX_TYPE_ARRAY;
         ptr->dim.array.item_type = VX_TYPE_KEYPOINT;
@@ -742,7 +812,8 @@ static vx_status VX_CALLBACK vxOpticalFlowPyrLKOutputValidator(vx_node node, vx_
     return status;
 }
 
-static vx_param_description_t optpyrlk_kernel_params[] = {
+static vx_param_description_t optpyrlk_kernel_params[] =
+{
     {VX_INPUT, VX_TYPE_PYRAMID, VX_PARAMETER_STATE_REQUIRED},
     {VX_INPUT, VX_TYPE_PYRAMID, VX_PARAMETER_STATE_REQUIRED},
     {VX_INPUT, VX_TYPE_ARRAY, VX_PARAMETER_STATE_REQUIRED},
@@ -758,11 +829,13 @@ static vx_param_description_t optpyrlk_kernel_params[] = {
 #ifdef __cplusplus
 extern "C"
 #endif
-vx_kernel_description_t optpyrlk_kernel = {
+vx_kernel_description_t optpyrlk_kernel =
+{
     VX_KERNEL_OPTICAL_FLOW_PYR_LK,
     "org.khronos.openvx.optical_flow_pyr_lk",
     vxOpticalFlowPyrLKKernel,
     optpyrlk_kernel_params, dimof(optpyrlk_kernel_params),
+    NULL,
     vxOpticalFlowPyrLKInputValidator,
     vxOpticalFlowPyrLKOutputValidator,
     NULL,

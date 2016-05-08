@@ -39,13 +39,13 @@ static vx_status VX_CALLBACK vxFast9CornersKernel(vx_node node, const vx_referen
     vx_status status = VX_ERROR_INVALID_PARAMETERS;
     if (num == 5)
     {
-        vx_border_mode_t bordermode;
+        vx_border_t bordermode;
         vx_image src = (vx_image)parameters[0];
         vx_scalar sens = (vx_scalar)parameters[1];
         vx_scalar nonm = (vx_scalar)parameters[2];
         vx_array points = (vx_array)parameters[3];
         vx_scalar num_corners = (vx_scalar)parameters[4];
-        status = vxQueryNode(node, VX_NODE_ATTRIBUTE_BORDER_MODE, &bordermode, sizeof(bordermode));
+        status = vxQueryNode(node, VX_NODE_BORDER, &bordermode, sizeof(bordermode));
         if (status == VX_SUCCESS)
         {
             status = vxFast9Corners(src, sens, nonm, points, num_corners, &bordermode);
@@ -60,14 +60,14 @@ static vx_status VX_CALLBACK vxFast9InputValidator(vx_node node, vx_uint32 index
     if (index == 0)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_image input = 0;
-            status = vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+            status = vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
             if ((status == VX_SUCCESS) && (input))
             {
                 vx_df_image format = 0;
-                status = vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                status = vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
                 if ((status == VX_SUCCESS) && (format == VX_DF_IMAGE_U8))
                 {
                     status = VX_SUCCESS;
@@ -80,18 +80,18 @@ static vx_status VX_CALLBACK vxFast9InputValidator(vx_node node, vx_uint32 index
     if (index == 1)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_scalar sens = 0;
-            status = vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &sens, sizeof(sens));
+            status = vxQueryParameter(param, VX_PARAMETER_REF, &sens, sizeof(sens));
             if ((status == VX_SUCCESS) && (sens))
             {
                 vx_enum type = VX_TYPE_INVALID;
-                vxQueryScalar(sens, VX_SCALAR_ATTRIBUTE_TYPE, &type, sizeof(type));
+                vxQueryScalar(sens, VX_SCALAR_TYPE, &type, sizeof(type));
                 if (type == VX_TYPE_FLOAT32)
                 {
                     vx_float32 k = 0.0f;
-                    status = vxReadScalarValue(sens, &k);
+                    status = vxCopyScalar(sens, &k, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
                     if ((status == VX_SUCCESS) && (k > 0) && (k < 256))
                     {
                         status = VX_SUCCESS;
@@ -113,18 +113,18 @@ static vx_status VX_CALLBACK vxFast9InputValidator(vx_node node, vx_uint32 index
     if (index == 2)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_scalar s_nonmax = 0;
-            status = vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &s_nonmax, sizeof(s_nonmax));
+            status = vxQueryParameter(param, VX_PARAMETER_REF, &s_nonmax, sizeof(s_nonmax));
             if ((status == VX_SUCCESS) && (s_nonmax))
             {
                 vx_enum type = VX_TYPE_INVALID;
-                vxQueryScalar(s_nonmax, VX_SCALAR_ATTRIBUTE_TYPE, &type, sizeof(type));
+                vxQueryScalar(s_nonmax, VX_SCALAR_TYPE, &type, sizeof(type));
                 if (type == VX_TYPE_BOOL)
                 {
                     vx_bool nonmax = vx_false_e;
-                    status = vxReadScalarValue(s_nonmax, &nonmax);
+                    status = vxCopyScalar(s_nonmax, &nonmax, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
                     if ((status == VX_SUCCESS) && ((nonmax == vx_false_e) ||
                                                    (nonmax == vx_true_e)))
                     {
@@ -178,6 +178,7 @@ vx_kernel_description_t fast9_kernel = {
     "org.khronos.openvx.fast_corners",
     vxFast9CornersKernel,
     fast9_kernel_params, dimof(fast9_kernel_params),
+    NULL,
     vxFast9InputValidator,
     vxFast9OutputValidator,
     NULL,

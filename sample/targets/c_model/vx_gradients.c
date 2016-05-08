@@ -37,11 +37,11 @@ static vx_status VX_CALLBACK vxSobel3x3Kernel(vx_node node, const vx_reference *
     vx_status status = VX_ERROR_INVALID_PARAMETERS;
     if (num == 3)
     {
-        vx_border_mode_t bordermode;
+        vx_border_t bordermode;
         vx_image input  = (vx_image)parameters[0];
         vx_image grad_x = (vx_image)parameters[1];
         vx_image grad_y = (vx_image)parameters[2];
-        status = vxQueryNode(node, VX_NODE_ATTRIBUTE_BORDER_MODE, &bordermode, sizeof(bordermode));
+        status = vxQueryNode(node, VX_NODE_BORDER, &bordermode, sizeof(bordermode));
         if (status == VX_SUCCESS)
         {
             status = vxSobel3x3(input, grad_x, grad_y, &bordermode);
@@ -58,14 +58,14 @@ static vx_status VX_CALLBACK vxGradientInputValidator(vx_node node, vx_uint32 in
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_uint32 width = 0, height = 0;
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxQueryImage(input, VX_IMAGE_WIDTH, &width, sizeof(width));
+            vxQueryImage(input, VX_IMAGE_HEIGHT, &height, sizeof(height));
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
             if (width >= 3 && height >= 3 && format == VX_DF_IMAGE_U8)
                 status = VX_SUCCESS;
             vxReleaseImage(&input);
@@ -81,15 +81,15 @@ static vx_status VX_CALLBACK vxGradientOutputValidator(vx_node node, vx_uint32 i
     if (index == 1 || index == 2)
     {
         vx_parameter param = vxGetParameterByIndex(node, 0); /* we reference the input image */
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_image input = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+            vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
             if (input)
             {
                 vx_uint32 width = 0, height = 0;
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+                vxQueryImage(input, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxQueryImage(input, VX_IMAGE_HEIGHT, &height, sizeof(height));
                 ptr->type = VX_TYPE_IMAGE;
                 ptr->dim.image.format = VX_DF_IMAGE_S16;
                 ptr->dim.image.width = width;
@@ -114,6 +114,7 @@ vx_kernel_description_t sobel3x3_kernel = {
     "org.khronos.openvx.sobel_3x3",
     vxSobel3x3Kernel,
     gradient_kernel_params, dimof(gradient_kernel_params),
+    NULL,
     vxGradientInputValidator,
     vxGradientOutputValidator,
     NULL,

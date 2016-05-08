@@ -47,63 +47,32 @@
  */
 #define AREA_SCALE_ENABLE 0 /* TODO enable this again after changing implementation in kernels/c_model/c_scale.c */
 
-static vx_status VX_CALLBACK vxScaleImageKernel(vx_node node, const vx_reference *parameters, vx_uint32 num)
+/* scale image kernel */
+static vx_param_description_t scale_kernel_params[] =
 {
-    if (num == 3)
+    { VX_INPUT,  VX_TYPE_IMAGE,  VX_PARAMETER_STATE_REQUIRED },
+    { VX_OUTPUT, VX_TYPE_IMAGE,  VX_PARAMETER_STATE_REQUIRED },
+    { VX_INPUT,  VX_TYPE_SCALAR, VX_PARAMETER_STATE_OPTIONAL },
+};
+
+static vx_status VX_CALLBACK vxScaleImageKernel(vx_node node, const vx_reference parameters[], vx_uint32 num)
+{
+    if (num == dimof(scale_kernel_params))
     {
-        vx_image  src_image = (vx_image) parameters[0];
-        vx_image  dst_image = (vx_image) parameters[1];
+        vx_image  src_image = (vx_image)parameters[0];
+        vx_image  dst_image = (vx_image)parameters[1];
         vx_scalar stype     = (vx_scalar)parameters[2];
-        vx_border_mode_t bordermode = {VX_BORDER_MODE_UNDEFINED, 0};
+        vx_border_t bordermode = { VX_BORDER_UNDEFINED, {{ 0 }} };
         vx_float64 *interm = NULL;
         vx_size size = 0ul;
 
-        vxQueryNode(node, VX_NODE_ATTRIBUTE_BORDER_MODE, &bordermode, sizeof(bordermode));
-        vxQueryNode(node, VX_NODE_ATTRIBUTE_LOCAL_DATA_PTR, &interm, sizeof(interm));
-        vxQueryNode(node, VX_NODE_ATTRIBUTE_LOCAL_DATA_SIZE,&size, sizeof(size));
+        vxQueryNode(node, VX_NODE_BORDER, &bordermode, sizeof(bordermode));
+        vxQueryNode(node, VX_NODE_LOCAL_DATA_PTR, &interm, sizeof(interm));
+        vxQueryNode(node, VX_NODE_LOCAL_DATA_SIZE, &size, sizeof(size));
 
         return vxScaleImage(src_image, dst_image, stype, &bordermode, interm, size);
     }
     return VX_ERROR_INVALID_PARAMETERS;
-}
-
-static vx_status VX_CALLBACK vxScaleImageInitializer(vx_node node, const vx_reference *parameters, vx_uint32 num)
-{
-    vx_status status = VX_ERROR_INVALID_PARAMETERS;
-    if (num == 3)
-    {
-        vx_image src = (vx_image)parameters[0];
-        vx_image dst = (vx_image)parameters[1];
-        vx_uint32 w1 = 0, h1 = 0, w2 = 0, h2 = 0;
-#if AREA_SCALE_ENABLE
-        vx_uint32 gcd_w = 0, gcd_h = 0;
-#endif
-        vx_size size = 0;
-
-        vxQueryImage(src, VX_IMAGE_ATTRIBUTE_WIDTH, &w1, sizeof(w1));
-        vxQueryImage(src, VX_IMAGE_ATTRIBUTE_HEIGHT, &h1, sizeof(h1));
-        vxQueryImage(dst, VX_IMAGE_ATTRIBUTE_WIDTH, &w2, sizeof(w2));
-        vxQueryImage(dst, VX_IMAGE_ATTRIBUTE_HEIGHT, &h2, sizeof(h2));
-
-/* AREA interpolation requires a scratch buffer, however, if AREA
- * implementation is disabled, then no scratch buffer is required, and
- * size can be 0 (setting to 1 so that checks can pass in the kernel) */
-#if AREA_SCALE_ENABLE
-        gcd_w = math_gcd(w1,w2);
-        gcd_h = math_gcd(h1,h2);
-        /* printf("%ux%u => %ux%u :: GCD_w %u GCD_h %u\n", w1,h1, w2,h2, gcd_w, gcd_h); */
-        if (gcd_w != 0 && gcd_h != 0)
-        {
-            size = (w1 / gcd_w) * (w2 / gcd_w) * (h1 / gcd_h) * (h2 / gcd_h) * sizeof(vx_float64);
-        }
-        /* printf("Requesting "VX_FMT_SIZE" bytes for resizer\n", size); */
-#else
-        size = 1;
-#endif
-        vxSetNodeAttribute(node, VX_NODE_ATTRIBUTE_LOCAL_DATA_SIZE, &size, sizeof(size));
-        status = VX_SUCCESS;
-    }
-    return status;
 }
 
 static vx_status VX_CALLBACK vxScaleImageInputValidator(vx_node node, vx_uint32 index)
@@ -114,37 +83,68 @@ static vx_status VX_CALLBACK vxScaleImageInputValidator(vx_node node, vx_uint32 
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
+
         if (input)
         {
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
+
             if (format == VX_DF_IMAGE_U8)
             {
                 status = VX_SUCCESS;
             }
+            else if (format == VX_DF_IMAGE_S16)
+            {
+                /* enable internal S16 format support (needed for laplacian pyramid reconstruction) */
+                vx_scalar scalar = 0;
+                vx_parameter param1 = vxGetParameterByIndex(node, 2);
+                vxQueryParameter(param1, VX_PARAMETER_REF, &scalar, sizeof(scalar));
+                if (scalar)
+                {
+                    vx_enum stype = 0;
+                    vxQueryScalar(scalar, VX_SCALAR_TYPE, &stype, sizeof(stype));
+                    if (VX_TYPE_ENUM == stype)
+                    {
+                        vx_enum interp = 0;
+                        vxCopyScalar(scalar, &interp, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+                        if (VX_INTERPOLATION_NEAREST_NEIGHBOR == interp)
+                        {
+                            /* only NN interpolation is required for laplacian pyramid */
+                            status = VX_SUCCESS;
+                        }
+                    }
+
+                    vxReleaseScalar(&scalar);
+                }
+
+                vxReleaseParameter(&param1);
+            }
+
             vxReleaseImage(&input);
         }
+
         vxReleaseParameter(&param);
     }
     else if (index == 2)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_scalar scalar = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &scalar, sizeof(scalar));
+            vxQueryParameter(param, VX_PARAMETER_REF, &scalar, sizeof(scalar));
             if (scalar)
             {
                 vx_enum stype = 0;
-                vxQueryScalar(scalar, VX_SCALAR_ATTRIBUTE_TYPE, &stype, sizeof(stype));
+                vxQueryScalar(scalar, VX_SCALAR_TYPE, &stype, sizeof(stype));
                 if (stype == VX_TYPE_ENUM)
                 {
                     vx_enum interp = 0;
-                    vxReadScalarValue(scalar, &interp);
-                    if ((interp == VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR) ||
-                        (interp == VX_INTERPOLATION_TYPE_BILINEAR) ||
-                        (interp == VX_INTERPOLATION_TYPE_AREA))
+                    vxCopyScalar(scalar, &interp, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+                    if ((interp == VX_INTERPOLATION_NEAREST_NEIGHBOR) ||
+                        (interp == VX_INTERPOLATION_BILINEAR) ||
+                        (interp == VX_INTERPOLATION_AREA))
                     {
                         status = VX_SUCCESS;
                     }
@@ -172,23 +172,24 @@ static vx_status VX_CALLBACK vxScaleImageOutputValidator(vx_node node, vx_uint32
     {
         vx_parameter src_param = vxGetParameterByIndex(node, 0);
         vx_parameter dst_param = vxGetParameterByIndex(node, index);
-        if (src_param && dst_param)
+        if ((vxGetStatus((vx_reference)src_param) == VX_SUCCESS) &&
+            (vxGetStatus((vx_reference)dst_param) == VX_SUCCESS))
         {
             vx_image src = 0;
             vx_image dst = 0;
-            vxQueryParameter(src_param, VX_PARAMETER_ATTRIBUTE_REF, &src, sizeof(src));
-            vxQueryParameter(dst_param, VX_PARAMETER_ATTRIBUTE_REF, &dst, sizeof(dst));
+            vxQueryParameter(src_param, VX_PARAMETER_REF, &src, sizeof(src));
+            vxQueryParameter(dst_param, VX_PARAMETER_REF, &dst, sizeof(dst));
             if ((src) && (dst))
             {
                 vx_uint32 w1 = 0, h1 = 0, w2 = 0, h2 = 0;
                 vx_df_image f1 = VX_DF_IMAGE_VIRT, f2 = VX_DF_IMAGE_VIRT;
 
-                vxQueryImage(src, VX_IMAGE_ATTRIBUTE_WIDTH, &w1, sizeof(w1));
-                vxQueryImage(src, VX_IMAGE_ATTRIBUTE_HEIGHT, &h1, sizeof(h1));
-                vxQueryImage(dst, VX_IMAGE_ATTRIBUTE_WIDTH, &w2, sizeof(w2));
-                vxQueryImage(dst, VX_IMAGE_ATTRIBUTE_HEIGHT, &h2, sizeof(h2));
-                vxQueryImage(src, VX_IMAGE_ATTRIBUTE_FORMAT, &f1, sizeof(f1));
-                vxQueryImage(dst, VX_IMAGE_ATTRIBUTE_FORMAT, &f2, sizeof(f2));
+                vxQueryImage(src, VX_IMAGE_WIDTH, &w1, sizeof(w1));
+                vxQueryImage(src, VX_IMAGE_HEIGHT, &h1, sizeof(h1));
+                vxQueryImage(dst, VX_IMAGE_WIDTH, &w2, sizeof(w2));
+                vxQueryImage(dst, VX_IMAGE_HEIGHT, &h2, sizeof(h2));
+                vxQueryImage(src, VX_IMAGE_FORMAT, &f1, sizeof(f1));
+                vxQueryImage(dst, VX_IMAGE_FORMAT, &f2, sizeof(f2));
                 /* output can not be virtual */
                 if ((w2 != 0) && (h2 != 0) && (f2 != VX_DF_IMAGE_VIRT) && (f1 == f2))
                 {
@@ -209,22 +210,72 @@ static vx_status VX_CALLBACK vxScaleImageOutputValidator(vx_node node, vx_uint32
     return status;
 }
 
-static vx_param_description_t scale_kernel_params[] = {
-    {VX_INPUT, VX_TYPE_IMAGE, VX_PARAMETER_STATE_REQUIRED},
-    {VX_OUTPUT, VX_TYPE_IMAGE, VX_PARAMETER_STATE_REQUIRED},
-    {VX_INPUT, VX_TYPE_SCALAR, VX_PARAMETER_STATE_OPTIONAL},
-};
+static vx_status VX_CALLBACK vxScaleImageInitializer(vx_node node, const vx_reference parameters[], vx_uint32 num)
+{
+    vx_status status = VX_ERROR_INVALID_PARAMETERS;
+    if (num == dimof(scale_kernel_params))
+    {
+        vx_image src = (vx_image)parameters[0];
+        vx_image dst = (vx_image)parameters[1];
+        vx_uint32 w1 = 0, h1 = 0, w2 = 0, h2 = 0;
+#if AREA_SCALE_ENABLE
+        vx_uint32 gcd_w = 0, gcd_h = 0;
+#endif
+        vx_size size = 0;
 
-vx_kernel_description_t scale_image_kernel = {
+        vxQueryImage(src, VX_IMAGE_WIDTH, &w1, sizeof(w1));
+        vxQueryImage(src, VX_IMAGE_HEIGHT, &h1, sizeof(h1));
+        vxQueryImage(dst, VX_IMAGE_WIDTH, &w2, sizeof(w2));
+        vxQueryImage(dst, VX_IMAGE_HEIGHT, &h2, sizeof(h2));
+
+        /* AREA interpolation requires a scratch buffer, however, if AREA
+        * implementation is disabled, then no scratch buffer is required, and
+        * size can be 0 (setting to 1 so that checks can pass in the kernel) */
+#if AREA_SCALE_ENABLE
+        gcd_w = math_gcd(w1, w2);
+        gcd_h = math_gcd(h1, h2);
+        /* printf("%ux%u => %ux%u :: GCD_w %u GCD_h %u\n", w1,h1, w2,h2, gcd_w, gcd_h); */
+        if (gcd_w != 0 && gcd_h != 0)
+        {
+            size = (w1 / gcd_w) * (w2 / gcd_w) * (h1 / gcd_h) * (h2 / gcd_h) * sizeof(vx_float64);
+        }
+        /* printf("Requesting "VX_FMT_SIZE" bytes for resizer\n", size); */
+#else
+        size = 1;
+#endif
+        vxSetNodeAttribute(node, VX_NODE_LOCAL_DATA_SIZE, &size, sizeof(size));
+        status = VX_SUCCESS;
+    }
+    return status;
+}
+
+vx_kernel_description_t scale_image_kernel =
+{
     VX_KERNEL_SCALE_IMAGE,
     "org.khronos.openvx.scale_image",
     vxScaleImageKernel,
     scale_kernel_params, dimof(scale_kernel_params),
+    NULL,
     vxScaleImageInputValidator,
     vxScaleImageOutputValidator,
     vxScaleImageInitializer,
     NULL,
 };
+
+
+/* half scale gaussian kernel */
+static vx_status VX_CALLBACK vxHalfscaleGaussianKernel(vx_node node, const vx_reference parameters[], vx_uint32 num)
+{
+    vx_status status = VX_FAILURE;
+
+    if (num == dimof(scale_kernel_params))
+    {
+        vx_graph subgraph = vxGetChildGraphOfNode(node);
+        status = vxProcessGraph(subgraph);
+    }
+
+    return status;
+}
 
 static vx_status VX_CALLBACK vxHalfscaleGaussianInputValidator(vx_node node, vx_uint32 index)
 {
@@ -234,11 +285,11 @@ static vx_status VX_CALLBACK vxHalfscaleGaussianInputValidator(vx_node node, vx_
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
             if (format == VX_DF_IMAGE_U8)
             {
                 status = VX_SUCCESS;
@@ -250,19 +301,19 @@ static vx_status VX_CALLBACK vxHalfscaleGaussianInputValidator(vx_node node, vx_
     else if (index == 2)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_scalar scalar = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &scalar, sizeof(scalar));
+            vxQueryParameter(param, VX_PARAMETER_REF, &scalar, sizeof(scalar));
             if (scalar)
             {
                 vx_enum stype = 0;
-                vxQueryScalar(scalar, VX_SCALAR_ATTRIBUTE_TYPE, &stype, sizeof(stype));
+                vxQueryScalar(scalar, VX_SCALAR_TYPE, &stype, sizeof(stype));
                 if (stype == VX_TYPE_INT32)
                 {
                     vx_int32 ksize = 0;
-                    vxReadScalarValue(scalar, &ksize);
-                    if ((ksize == 3) || (ksize == 5))
+                    vxCopyScalar(scalar, &ksize, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+                    if ((ksize == 1) || (ksize == 3) || (ksize == 5))
                     {
                         status = VX_SUCCESS;
                     }
@@ -290,20 +341,21 @@ static vx_status VX_CALLBACK vxHalfscaleGaussianOutputValidator(vx_node node, vx
     {
         vx_parameter src_param = vxGetParameterByIndex(node, 0);
         vx_parameter dst_param = vxGetParameterByIndex(node, index);
-        if (src_param && dst_param)
+        if ((vxGetStatus((vx_reference)src_param) == VX_SUCCESS) &&
+            (vxGetStatus((vx_reference)dst_param) == VX_SUCCESS))
         {
             vx_image src = 0;
             vx_image dst = 0;
-            vxQueryParameter(src_param, VX_PARAMETER_ATTRIBUTE_REF, &src, sizeof(src));
-            vxQueryParameter(dst_param, VX_PARAMETER_ATTRIBUTE_REF, &dst, sizeof(dst));
+            vxQueryParameter(src_param, VX_PARAMETER_REF, &src, sizeof(src));
+            vxQueryParameter(dst_param, VX_PARAMETER_REF, &dst, sizeof(dst));
             if ((src) && (dst))
             {
                 vx_uint32 w1 = 0, h1 = 0;
                 vx_df_image f1 = VX_DF_IMAGE_VIRT;
 
-                vxQueryImage(src, VX_IMAGE_ATTRIBUTE_WIDTH, &w1, sizeof(w1));
-                vxQueryImage(src, VX_IMAGE_ATTRIBUTE_HEIGHT, &h1, sizeof(h1));
-                vxQueryImage(src, VX_IMAGE_ATTRIBUTE_FORMAT, &f1, sizeof(f1));
+                vxQueryImage(src, VX_IMAGE_WIDTH, &w1, sizeof(w1));
+                vxQueryImage(src, VX_IMAGE_HEIGHT, &h1, sizeof(h1));
+                vxQueryImage(src, VX_IMAGE_FORMAT, &f1, sizeof(f1));
 
                 /* fill in the meta data with the attributes so that the checker will pass */
                 ptr->type = VX_TYPE_IMAGE;
@@ -321,17 +373,6 @@ static vx_status VX_CALLBACK vxHalfscaleGaussianOutputValidator(vx_node node, vx
     return status;
 }
 
-static vx_status VX_CALLBACK vxHalfscaleGaussianKernel(vx_node node, const vx_reference *parameters, vx_uint32 num)
-{
-    vx_status status = VX_FAILURE;
-    if (num == 3)
-    {
-        vx_graph graph = vxGetChildGraphOfNode(node);
-        status = vxProcessGraph(graph);
-    }
-    return status;
-}
-
 static const vx_uint32 gaussian5x5scale = 256;
 static const vx_int16 gaussian5x5[5][5] =
 {
@@ -345,14 +386,14 @@ static const vx_int16 gaussian5x5[5][5] =
 static vx_convolution vxCreateGaussian5x5Convolution(vx_context context)
 {
     vx_convolution conv = vxCreateConvolution(context, 5, 5);
-    vx_status status = vxWriteConvolutionCoefficients(conv, (vx_int16 *)gaussian5x5);
+    vx_status status = vxCopyConvolutionCoefficients(conv, (vx_int16 *)gaussian5x5, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
     if (status != VX_SUCCESS)
     {
         vxReleaseConvolution(&conv);
         return NULL;
     }
 
-    status = vxSetConvolutionAttribute(conv, VX_CONVOLUTION_ATTRIBUTE_SCALE, (void *)&gaussian5x5scale, sizeof(vx_uint32));
+    status = vxSetConvolutionAttribute(conv, VX_CONVOLUTION_SCALE, (void *)&gaussian5x5scale, sizeof(vx_uint32));
     if (status != VX_SUCCESS)
     {
         vxReleaseConvolution(&conv);
@@ -361,29 +402,73 @@ static vx_convolution vxCreateGaussian5x5Convolution(vx_context context)
     return conv;
 }
 
-static vx_status VX_CALLBACK vxHalfscaleGaussianInitializer(vx_node node, const vx_reference *parameters, vx_uint32 num)
+static vx_status VX_CALLBACK vxHalfscaleGaussianInitializer(vx_node node, const vx_reference parameters[], vx_uint32 num)
 {
     vx_status status = VX_ERROR_INVALID_PARAMETERS;
-    if (num == 3)
-    {
-        vx_image input = (vx_image)parameters[0];
-        vx_image output = (vx_image)parameters[1];
-        vx_int32 kernel_size = 3;
-        vx_convolution convolution = 0;
-        vx_context context = vxGetContext((vx_reference)node);
-        vx_graph graph = vxCreateGraph(context);
 
-        if (vxGetStatus((vx_reference)graph) == VX_SUCCESS)
+    if (num == dimof(scale_kernel_params))
+    {
+        vx_context context = vxGetContext((vx_reference)node);
+
+        vx_graph subgraph = node->child;
+        if (subgraph)
+        {
+            /* deallocate subgraph resources */
+            status = vxReleaseGraph(&subgraph);
+            if (VX_SUCCESS != status)
+                return status;
+
+            status = vxSetChildGraphOfNode(node, 0);
+            if (VX_SUCCESS != status)
+                return status;
+        }
+
+        /* allocate subgraph resources */
+        subgraph = vxCreateGraph(context);
+
+        status = vxGetStatus((vx_reference)subgraph);
+        if (status == VX_SUCCESS)
         {
             vx_uint32 i;
+            vx_image input  = (vx_image)parameters[0];
+            vx_image output = (vx_image)parameters[1];
+            vx_int32 kernel_size = 3;
+            vx_convolution convolution = 0;
 
             /* We have a child-graph; we want to make sure the parent
                graph is recognized as a valid scope for sake of virtual
                image parameters. */
-            graph->parentGraph = node->graph;
+            subgraph->parentGraph = node->graph;
 
-            vxReadScalarValue((vx_scalar)parameters[2], &kernel_size);
-            if (kernel_size == 3 || kernel_size == 5)
+            status |= vxCopyScalar((vx_scalar)parameters[2], &kernel_size, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+            if (kernel_size == 1)
+            {
+                    vx_node nodes[] =
+                    {
+                        vxScaleImageNode(subgraph, input, output, VX_INTERPOLATION_NEAREST_NEIGHBOR),
+                    };
+
+                    vx_border_t borders;
+                    status |= vxQueryNode(node, VX_NODE_BORDER, &borders, sizeof(borders));
+                    for (i = 0; i < dimof(nodes); i++)
+                    {
+                        status |= vxSetNodeAttribute(nodes[i], VX_NODE_BORDER, &borders, sizeof(borders));
+                    }
+
+                    status |= vxAddParameterToGraphByIndex(subgraph, nodes[0], 0); /* input image */
+                    status |= vxAddParameterToGraphByIndex(subgraph, nodes[0], 1); /* output image */
+
+                    status |= vxVerifyGraph(subgraph);
+
+                    /* release our references, the graph will hold it's own */
+                    for (i = 0; i < dimof(nodes); i++)
+                    {
+                        status |= vxReleaseNode(&nodes[i]);
+                    }
+
+                    status |= vxSetChildGraphOfNode(node, subgraph);
+            }
+            else if (kernel_size == 3 || kernel_size == 5)
             {
                 if (kernel_size == 5)
                 {
@@ -391,59 +476,74 @@ static vx_status VX_CALLBACK vxHalfscaleGaussianInitializer(vx_node node, const 
                 }
                 if (kernel_size == 3 || convolution)
                 {
-                    vx_image virt = vxCreateVirtualImage(graph, 0, 0, VX_DF_IMAGE_U8);
-                    vx_node nodes[] = {
-                            kernel_size == 3 ? vxGaussian3x3Node(graph, input, virt) : vxConvolveNode(graph, input, convolution, virt),
-                            vxScaleImageNode(graph, virt, output, VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR),
+                    vx_image virt = vxCreateVirtualImage(subgraph, 0, 0, VX_DF_IMAGE_U8);
+                    vx_node nodes[] =
+                    {
+                            kernel_size == 3 ? vxGaussian3x3Node(subgraph, input, virt) : vxConvolveNode(subgraph, input, convolution, virt),
+                            vxScaleImageNode(subgraph, virt, output, VX_INTERPOLATION_NEAREST_NEIGHBOR),
                     };
 
-                    vx_border_mode_t borders;
-                    vxQueryNode(node, VX_NODE_ATTRIBUTE_BORDER_MODE, &borders, sizeof(borders));
-                    for (i = 0; i < dimof(nodes); i++) {
-                        vxSetNodeAttribute(nodes[i], VX_NODE_ATTRIBUTE_BORDER_MODE, &borders, sizeof(borders));
+                    vx_border_t borders;
+                    status |= vxQueryNode(node, VX_NODE_BORDER, &borders, sizeof(borders));
+                    for (i = 0; i < dimof(nodes); i++)
+                    {
+                        status |= vxSetNodeAttribute(nodes[i], VX_NODE_BORDER, &borders, sizeof(borders));
                     }
 
-                    status = VX_SUCCESS;
-                    status |= vxAddParameterToGraphByIndex(graph, nodes[0], 0); /* input image */
-                    status |= vxAddParameterToGraphByIndex(graph, nodes[1], 1); /* output image */
-                    status |= vxAddParameterToGraphByIndex(graph, node, 2);     /* gradient size - refer to self to quiet sub-graph validator */
-                    status |= vxVerifyGraph(graph);
+                    status |= vxAddParameterToGraphByIndex(subgraph, nodes[0], 0); /* input image */
+                    status |= vxAddParameterToGraphByIndex(subgraph, nodes[1], 1); /* output image */
+                    status |= vxAddParameterToGraphByIndex(subgraph, node, 2);     /* gradient size - refer to self to quiet sub-graph validator */
+
+                    status |= vxVerifyGraph(subgraph);
 
                     /* release our references, the graph will hold it's own */
-                    for (i = 0; i < dimof(nodes); i++) {
-                        vxReleaseNode(&nodes[i]);
+                    for (i = 0; i < dimof(nodes); i++)
+                    {
+                        status |= vxReleaseNode(&nodes[i]);
                     }
-                    if (convolution) vxReleaseConvolution(&convolution);
-                    vxReleaseImage(&virt);
-                    status |= vxSetChildGraphOfNode(node, graph);
+                    
+                    if (convolution)
+                        status |= vxReleaseConvolution(&convolution);
+
+                    status |= vxReleaseImage(&virt);
+
+                    status |= vxSetChildGraphOfNode(node, subgraph);
                 }
             }
-            vxReleaseGraph(&graph);
         }
     }
+
     return status;
 }
 
-static vx_status VX_CALLBACK vxHalfscaleGaussianDeinitializer(vx_node node, const vx_reference *parameters, vx_uint32 num)
+static vx_status VX_CALLBACK vxHalfscaleGaussianDeinitializer(vx_node node, const vx_reference parameters[], vx_uint32 num)
 {
     vx_status status = VX_ERROR_INVALID_PARAMETERS;
-    if (num == 3)
+
+    if (num == dimof(scale_kernel_params))
     {
-        vxSetChildGraphOfNode(node, 0);
+        vx_graph subgraph = vxGetChildGraphOfNode(node);
+
         status = VX_SUCCESS;
+
+        status |= vxReleaseGraph(&subgraph);
+
+        /* set subgraph to "null" */
+        status |= vxSetChildGraphOfNode(node, 0);
     }
+
     return status;
 }
 
-vx_kernel_description_t halfscale_gaussian_kernel = {
+vx_kernel_description_t halfscale_gaussian_kernel =
+{
     VX_KERNEL_HALFSCALE_GAUSSIAN,
     "org.khronos.openvx.halfscale_gaussian",
     vxHalfscaleGaussianKernel,
     scale_kernel_params, dimof(scale_kernel_params),
+    NULL,
     vxHalfscaleGaussianInputValidator,
     vxHalfscaleGaussianOutputValidator,
     vxHalfscaleGaussianInitializer,
     vxHalfscaleGaussianDeinitializer,
 };
-
-

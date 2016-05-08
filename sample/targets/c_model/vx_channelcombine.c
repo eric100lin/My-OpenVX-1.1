@@ -56,14 +56,14 @@ static vx_status VX_CALLBACK vxChannelCombineInputValidator(vx_node node, vx_uin
     if (index < 4)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_image image = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &image, sizeof(image));
+            vxQueryParameter(param, VX_PARAMETER_REF, &image, sizeof(image));
             if (image)
             {
                 vx_df_image format = 0;
-                vxQueryImage(image, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxQueryImage(image, VX_IMAGE_FORMAT, &format, sizeof(format));
                 if (format == VX_DF_IMAGE_U8)
                 {
                     status = VX_SUCCESS;
@@ -94,17 +94,17 @@ static vx_status VX_CALLBACK vxChannelCombineOutputValidator(vx_node node, vx_ui
         /* check for equal plane sizes and determine plane presence */
         for (p = 0; p < index; p++)
         {
-            if (params[p])
+            if (vxGetStatus((vx_reference)params[p]) == VX_SUCCESS)
             {
                 vx_image image = 0;
-                vxQueryParameter(params[p], VX_PARAMETER_ATTRIBUTE_REF, &image, sizeof(image));
+                vxQueryParameter(params[p], VX_PARAMETER_REF, &image, sizeof(image));
                 planes_present[p] = image != 0;
 
                 if (image)
                 {
                     uint32_t w = 0, h = 0;
-                    vxQueryImage(image, VX_IMAGE_ATTRIBUTE_WIDTH, &w, sizeof(w));
-                    vxQueryImage(image, VX_IMAGE_ATTRIBUTE_HEIGHT, &h, sizeof(h));
+                    vxQueryImage(image, VX_IMAGE_WIDTH, &w, sizeof(w));
+                    vxQueryImage(image, VX_IMAGE_HEIGHT, &h, sizeof(h));
                     if (width == 0 && height == 0)
                     {
                         width = w;
@@ -134,14 +134,14 @@ static vx_status VX_CALLBACK vxChannelCombineOutputValidator(vx_node node, vx_ui
         if (params[index])
         {
             vx_image output = 0;
-            vxQueryParameter(params[index], VX_PARAMETER_ATTRIBUTE_REF, &output, sizeof(output));
+            vxQueryParameter(params[index], VX_PARAMETER_REF, &output, sizeof(output));
             if (output)
             {
                 vx_df_image format = VX_DF_IMAGE_VIRT;
                 vx_bool supported_format = vx_true_e;
                 vx_bool correct_planes = planes_present[0] && planes_present[1] && planes_present[2];
 
-                vxQueryImage(output, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxQueryImage(output, VX_IMAGE_FORMAT, &format, sizeof(format));
                 switch (format)
                 {
                     case VX_DF_IMAGE_RGB:
@@ -208,6 +208,7 @@ vx_kernel_description_t channelcombine_kernel = {
     "org.khronos.openvx.channel_combine",
     vxChannelCombineKernel,
     channel_combine_kernel_params, dimof(channel_combine_kernel_params),
+    NULL, //vx_kernel_validate_f validate_params;
     vxChannelCombineInputValidator,
     vxChannelCombineOutputValidator,
     NULL,

@@ -76,11 +76,11 @@ static vx_status VX_CALLBACK vxAccumulateInputValidator(vx_node node, vx_uint32 
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
             if (format == VX_DF_IMAGE_U8)
                 status = VX_SUCCESS;
             vxReleaseImage(&input);
@@ -94,19 +94,19 @@ static vx_status VX_CALLBACK vxAccumulateInputValidator(vx_node node, vx_uint32 
             vxGetParameterByIndex(node, 0),
             vxGetParameterByIndex(node, 1),
         };
-        vxQueryParameter(param[0], VX_PARAMETER_ATTRIBUTE_REF, &images[0], sizeof(images[0]));
-        vxQueryParameter(param[1], VX_PARAMETER_ATTRIBUTE_REF, &images[1], sizeof(images[1]));
+        vxQueryParameter(param[0], VX_PARAMETER_REF, &images[0], sizeof(images[0]));
+        vxQueryParameter(param[1], VX_PARAMETER_REF, &images[1], sizeof(images[1]));
         if (images[0] && images[1])
         {
             vx_uint32 width[2], height[2];
             vx_df_image format[2];
 
-            vxQueryImage(images[0], VX_IMAGE_ATTRIBUTE_WIDTH, &width[0], sizeof(width[0]));
-            vxQueryImage(images[1], VX_IMAGE_ATTRIBUTE_WIDTH, &width[1], sizeof(width[1]));
-            vxQueryImage(images[0], VX_IMAGE_ATTRIBUTE_HEIGHT, &height[0], sizeof(height[0]));
-            vxQueryImage(images[1], VX_IMAGE_ATTRIBUTE_HEIGHT, &height[1], sizeof(height[1]));
-            vxQueryImage(images[0], VX_IMAGE_ATTRIBUTE_FORMAT, &format[0], sizeof(format[0]));
-            vxQueryImage(images[1], VX_IMAGE_ATTRIBUTE_FORMAT, &format[1], sizeof(format[1]));
+            vxQueryImage(images[0], VX_IMAGE_WIDTH, &width[0], sizeof(width[0]));
+            vxQueryImage(images[1], VX_IMAGE_WIDTH, &width[1], sizeof(width[1]));
+            vxQueryImage(images[0], VX_IMAGE_HEIGHT, &height[0], sizeof(height[0]));
+            vxQueryImage(images[1], VX_IMAGE_HEIGHT, &height[1], sizeof(height[1]));
+            vxQueryImage(images[0], VX_IMAGE_FORMAT, &format[0], sizeof(format[0]));
+            vxQueryImage(images[1], VX_IMAGE_FORMAT, &format[1], sizeof(format[1]));
             if (width[0] == width[1] &&
                height[0] == height[1] &&
                format[0] == VX_DF_IMAGE_U8 &&
@@ -132,11 +132,11 @@ static vx_status VX_CALLBACK vxAccumulateWeightedInputValidator(vx_node node, vx
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
             if (format == VX_DF_IMAGE_U8)
                 status = VX_SUCCESS;
             vxReleaseImage(&input);
@@ -150,19 +150,19 @@ static vx_status VX_CALLBACK vxAccumulateWeightedInputValidator(vx_node node, vx
             vxGetParameterByIndex(node, 0),
             vxGetParameterByIndex(node, 2),
         };
-        vxQueryParameter(param[0], VX_PARAMETER_ATTRIBUTE_REF, &images[0], sizeof(images[0]));
-        vxQueryParameter(param[1], VX_PARAMETER_ATTRIBUTE_REF, &images[1], sizeof(images[1]));
+        vxQueryParameter(param[0], VX_PARAMETER_REF, &images[0], sizeof(images[0]));
+        vxQueryParameter(param[1], VX_PARAMETER_REF, &images[1], sizeof(images[1]));
         if (images[0] && images[1])
         {
             vx_uint32 width[2], height[2];
             vx_df_image format[2];
 
-            vxQueryImage(images[0], VX_IMAGE_ATTRIBUTE_WIDTH, &width[0], sizeof(width[0]));
-            vxQueryImage(images[1], VX_IMAGE_ATTRIBUTE_WIDTH, &width[1], sizeof(width[1]));
-            vxQueryImage(images[0], VX_IMAGE_ATTRIBUTE_HEIGHT, &height[0], sizeof(height[0]));
-            vxQueryImage(images[1], VX_IMAGE_ATTRIBUTE_HEIGHT, &height[1], sizeof(height[1]));
-            vxQueryImage(images[0], VX_IMAGE_ATTRIBUTE_FORMAT, &format[0], sizeof(format[0]));
-            vxQueryImage(images[1], VX_IMAGE_ATTRIBUTE_FORMAT, &format[1], sizeof(format[1]));
+            vxQueryImage(images[0], VX_IMAGE_WIDTH, &width[0], sizeof(width[0]));
+            vxQueryImage(images[1], VX_IMAGE_WIDTH, &width[1], sizeof(width[1]));
+            vxQueryImage(images[0], VX_IMAGE_HEIGHT, &height[0], sizeof(height[0]));
+            vxQueryImage(images[1], VX_IMAGE_HEIGHT, &height[1], sizeof(height[1]));
+            vxQueryImage(images[0], VX_IMAGE_FORMAT, &format[0], sizeof(format[0]));
+            vxQueryImage(images[1], VX_IMAGE_FORMAT, &format[1], sizeof(format[1]));
             if (width[0] == width[1] &&
                height[0] == height[1] &&
                format[0] == VX_DF_IMAGE_U8 &&
@@ -180,17 +180,17 @@ static vx_status VX_CALLBACK vxAccumulateWeightedInputValidator(vx_node node, vx
     {
         vx_scalar scalar = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &scalar, sizeof(scalar));
+            vxQueryParameter(param, VX_PARAMETER_REF, &scalar, sizeof(scalar));
             if (scalar)
             {
                 vx_enum type = 0;
-                vxQueryScalar(scalar, VX_SCALAR_ATTRIBUTE_TYPE, &type, sizeof(type));
+                vxQueryScalar(scalar, VX_SCALAR_TYPE, &type, sizeof(type));
                 if (type == VX_TYPE_FLOAT32)
                 {
                     vx_float32 alpha = 0.0f;
-                    if ((vxReadScalarValue(scalar, &alpha) == VX_SUCCESS) &&
+                    if ((vxCopyScalar(scalar, &alpha, VX_READ_ONLY, VX_MEMORY_TYPE_HOST) == VX_SUCCESS) &&
                         (0.0f <= alpha) && (alpha <= 1.0f))
                     {
                         status = VX_SUCCESS;
@@ -220,11 +220,11 @@ static vx_status VX_CALLBACK vxAccumulateSquaredInputValidator(vx_node node, vx_
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
             if (format == VX_DF_IMAGE_U8)
                 status = VX_SUCCESS;
             vxReleaseImage(&input);
@@ -238,19 +238,19 @@ static vx_status VX_CALLBACK vxAccumulateSquaredInputValidator(vx_node node, vx_
             vxGetParameterByIndex(node, 0),
             vxGetParameterByIndex(node, 2),
         };
-        vxQueryParameter(param[0], VX_PARAMETER_ATTRIBUTE_REF, &images[0], sizeof(images[0]));
-        vxQueryParameter(param[1], VX_PARAMETER_ATTRIBUTE_REF, &images[1], sizeof(images[1]));
+        vxQueryParameter(param[0], VX_PARAMETER_REF, &images[0], sizeof(images[0]));
+        vxQueryParameter(param[1], VX_PARAMETER_REF, &images[1], sizeof(images[1]));
         if (images[0] && images[1])
         {
             vx_uint32 width[2], height[2];
             vx_df_image format[2];
 
-            vxQueryImage(images[0], VX_IMAGE_ATTRIBUTE_WIDTH, &width[0], sizeof(width[0]));
-            vxQueryImage(images[1], VX_IMAGE_ATTRIBUTE_WIDTH, &width[1], sizeof(width[1]));
-            vxQueryImage(images[0], VX_IMAGE_ATTRIBUTE_HEIGHT, &height[0], sizeof(height[0]));
-            vxQueryImage(images[1], VX_IMAGE_ATTRIBUTE_HEIGHT, &height[1], sizeof(height[1]));
-            vxQueryImage(images[0], VX_IMAGE_ATTRIBUTE_FORMAT, &format[0], sizeof(format[0]));
-            vxQueryImage(images[1], VX_IMAGE_ATTRIBUTE_FORMAT, &format[1], sizeof(format[1]));
+            vxQueryImage(images[0], VX_IMAGE_WIDTH, &width[0], sizeof(width[0]));
+            vxQueryImage(images[1], VX_IMAGE_WIDTH, &width[1], sizeof(width[1]));
+            vxQueryImage(images[0], VX_IMAGE_HEIGHT, &height[0], sizeof(height[0]));
+            vxQueryImage(images[1], VX_IMAGE_HEIGHT, &height[1], sizeof(height[1]));
+            vxQueryImage(images[0], VX_IMAGE_FORMAT, &format[0], sizeof(format[0]));
+            vxQueryImage(images[1], VX_IMAGE_FORMAT, &format[1], sizeof(format[1]));
             if (width[0] == width[1] &&
                height[0] == height[1] &&
                format[0] == VX_DF_IMAGE_U8 &&
@@ -268,18 +268,18 @@ static vx_status VX_CALLBACK vxAccumulateSquaredInputValidator(vx_node node, vx_
     {
         vx_scalar scalar = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &scalar, sizeof(scalar));
+            vxQueryParameter(param, VX_PARAMETER_REF, &scalar, sizeof(scalar));
             if (scalar)
             {
                 vx_enum type = 0;
-                vxQueryScalar(scalar, VX_SCALAR_ATTRIBUTE_TYPE, &type, sizeof(type));
+                vxQueryScalar(scalar, VX_SCALAR_TYPE, &type, sizeof(type));
                 if (type == VX_TYPE_UINT32)
                 {
                     vx_uint32 shift = 0u;
-                    if ((vxReadScalarValue(scalar, &shift) == VX_SUCCESS) &&
-                        (0 <= shift) && (shift <= 15))
+                    if ((vxCopyScalar(scalar, &shift, VX_READ_ONLY, VX_MEMORY_TYPE_HOST) == VX_SUCCESS) &&
+                        (shift <= 15)) /* valid range 0...15 inclusive */
                     {
                         status = VX_SUCCESS;
                     }
@@ -324,6 +324,7 @@ vx_kernel_description_t accumulate_kernel = {
     "org.khronos.openvx.accumulate",
     vxAccumulateKernel,
     accumulate_kernel_params, dimof(accumulate_kernel_params),
+    NULL,
     vxAccumulateInputValidator,
     vxAccumulateOutputValidator,
     NULL,
@@ -335,6 +336,7 @@ vx_kernel_description_t accumulate_weighted_kernel = {
     "org.khronos.openvx.accumulate_weighted",
     vxAccumulateWeightedKernel,
     accumulate_scaled_kernel_params, dimof(accumulate_scaled_kernel_params),
+    NULL,
     vxAccumulateWeightedInputValidator,
     vxAccumulateOutputValidator,
     NULL,
@@ -346,6 +348,7 @@ vx_kernel_description_t accumulate_square_kernel = {
     "org.khronos.openvx.accumulate_square",
     vxAccumulateSquareKernel,
     accumulate_scaled_kernel_params, dimof(accumulate_scaled_kernel_params),
+    NULL,
     vxAccumulateSquaredInputValidator,
     vxAccumulateOutputValidator,
     NULL,

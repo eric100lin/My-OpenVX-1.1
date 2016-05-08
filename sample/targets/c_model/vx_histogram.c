@@ -67,11 +67,11 @@ static vx_status VX_CALLBACK vxHistogramInputValidator(vx_node node, vx_uint32 i
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
             if (format == VX_DF_IMAGE_U8
 #if defined(EXPERIMENTAL_USE_S16)
                 || format == VX_DF_IMAGE_U16
@@ -97,19 +97,19 @@ static vx_status VX_CALLBACK vxHistogramOutputValidator(vx_node node, vx_uint32 
         vx_parameter dst_param = vxGetParameterByIndex(node, 1);
         vx_distribution dist;
 
-        vxQueryParameter(src_param, VX_PARAMETER_ATTRIBUTE_REF, &src, sizeof(src));
-        vxQueryParameter(dst_param, VX_PARAMETER_ATTRIBUTE_REF, &dist, sizeof(dist));
+        vxQueryParameter(src_param, VX_PARAMETER_REF, &src, sizeof(src));
+        vxQueryParameter(dst_param, VX_PARAMETER_REF, &dist, sizeof(dist));
         if ((src) && (dist))
         {
             vx_uint32 width = 0, height = 0;
             vx_df_image format;
             vx_size numBins = 0;
-            vxQueryDistribution(dist, VX_DISTRIBUTION_ATTRIBUTE_BINS, &numBins, sizeof(numBins));
-            vxQueryImage(src, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(height));
-            vxQueryImage(src, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
-            vxQueryImage(src, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxQueryDistribution(dist, VX_DISTRIBUTION_BINS, &numBins, sizeof(numBins));
+            vxQueryImage(src, VX_IMAGE_WIDTH, &width, sizeof(height));
+            vxQueryImage(src, VX_IMAGE_HEIGHT, &height, sizeof(height));
+            vxQueryImage(src, VX_IMAGE_FORMAT, &format, sizeof(format));
             /* fill in the meta data with the attributes so that the checker will pass */
-            ptr->type = VX_TYPE_DISTRIBUTION;
+            vxSetMetaFormatFromReference(ptr, (vx_reference)dist);
             status = VX_SUCCESS;
             vxReleaseDistribution(&dist);
             vxReleaseImage(&src);
@@ -128,11 +128,11 @@ static vx_status VX_CALLBACK vxEqualizeHistInputValidator(vx_node node, vx_uint3
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
             if (format == VX_DF_IMAGE_U8)
             {
                 status = VX_SUCCESS;
@@ -150,16 +150,16 @@ static vx_status VX_CALLBACK vxEqualizeHistOutputValidator(vx_node node, vx_uint
     if (index == 1)
     {
         vx_parameter param = vxGetParameterByIndex(node, 0); /* we reference the input image */
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_image input = 0;
 
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+            vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
             if (input)
             {
                 vx_uint32 width = 0, height = 0;
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+                vxQueryImage(input, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxQueryImage(input, VX_IMAGE_HEIGHT, &height, sizeof(height));
                 ptr->type = VX_TYPE_IMAGE;
                 ptr->dim.image.format = VX_DF_IMAGE_U8;
                 ptr->dim.image.width = width;
@@ -190,6 +190,7 @@ vx_kernel_description_t histogram_kernel = {
     "org.khronos.openvx.histogram",
     vxHistogramKernel,
     histogram_kernel_params, dimof(histogram_kernel_params),
+    NULL,
     vxHistogramInputValidator,
     vxHistogramOutputValidator,
     NULL,
@@ -201,6 +202,7 @@ vx_kernel_description_t equalize_hist_kernel = {
     "org.khronos.openvx.equalize_histogram",
     vxEqualizeHistKernel,
     equalize_hist_kernel_params, dimof(equalize_hist_kernel_params),
+    NULL,
     vxEqualizeHistInputValidator,
     vxEqualizeHistOutputValidator,
     NULL,

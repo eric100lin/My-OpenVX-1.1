@@ -49,7 +49,7 @@ extern vx_kernel_description_t box3x3_kernel_2;
 extern vx_kernel_description_t gaussian3x3_kernel;
 extern vx_kernel_description_t laplacian3x3_kernel;
 extern vx_kernel_description_t convolution_kernel;
-extern vx_kernel_description_t pyramid_kernel;
+extern vx_kernel_description_t gaussian_pyramid_kernel;
 extern vx_kernel_description_t accumulate_kernel;
 extern vx_kernel_description_t accumulate_weighted_kernel;
 extern vx_kernel_description_t accumulate_square_kernel;
@@ -71,6 +71,9 @@ extern vx_kernel_description_t fast9_kernel;
 extern vx_kernel_description_t optpyrlk_kernel;
 extern vx_kernel_description_t remap_kernel;
 extern vx_kernel_description_t halfscale_gaussian_kernel;
+extern vx_kernel_description_t laplacian_pyramid_kernel;
+extern vx_kernel_description_t laplacian_reconstruct_kernel;
+extern vx_kernel_description_t nonlinearfilter_kernel;
 
 #endif
 

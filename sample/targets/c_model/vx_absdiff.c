@@ -53,11 +53,11 @@ static vx_status VX_CALLBACK vxAbsDiffInputValidator(vx_node node, vx_uint32 ind
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
             if (format == VX_DF_IMAGE_U8
                 || format == VX_DF_IMAGE_S16
 #if defined(EXPERIMENTAL_USE_S16)
@@ -76,19 +76,19 @@ static vx_status VX_CALLBACK vxAbsDiffInputValidator(vx_node node, vx_uint32 ind
             vxGetParameterByIndex(node, 0),
             vxGetParameterByIndex(node, 1),
         };
-        vxQueryParameter(param[0], VX_PARAMETER_ATTRIBUTE_REF, &images[0], sizeof(images[0]));
-        vxQueryParameter(param[1], VX_PARAMETER_ATTRIBUTE_REF, &images[1], sizeof(images[1]));
+        vxQueryParameter(param[0], VX_PARAMETER_REF, &images[0], sizeof(images[0]));
+        vxQueryParameter(param[1], VX_PARAMETER_REF, &images[1], sizeof(images[1]));
         if (images[0] && images[1])
         {
             vx_uint32 width[2], height[2];
             vx_df_image format[2];
 
-            vxQueryImage(images[0], VX_IMAGE_ATTRIBUTE_WIDTH, &width[0], sizeof(width[0]));
-            vxQueryImage(images[1], VX_IMAGE_ATTRIBUTE_WIDTH, &width[1], sizeof(width[1]));
-            vxQueryImage(images[0], VX_IMAGE_ATTRIBUTE_HEIGHT, &height[0], sizeof(height[0]));
-            vxQueryImage(images[1], VX_IMAGE_ATTRIBUTE_HEIGHT, &height[1], sizeof(height[1]));
-            vxQueryImage(images[0], VX_IMAGE_ATTRIBUTE_FORMAT, &format[0], sizeof(format[0]));
-            vxQueryImage(images[1], VX_IMAGE_ATTRIBUTE_FORMAT, &format[1], sizeof(format[1]));
+            vxQueryImage(images[0], VX_IMAGE_WIDTH, &width[0], sizeof(width[0]));
+            vxQueryImage(images[1], VX_IMAGE_WIDTH, &width[1], sizeof(width[1]));
+            vxQueryImage(images[0], VX_IMAGE_HEIGHT, &height[0], sizeof(height[0]));
+            vxQueryImage(images[1], VX_IMAGE_HEIGHT, &height[1], sizeof(height[1]));
+            vxQueryImage(images[0], VX_IMAGE_FORMAT, &format[0], sizeof(format[0]));
+            vxQueryImage(images[1], VX_IMAGE_FORMAT, &format[1], sizeof(format[1]));
             if (width[0] == width[1] && height[0] == height[1] && format[0] == format[1])
             {
                 status = VX_SUCCESS;
@@ -111,20 +111,21 @@ static vx_status VX_CALLBACK vxAbsDiffOutputValidator(vx_node node, vx_uint32 in
             vxGetParameterByIndex(node, 0),
             vxGetParameterByIndex(node, 1),
         };
-        if (param[0] && param[1])
+        if ((vxGetStatus((vx_reference)param[0]) == VX_SUCCESS) &&
+            (vxGetStatus((vx_reference)param[1]) == VX_SUCCESS))
         {
             vx_image images[2];
-            vxQueryParameter(param[0], VX_PARAMETER_ATTRIBUTE_REF, &images[0], sizeof(images[0]));
-            vxQueryParameter(param[1], VX_PARAMETER_ATTRIBUTE_REF, &images[1], sizeof(images[1]));
+            vxQueryParameter(param[0], VX_PARAMETER_REF, &images[0], sizeof(images[0]));
+            vxQueryParameter(param[1], VX_PARAMETER_REF, &images[1], sizeof(images[1]));
             if (images[0] && images[1])
             {
                 vx_uint32 width[2], height[2];
                 vx_df_image format = 0;
-                vxQueryImage(images[0], VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
-                vxQueryImage(images[0], VX_IMAGE_ATTRIBUTE_WIDTH, &width[0], sizeof(width[0]));
-                vxQueryImage(images[1], VX_IMAGE_ATTRIBUTE_WIDTH, &width[1], sizeof(width[1]));
-                vxQueryImage(images[0], VX_IMAGE_ATTRIBUTE_HEIGHT, &height[0], sizeof(height[0]));
-                vxQueryImage(images[1], VX_IMAGE_ATTRIBUTE_HEIGHT, &height[1], sizeof(height[1]));
+                vxQueryImage(images[0], VX_IMAGE_FORMAT, &format, sizeof(format));
+                vxQueryImage(images[0], VX_IMAGE_WIDTH, &width[0], sizeof(width[0]));
+                vxQueryImage(images[1], VX_IMAGE_WIDTH, &width[1], sizeof(width[1]));
+                vxQueryImage(images[0], VX_IMAGE_HEIGHT, &height[0], sizeof(height[0]));
+                vxQueryImage(images[1], VX_IMAGE_HEIGHT, &height[1], sizeof(height[1]));
                 if (width[0] == width[1] && height[0] == height[1] &&
                     (format == VX_DF_IMAGE_U8
                      || format == VX_DF_IMAGE_S16
@@ -160,6 +161,7 @@ vx_kernel_description_t absdiff_kernel = {
     "org.khronos.openvx.absdiff",
     vxAbsDiffKernel,
     absdiff_kernel_params, dimof(absdiff_kernel_params),
+    NULL,
     vxAbsDiffInputValidator,
     vxAbsDiffOutputValidator,
     NULL,

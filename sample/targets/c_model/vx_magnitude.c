@@ -53,11 +53,11 @@ static vx_status VX_CALLBACK vxMagnitudeInputValidator(vx_node node, vx_uint32 i
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
             if (format == VX_DF_IMAGE_S16)
             {
                 if (index == 0)
@@ -69,14 +69,14 @@ static vx_status VX_CALLBACK vxMagnitudeInputValidator(vx_node node, vx_uint32 i
                     vx_parameter param0 = vxGetParameterByIndex(node, index);
                     vx_image input0 = 0;
 
-                    vxQueryParameter(param0, VX_PARAMETER_ATTRIBUTE_REF, &input0, sizeof(input0));
+                    vxQueryParameter(param0, VX_PARAMETER_REF, &input0, sizeof(input0));
                     if (input0)
                     {
                         vx_uint32 width0 = 0, height0 = 0, width1 = 0, height1 = 0;
-                        vxQueryImage(input0, VX_IMAGE_ATTRIBUTE_WIDTH, &width0, sizeof(width0));
-                        vxQueryImage(input0, VX_IMAGE_ATTRIBUTE_HEIGHT, &height0, sizeof(height0));
-                        vxQueryImage(input, VX_IMAGE_ATTRIBUTE_WIDTH, &width1, sizeof(width1));
-                        vxQueryImage(input, VX_IMAGE_ATTRIBUTE_HEIGHT, &height1, sizeof(height1));
+                        vxQueryImage(input0, VX_IMAGE_WIDTH, &width0, sizeof(width0));
+                        vxQueryImage(input0, VX_IMAGE_HEIGHT, &height0, sizeof(height0));
+                        vxQueryImage(input, VX_IMAGE_WIDTH, &width1, sizeof(width1));
+                        vxQueryImage(input, VX_IMAGE_HEIGHT, &height1, sizeof(height1));
 
                         if (width0 == width1 && height0 == height1)
                             status = VX_SUCCESS;
@@ -98,16 +98,16 @@ static vx_status VX_CALLBACK vxMagnitudeOutputValidator(vx_node node, vx_uint32 
     if (index == 2)
     {
         vx_parameter param  = vxGetParameterByIndex(node, 0);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_image input = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+            vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
             if (input)
             {
                 vx_uint32 width = 0, height = 0;
 
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+                vxQueryImage(input, VX_IMAGE_WIDTH, &width, sizeof(width));
+                vxQueryImage(input, VX_IMAGE_HEIGHT, &height, sizeof(height));
                 ptr->type = VX_TYPE_IMAGE;
                 ptr->dim.image.format = VX_DF_IMAGE_S16;
                 ptr->dim.image.width = width;
@@ -132,6 +132,7 @@ vx_kernel_description_t magnitude_kernel = {
     "org.khronos.openvx.magnitude",
     vxMagnitudeKernel,
     magnitude_kernel_params, dimof(magnitude_kernel_params),
+    NULL,
     vxMagnitudeInputValidator,
     vxMagnitudeOutputValidator,
     NULL,

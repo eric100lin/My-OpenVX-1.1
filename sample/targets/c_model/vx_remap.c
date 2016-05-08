@@ -32,18 +32,18 @@
 #include <vx_internal.h>
 
 static vx_bool read_pixel(void* base, vx_imagepatch_addressing_t* addr,
-    vx_float32 x, vx_float32 y, const vx_border_mode_t* borders, vx_uint8* pixel)
+    vx_float32 x, vx_float32 y, const vx_border_t* borders, vx_uint8* pixel)
 {
     vx_bool out_of_bounds = (x < 0 || y < 0 || x >= addr->dim_x || y >= addr->dim_y);
     vx_uint32 bx, by;
     vx_uint8 *bpixel;
     if (out_of_bounds)
     {
-        if (borders->mode == VX_BORDER_MODE_UNDEFINED)
+        if (borders->mode == VX_BORDER_UNDEFINED)
             return vx_false_e;
-        if (borders->mode == VX_BORDER_MODE_CONSTANT)
+        if (borders->mode == VX_BORDER_CONSTANT)
         {
-            *pixel = borders->constant_value;
+            *pixel = borders->constant_value.U8;
             return vx_true_e;
         }
     }
@@ -75,21 +75,21 @@ static vx_status VX_CALLBACK vxRemapKernel(vx_node node, const vx_reference *par
         vx_uint32 y = 0u, x = 0u, width = 0u, height = 0u;
         vx_rectangle_t src_rect;
         vx_rectangle_t dst_rect;
-        vx_border_mode_t borders;
+        vx_border_t borders;
 
-        vxReadScalarValue(stype, &policy);
-        vxQueryImage(src_image, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-        vxQueryImage(src_image, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+        vxCopyScalar(stype, &policy, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+        vxQueryImage(src_image, VX_IMAGE_WIDTH, &width, sizeof(width));
+        vxQueryImage(src_image, VX_IMAGE_HEIGHT, &height, sizeof(height));
         src_rect.start_x = src_rect.start_y = 0;
         src_rect.end_x = width;
         src_rect.end_y = height;
-        vxQueryImage(dst_image, VX_IMAGE_ATTRIBUTE_WIDTH, &width, sizeof(width));
-        vxQueryImage(dst_image, VX_IMAGE_ATTRIBUTE_HEIGHT, &height, sizeof(height));
+        vxQueryImage(dst_image, VX_IMAGE_WIDTH, &width, sizeof(width));
+        vxQueryImage(dst_image, VX_IMAGE_HEIGHT, &height, sizeof(height));
         dst_rect.start_x = dst_rect.start_y = 0;
         dst_rect.end_x = width;
         dst_rect.end_y = height;
 
-        vxQueryNode(node, VX_NODE_ATTRIBUTE_BORDER_MODE, &borders, sizeof(borders));
+        vxQueryNode(node, VX_NODE_BORDER, &borders, sizeof(borders));
 
         status = VX_SUCCESS;
         status |= vxAccessImagePatch(src_image, &src_rect, 0, &src_addr, &src_base, VX_READ_ONLY);
@@ -106,12 +106,12 @@ static vx_status VX_CALLBACK vxRemapKernel(vx_node node, const vx_reference *par
                     vx_uint8 *dst = vxFormatImagePatchAddress2d(dst_base, x, y, &dst_addr);
                     status = vxGetRemapPoint(table, x, y, &src_x, &src_y);
                     //printf("Remapping %lf,%lf to %lu,%lu\n",src_x, src_y, x, y);
-                    if (policy == VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR)
+                    if (policy == VX_INTERPOLATION_NEAREST_NEIGHBOR)
                     {
                         /* this rounds then truncates the decimal side */
                         read_pixel(src_base, &src_addr, src_x + 0.5f, src_y + 0.5f, &borders, dst);
                     }
-                    else if (policy == VX_INTERPOLATION_TYPE_BILINEAR)
+                    else if (policy == VX_INTERPOLATION_BILINEAR)
                     {
                         vx_uint8 tl = 0;
                         vx_uint8 tr = 0;
@@ -156,11 +156,11 @@ static vx_status VX_CALLBACK vxRemapInputValidator(vx_node node, vx_uint32 index
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
             if (format == VX_DF_IMAGE_U8)
             {
                 status = VX_SUCCESS;
@@ -172,10 +172,10 @@ static vx_status VX_CALLBACK vxRemapInputValidator(vx_node node, vx_uint32 index
     else if (index == 1)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_remap table;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &table, sizeof(table));
+            vxQueryParameter(param, VX_PARAMETER_REF, &table, sizeof(table));
             if (table)
             {
                 /* \todo what are we checking? */
@@ -188,20 +188,20 @@ static vx_status VX_CALLBACK vxRemapInputValidator(vx_node node, vx_uint32 index
     else if (index == 2)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_scalar scalar = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &scalar, sizeof(scalar));
+            vxQueryParameter(param, VX_PARAMETER_REF, &scalar, sizeof(scalar));
             if (scalar)
             {
                 vx_enum stype = 0;
-                vxQueryScalar(scalar, VX_SCALAR_ATTRIBUTE_TYPE, &stype, sizeof(stype));
+                vxQueryScalar(scalar, VX_SCALAR_TYPE, &stype, sizeof(stype));
                 if (stype == VX_TYPE_ENUM)
                 {
                     vx_enum policy = 0;
-                    vxReadScalarValue(scalar, &policy);
-                    if ((policy == VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR) ||
-                        (policy == VX_INTERPOLATION_TYPE_BILINEAR))
+                    vxCopyScalar(scalar, &policy, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+                    if ((policy == VX_INTERPOLATION_NEAREST_NEIGHBOR) ||
+                        (policy == VX_INTERPOLATION_BILINEAR))
                     {
                         status = VX_SUCCESS;
                     }
@@ -230,26 +230,28 @@ static vx_status VX_CALLBACK vxRemapOutputValidator(vx_node node, vx_uint32 inde
         vx_parameter src_param = vxGetParameterByIndex(node, 0);
         vx_parameter tbl_param = vxGetParameterByIndex(node, 1);
         vx_parameter dst_param = vxGetParameterByIndex(node, index);
-        if (src_param && dst_param && tbl_param)
+        if ((vxGetStatus((vx_reference)src_param) == VX_SUCCESS) &&
+            (vxGetStatus((vx_reference)dst_param) == VX_SUCCESS) &&
+            (vxGetStatus((vx_reference)tbl_param) == VX_SUCCESS))
         {
             vx_image src = 0;
             vx_image dst = 0;
             vx_remap tbl = 0;
-            vxQueryParameter(src_param, VX_PARAMETER_ATTRIBUTE_REF, &src, sizeof(src));
-            vxQueryParameter(dst_param, VX_PARAMETER_ATTRIBUTE_REF, &dst, sizeof(dst));
-            vxQueryParameter(tbl_param, VX_PARAMETER_ATTRIBUTE_REF, &tbl, sizeof(tbl));
+            vxQueryParameter(src_param, VX_PARAMETER_REF, &src, sizeof(src));
+            vxQueryParameter(dst_param, VX_PARAMETER_REF, &dst, sizeof(dst));
+            vxQueryParameter(tbl_param, VX_PARAMETER_REF, &tbl, sizeof(tbl));
             if ((src) && (dst) && (tbl))
             {
                 vx_uint32 w1 = 0, h1 = 0;
                 vx_uint32 w2 = 0, h2 = 0;
                 vx_uint32 w3 = 0, h3 = 0;
 
-                vxQueryImage(src, VX_IMAGE_ATTRIBUTE_WIDTH, &w1, sizeof(w1));
-                vxQueryImage(src, VX_IMAGE_ATTRIBUTE_HEIGHT, &h1, sizeof(h1));
-                vxQueryRemap(tbl, VX_REMAP_ATTRIBUTE_SOURCE_WIDTH, &w2, sizeof(w2));
-                vxQueryRemap(tbl, VX_REMAP_ATTRIBUTE_SOURCE_HEIGHT, &h2, sizeof(h2));
-                vxQueryRemap(tbl, VX_REMAP_ATTRIBUTE_DESTINATION_WIDTH, &w3, sizeof(w3));
-                vxQueryRemap(tbl, VX_REMAP_ATTRIBUTE_DESTINATION_HEIGHT, &h3, sizeof(h3));
+                vxQueryImage(src, VX_IMAGE_WIDTH, &w1, sizeof(w1));
+                vxQueryImage(src, VX_IMAGE_HEIGHT, &h1, sizeof(h1));
+                vxQueryRemap(tbl, VX_REMAP_SOURCE_WIDTH, &w2, sizeof(w2));
+                vxQueryRemap(tbl, VX_REMAP_SOURCE_HEIGHT, &h2, sizeof(h2));
+                vxQueryRemap(tbl, VX_REMAP_DESTINATION_WIDTH, &w3, sizeof(w3));
+                vxQueryRemap(tbl, VX_REMAP_DESTINATION_HEIGHT, &h3, sizeof(h3));
 
                 if ((w1 == w2) && (h1 == h2))
                 {
@@ -283,6 +285,7 @@ vx_kernel_description_t remap_kernel = {
     "org.khronos.openvx.remap",
     vxRemapKernel,
     remap_kernel_params, dimof(remap_kernel_params),
+    NULL,
     vxRemapInputValidator,
     vxRemapOutputValidator,
     NULL,

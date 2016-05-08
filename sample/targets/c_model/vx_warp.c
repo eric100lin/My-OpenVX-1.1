@@ -41,8 +41,8 @@ static vx_status VX_CALLBACK vxWarpPerspectiveKernel(vx_node node, const vx_refe
         vx_scalar stype     = (vx_scalar)parameters[2];
         vx_image  dst_image = (vx_image) parameters[3];
 
-        vx_border_mode_t borders;
-        vxQueryNode(node, VX_NODE_ATTRIBUTE_BORDER_MODE, &borders, sizeof(borders));
+        vx_border_t borders;
+        vxQueryNode(node, VX_NODE_BORDER, &borders, sizeof(borders));
 
         return vxWarpPerspective(src_image, matrix, stype, dst_image, &borders);
     }
@@ -58,8 +58,8 @@ static vx_status VX_CALLBACK vxWarpAffineKernel(vx_node node, const vx_reference
         vx_scalar stype     = (vx_scalar)parameters[2];
         vx_image  dst_image = (vx_image) parameters[3];
 
-        vx_border_mode_t borders;
-        vxQueryNode(node, VX_NODE_ATTRIBUTE_BORDER_MODE, &borders, sizeof(borders));
+        vx_border_t borders;
+        vxQueryNode(node, VX_NODE_BORDER, &borders, sizeof(borders));
 
         return vxWarpAffine(src_image, matrix, stype, dst_image, &borders);
     }
@@ -74,11 +74,11 @@ static vx_status vxWarpInputValidator(vx_node node, vx_uint32 index, vx_size mat
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
             if (format == VX_DF_IMAGE_U8)
             {
                 status = VX_SUCCESS;
@@ -90,17 +90,17 @@ static vx_status vxWarpInputValidator(vx_node node, vx_uint32 index, vx_size mat
     else if (index == 1)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_matrix matrix;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &matrix, sizeof(matrix));
+            vxQueryParameter(param, VX_PARAMETER_REF, &matrix, sizeof(matrix));
             if (matrix)
             {
                 vx_enum data_type = 0;
                 vx_size rows = 0ul, columns = 0ul;
-                vxQueryMatrix(matrix, VX_MATRIX_ATTRIBUTE_TYPE, &data_type, sizeof(data_type));
-                vxQueryMatrix(matrix, VX_MATRIX_ATTRIBUTE_ROWS, &rows, sizeof(rows));
-                vxQueryMatrix(matrix, VX_MATRIX_ATTRIBUTE_COLUMNS, &columns, sizeof(columns));
+                vxQueryMatrix(matrix, VX_MATRIX_TYPE, &data_type, sizeof(data_type));
+                vxQueryMatrix(matrix, VX_MATRIX_ROWS, &rows, sizeof(rows));
+                vxQueryMatrix(matrix, VX_MATRIX_COLUMNS, &columns, sizeof(columns));
                 if ((data_type == VX_TYPE_FLOAT32) && (columns == mat_columns) && (rows == 3))
                 {
                     status = VX_SUCCESS;
@@ -113,20 +113,20 @@ static vx_status vxWarpInputValidator(vx_node node, vx_uint32 index, vx_size mat
     else if (index == 2)
     {
         vx_parameter param = vxGetParameterByIndex(node, index);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_scalar scalar = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &scalar, sizeof(scalar));
+            vxQueryParameter(param, VX_PARAMETER_REF, &scalar, sizeof(scalar));
             if (scalar)
             {
                 vx_enum stype = 0;
-                vxQueryScalar(scalar, VX_SCALAR_ATTRIBUTE_TYPE, &stype, sizeof(stype));
+                vxQueryScalar(scalar, VX_SCALAR_TYPE, &stype, sizeof(stype));
                 if (stype == VX_TYPE_ENUM)
                 {
                     vx_enum interp = 0;
-                    vxReadScalarValue(scalar, &interp);
-                    if ((interp == VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR) ||
-                        (interp == VX_INTERPOLATION_TYPE_BILINEAR))
+                    vxCopyScalar(scalar, &interp, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
+                    if ((interp == VX_INTERPOLATION_NEAREST_NEIGHBOR) ||
+                        (interp == VX_INTERPOLATION_BILINEAR))
                     {
                         status = VX_SUCCESS;
                     }
@@ -163,18 +163,18 @@ static vx_status VX_CALLBACK vxWarpOutputValidator(vx_node node, vx_uint32 index
     if (index == 3)
     {
         vx_parameter dst_param = vxGetParameterByIndex(node, index);
-        if (dst_param)
+        if (vxGetStatus((vx_reference)dst_param) == VX_SUCCESS)
         {
             vx_image dst = 0;
-            vxQueryParameter(dst_param, VX_PARAMETER_ATTRIBUTE_REF, &dst, sizeof(dst));
+            vxQueryParameter(dst_param, VX_PARAMETER_REF, &dst, sizeof(dst));
             if (dst)
             {
                 vx_uint32 w1 = 0, h1 = 0;
                 vx_df_image f1 = VX_DF_IMAGE_VIRT;
 
-                vxQueryImage(dst, VX_IMAGE_ATTRIBUTE_WIDTH, &w1, sizeof(w1));
-                vxQueryImage(dst, VX_IMAGE_ATTRIBUTE_HEIGHT, &h1, sizeof(h1));
-                vxQueryImage(dst, VX_IMAGE_ATTRIBUTE_FORMAT, &f1, sizeof(f1));
+                vxQueryImage(dst, VX_IMAGE_WIDTH, &w1, sizeof(w1));
+                vxQueryImage(dst, VX_IMAGE_HEIGHT, &h1, sizeof(h1));
+                vxQueryImage(dst, VX_IMAGE_FORMAT, &f1, sizeof(f1));
                 /* output can not be virtual */
                 if ((w1 != 0) && (h1 != 0) && (f1 == VX_DF_IMAGE_U8))
                 {
@@ -205,6 +205,7 @@ vx_kernel_description_t warp_affine_kernel = {
     "org.khronos.openvx.warp_affine",
     vxWarpAffineKernel,
     warp_kernel_params, dimof(warp_kernel_params),
+    NULL,
     vxWarpAffineInputValidator,
     vxWarpOutputValidator,
     NULL,
@@ -216,6 +217,7 @@ vx_kernel_description_t warp_perspective_kernel = {
     "org.khronos.openvx.warp_perspective",
     vxWarpPerspectiveKernel,
     warp_kernel_params, dimof(warp_kernel_params),
+    NULL,
     vxWarpPerspectiveInputValidator,
     vxWarpOutputValidator,
     NULL,

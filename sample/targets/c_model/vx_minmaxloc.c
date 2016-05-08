@@ -57,11 +57,11 @@ static vx_status VX_CALLBACK vxMinMaxLocInputValidator(vx_node node, vx_uint32 i
         vx_image input = 0;
         vx_parameter param = vxGetParameterByIndex(node, index);
 
-        vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+        vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
         if (input)
         {
             vx_df_image format = 0;
-            vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+            vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
             if ((format == VX_DF_IMAGE_U8)
                 || (format == VX_DF_IMAGE_S16)
 #if defined(EXPERIMENTAL_USE_S16)
@@ -86,15 +86,15 @@ static vx_status VX_CALLBACK vxMinMaxLocOutputValidator(vx_node node, vx_uint32 
     if ((index == 1) || (index == 2))
     {
         vx_parameter param = vxGetParameterByIndex(node, 0);
-        if (param)
+        if (vxGetStatus((vx_reference)param) == VX_SUCCESS)
         {
             vx_image input = 0;
-            vxQueryParameter(param, VX_PARAMETER_ATTRIBUTE_REF, &input, sizeof(input));
+            vxQueryParameter(param, VX_PARAMETER_REF, &input, sizeof(input));
             if (input)
             {
                 vx_df_image format;
                 vx_enum type = VX_TYPE_INVALID;
-                vxQueryImage(input, VX_IMAGE_ATTRIBUTE_FORMAT, &format, sizeof(format));
+                vxQueryImage(input, VX_IMAGE_FORMAT, &format, sizeof(format));
                 switch (format)
                 {
                     case VX_DF_IMAGE_U8:
@@ -161,6 +161,7 @@ vx_kernel_description_t minmaxloc_kernel = {
     "org.khronos.openvx.minmaxloc",
     vxMinMaxLocKernel,
     minmaxloc_kernel_params, dimof(minmaxloc_kernel_params),
+    NULL,
     vxMinMaxLocInputValidator,
     vxMinMaxLocOutputValidator,
     NULL,
