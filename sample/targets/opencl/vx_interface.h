@@ -82,7 +82,7 @@ typedef struct _vx_cl_context_t {
 #define INIT_PROGRAMS {0}
 #define INIT_KERNELS  {0}
 #define INIT_NUMKERNELS {0}
-#define INIT_RETURNS  {{0,0}}
+#define INIT_RETURNS  {0}
 
 typedef struct _vx_cl_kernel_description_t {
     vx_kernel_description_t description;
