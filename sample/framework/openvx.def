@@ -189,8 +189,11 @@ EXPORTS
     vxPrintImageAddressing
     vxStartCapture
     vxStopCapture
-;    vxSemWait
-;    vxSemPost
+    vxSemWait
+    vxSemPost
+	vxSizeOfType
+	vxComputeMemorySize
+	vxIsKernelUnique
 ;    vxIsSupportedFourcc
     vxPrintImage
 
