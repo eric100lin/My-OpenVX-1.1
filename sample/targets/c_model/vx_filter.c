@@ -144,7 +144,7 @@ static vx_param_description_t filter_kernel_params[] = {
 
 vx_kernel_description_t box3x3_kernel = {
     VX_KERNEL_BOX_3x3,
-    "org.khronos.openvx.box_3x3:default",
+    "org.khronos.openvx.box_3x3",
     vxBox3x3Kernel,
     filter_kernel_params, dimof(filter_kernel_params),
     NULL,
