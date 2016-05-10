@@ -6,10 +6,10 @@
 #define SRC_IMG_NAME "lena.jpg"
 #define IMG_WIDTH 640
 #define IMG_HEIGHT 480
-//#define VX_CL_NOT_NAME    "khronos.c_model:org.khronos.openvx.not"
-//#define VX_CL_BOX3X3_NAME "khronos.c_model:org.khronos.openvx.box_3x3:default"
-#define VX_CL_NOT_NAME    "pc.opencl:org.khronos.openvx.not"
-#define VX_CL_BOX3X3_NAME "pc.opencl:org.khronos.openvx.box3x3"
+#define VX_CL_NOT_NAME    "khronos.c_model:org.khronos.openvx.not"
+#define VX_CL_BOX3X3_NAME "khronos.c_model:org.khronos.openvx.box_3x3"
+//#define VX_CL_NOT_NAME    "pc.opencl:org.khronos.openvx.not"
+//#define VX_CL_BOX3X3_NAME "pc.opencl:org.khronos.openvx.box3x3"
 #define CHECK_NOT_NULL(value, name) 										  \
 { 																			  \
 	if (value == NULL) 												  		  \
@@ -91,6 +91,9 @@ int main(int argc, char **argv)
 			printf("Verify fail!!\n");
 		printf("\n");
 		
+		//imwrite("not_box3x3_cv.jpg",result_cv);
+		//imwrite("not_box3x3_vx.jpg",result_vx);
+		
 		printf("Start to run not_not_graph()\n");
 		not_not_cv(src.clone(), result_cv);
 		status = not_not_graph(context, src.clone(), result_vx);
@@ -133,6 +136,8 @@ bool verify_result(Mat inMat, Mat resultMat)
 	{
 		for(w=0; w<width; w++, ptr_inMat++, ptr_resMat++)
 		{
+			if(h==0 || w==0 || h==height-1 || w==width-1)
+				continue;	//Don't verify boarder
 			if(*ptr_inMat != *ptr_resMat)
 			{
 				printf("fail at inMat[%d,%d]:%d != resultMat[%d,%d]:%d\n",

@@ -6,7 +6,7 @@ LDFLAGS = -O3
 CFLAGS = -g -Wall
 CXXFLAGS = -g -Wall #-std=gnu++0x
 
-PROGRAM_NAME = ./fusion-app
+PROGRAM_NAME = ./vx_cl-node_graph
 OPENCV_PATH = /home/thlin/opencv-2.4.9
 SOURCE_PATH = ./
 INCLUDE_PATH = -I$(OPENVX_INSTALL_ROOT)/include \

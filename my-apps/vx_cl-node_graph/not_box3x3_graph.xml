@@ -10,7 +10,7 @@
 			<parameter index="1" reference="4" />
 		</node>
 		<node reference="2">
-			<kernel>org.khronos.openvx.box3x3</kernel>
+			<kernel>org.khronos.openvx.box_3x3</kernel>
 			<parameter index="0" reference="4" />
 			<parameter index="1" reference="5" />
 		</node>
