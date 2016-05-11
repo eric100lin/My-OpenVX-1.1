@@ -72,6 +72,34 @@ endmacro( FILTER_SOURCES )
 
 #
 # Usage
+#     PREPEND( )
+#
+# Prepend all filenames on the list with common path
+#
+FUNCTION(PREPEND var prefix)
+   SET(listVar "")
+   FOREACH(f ${ARGN})
+      LIST(APPEND listVar "${prefix}${f}")
+   ENDFOREACH(f)
+   SET(${var} ${listVar} PARENT_SCOPE)
+ENDFUNCTION(PREPEND)
+
+#
+# Usage
+#     POSTPEND( )
+#
+# Postpend all filenames on the list with common path
+#
+FUNCTION(POSTPEND var postfix)
+   SET(listVar "")
+   FOREACH(f ${ARGN})
+      LIST(APPEND listVar "${f}${postfix}")
+   ENDFOREACH(f)
+   SET(${var} ${listVar} PARENT_SCOPE)
+ENDFUNCTION(POSTPEND)
+
+#
+# Usage
 #     FIND_SOURCES( )
 #
 # Creates HEADER_FILES, EXPORT_HEADER_FILES and SOURCE_FILES variables
