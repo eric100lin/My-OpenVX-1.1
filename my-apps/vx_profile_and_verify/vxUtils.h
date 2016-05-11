@@ -42,9 +42,9 @@ THE SOFTWARE.
 #include <Windows.h>
 #include <wincrypt.h>
 #else
-#include <chrono>
-#include <openssl/hmac.h>
-#include <openssl/md5.h>
+//#include <chrono>
+//#include <openssl/hmac.h>
+//#include <openssl/md5.h>
 #include <unistd.h>
 
 #include <strings.h>
@@ -81,7 +81,7 @@ using namespace std;
 // platform independent functions
 ///////////////////////////////////////////////////////////////////////////
 
-// get clock counter
+/*// get clock counter
 inline int64_t utilGetClockCounter()
 {
 #if _WIN32
@@ -129,7 +129,7 @@ private:
 	vx_uint8 m_hash[16];
 	char m_checkSum[33];
 
-};
+};*/
 
 ///////////////////////////////////////////////////////////////////////////
 // utility functions

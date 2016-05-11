@@ -243,7 +243,7 @@ int convert_image_format(string format){
 	}
 }
 
-CHasher::CHasher(){
+/*CHasher::CHasher(){
 	for (int i = 0; i < 32; i++)
 		m_checkSum[i] = '0';
 	m_checkSum[32] = '\0';
@@ -708,4 +708,4 @@ int PutScalarValueToString(vx_enum type, const void * value, char str[])
 		return -1;
 	}
 	return 0;
-}
+}*/
