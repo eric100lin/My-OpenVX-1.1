@@ -88,7 +88,7 @@ static vx_param_description_t filter_kernel_params[] = {
 vx_cl_kernel_description_t box3x3_clkernel = {
     {
         VX_KERNEL_BOX_3x3,
-        "org.khronos.openvx.box3x3",
+        "org.khronos.openvx.box_3x3",
         NULL,
         filter_kernel_params, dimof(filter_kernel_params),
 		NULL,
@@ -107,7 +107,7 @@ vx_cl_kernel_description_t box3x3_clkernel = {
 vx_cl_kernel_description_t gaussian3x3_clkernel = {
     {
         VX_KERNEL_GAUSSIAN_3x3,
-        "org.khronos.openvx.gaussian3x3",
+        "org.khronos.openvx.gaussian_3x3",
         NULL,
         filter_kernel_params, dimof(filter_kernel_params),
 		NULL,
