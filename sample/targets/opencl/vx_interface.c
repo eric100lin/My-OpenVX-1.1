@@ -229,6 +229,7 @@ vx_status vxTargetInit(vx_target_t *target)
                 }
             }
 
+            char abs_source_path[VX_CL_MAX_PATH];
             /* for each kernel */
             for (k = 0; k < num_cl_kernels; k++)
             {
@@ -241,7 +242,15 @@ vx_status vxTargetInit(vx_target_t *target)
                 VX_PRINT(VX_ZONE_INFO, "Kernel[%u] File: %s\n", k, cl_kernels[k]->sourcepath);
                 VX_PRINT(VX_ZONE_INFO, "Kernel[%u] Name: %s\n", k, cl_kernels[k]->kernelname);
                 VX_PRINT(VX_ZONE_INFO, "Kernel[%u] ID: %s\n", k, cl_kernels[k]->description.name);
-                sources = clLoadSources(cl_kernels[k]->sourcepath, &programSze);
+
+				int cl_dirs_len = strlen(cl_dirs);
+				int sourcepath_len = strlen(cl_kernels[k]->sourcepath);
+				strncpy(abs_source_path, cl_dirs, cl_dirs_len);
+				strncpy(&abs_source_path[cl_dirs_len], cl_kernels[k]->sourcepath, sourcepath_len);
+				abs_source_path[cl_dirs_len+sourcepath_len] = '\0';
+                sources = clLoadSources(abs_source_path, &programSze);
+				VX_PRINT(VX_ZONE_INFO, "clLoadSources programSze:%d\n", programSze);
+
                 /* create a program with this source */
                 cl_kernels[k]->program[p] = clCreateProgramWithSource(context->global[p],
                     1,

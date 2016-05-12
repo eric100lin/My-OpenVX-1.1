@@ -119,7 +119,7 @@ vx_cl_kernel_description_t lut_clkernel = {
         NULL,
         NULL,
     },
-    VX_CL_SOURCE_DIR""FILE_JOINER"vx_lut.cl",
+    FILE_JOINER"vx_lut.cl",
     "vx_lut",
     INIT_PROGRAMS,
     INIT_KERNELS,
