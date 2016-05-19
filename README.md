@@ -105,7 +105,14 @@ cd build\%ANDROID_ABI%\%BUILD_CON%
 cmake %OPENVX_ROOT% -DCMAKE_BUILD_TYPE=%BUILD_CON% -DCMAKE_INSTALL_PREFIX=%OPENVX_INSTALL_ROOT% -DBUILD_X64=0  -DEXPERIMENTAL_USE_OPENMP=1 -DEXPERIMENTAL_USE_OPENCL=1 -DEXPERIMENTAL_USE_TARGET=1 -DCMAKE_TOOLCHAIN_FILE=%OPENVX_ROOT%/cmake_utils/android.toolchain.cmake -DANDROID_NDK=%ANDROID_NDK% -DPROCESSOR_COUNT=4 -G "Unix Makefiles" -DVX_OPENCL_INCLUDE_PATH=%VX_OPENCL_INCLUDE_PATH% -DVX_OPENCL_LIB_PATH=%VX_OPENCL_LIB_PATH% -DBUILD_CON=%BUILD_CON% -DANDROID_ABI=%ANDROID_ABI% -DCMAKE_C_FLAGS="-std=c99 -fPIE" -DCMAKE_CXX_FLAGS="-std=c++11 -fPIE" -DCMAKE_EXE_LINKER_FLAGS="-fPIE -pie"
 make -j8 && make install
 ```
+*Support Hexagon DSP and build with prebuilt OpenCL library on Windows Host using MinGW Make
 
+Same as above, but use different CMake options; env{ANDROID_BUILD_VARIANT} is set by developer during Hexagon Make.d build
+```
+set VX_HEXAGON_LIB_PATH=C:\Qualcomm\Hexagon_SDK\2.0\examples\fastcv\vx_hexagon\%ANDROID_BUILD_VARIANT%\ship\libvx_hexagon_kernels.so
+cmake %OPENVX_ROOT% -DCMAKE_BUILD_TYPE=%BUILD_CON% -DCMAKE_INSTALL_PREFIX=%OPENVX_INSTALL_ROOT% -DBUILD_X64=0  -DEXPERIMENTAL_USE_OPENMP=1 -DEXPERIMENTAL_USE_OPENCL=1 -DEXPERIMENTAL_USE_TARGET=1 -DCMAKE_TOOLCHAIN_FILE=%OPENVX_ROOT%/cmake_utils/android.toolchain.cmake -DANDROID_NDK=%ANDROID_NDK% -DPROCESSOR_COUNT=4 -G "Unix Makefiles" -DVX_OPENCL_INCLUDE_PATH=%VX_OPENCL_INCLUDE_PATH% -DVX_OPENCL_LIB_PATH=%VX_OPENCL_LIB_PATH% -DBUILD_CON=%BUILD_CON% -DANDROID_ABI=%ANDROID_ABI% -DCMAKE_C_FLAGS="-std=c99 -fPIE" -DCMAKE_CXX_FLAGS="-std=c++11 -fPIE" -DCMAKE_EXE_LINKER_FLAGS="-fPIE -pie" -DEXPERIMENTAL_USE_HEXAGON=1
+make -j8 && make install
+```
 # Build OpenVX application
 The OPENVX_ROOT and OPENVX_INSTALL_ROOT environment variable should have been setup upon preceding build process.
 Now setup for runtime environment variable.

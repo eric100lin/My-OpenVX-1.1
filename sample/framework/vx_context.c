@@ -32,7 +32,10 @@ vx_char targetModules[][VX_MAX_TARGET_NAME] = {
     "openvx-opencl",
 #endif
 #if defined(EXPERIMENTAL_USE_OPENMP)
-    "openvx-openmp"
+    "openvx-openmp",
+#endif
+#if defined(EXPERIMENTAL_USE_HEXAGON)
+    "openvx-hexagon",
 #endif
 };
 

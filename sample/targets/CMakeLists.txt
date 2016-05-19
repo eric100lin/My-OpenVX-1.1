@@ -24,3 +24,4 @@
 add_subdirectory( c_model )
 add_subdirectory( opencl )
 add_subdirectory( openmp )
+add_subdirectory( hexagon )
