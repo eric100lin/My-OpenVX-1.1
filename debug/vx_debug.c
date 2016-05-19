@@ -129,6 +129,7 @@ struct vx_string_and_enum_e enumnames[] = {
     _STR2(VX_ZONE_DELAY),
     _STR2(VX_ZONE_TARGET),
     _STR2(VX_ZONE_LOG),
+	_STR2(VX_ZONE_TAR_HEXAGON),
     {"UNKNOWN", -1}, // if the zone is not found, this will be returned.
 };
 

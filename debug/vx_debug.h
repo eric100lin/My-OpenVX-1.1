@@ -69,6 +69,8 @@ enum vx_debug_zone_e {
 
     VX_ZONE_TARGET      = 16,
     VX_ZONE_LOG         = 17,
+	
+	VX_ZONE_TAR_HEXAGON = 18,
 
     VX_ZONE_MAX         = 32
 };
