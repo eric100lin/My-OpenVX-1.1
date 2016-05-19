@@ -10,8 +10,11 @@ Context::Context()
 
 Context::~Context()
 {
+	std::cout << "Before vxReleaseContext" << std::endl;
 	vx_status status = vxReleaseContext(&m_context);
+	std::cout << "vxReleaseContext status:" << status << std::endl;
 	ERROR_CHECK(status);
+	std::cout << "After vxReleaseContext ERROR_CHECK(status)" << std::endl;
 }
 
 vx_status Context::setImmediateBorderMode(vx_border_t *config)
@@ -43,10 +46,15 @@ void Context::selfTest()
 	std::cout << "\tnumKernels: " << numKernels() << std::endl;
 	std::cout << "\tnumModules: " << numModules() << std::endl;
 	std::cout << "\tnumRefs: " << numRefs() << std::endl;
-	std::cout << "\tnumTargets: " << numTargets() << std::endl;
 	std::cout << "\timplementation: " << implementation() << std::endl;
 	std::cout << "\textensions: " << extensions().c_str() << std::endl;
 	std::cout << "\tconvolutionMaxDimension: " << convolutionMaxDimension() << std::endl;
+	
+	int num_target = numTargets();
+	std::cout << "\tnumTargets: " << num_target << std::endl;
+	std::cout << "\tTarget list: " << std::endl;
+	for(int i=0; i<num_target; i++)
+		std::cout << "\t [" << i << "]: " << getTargetName(i).c_str() << std::endl;
 }
 
 vx_uint16 Context::vendorID()
@@ -103,6 +111,21 @@ vx_uint32 Context::numTargets()
 	vx_uint32 targets = 0;
 	vxQueryContext(getVxContext(), VX_CONTEXT_TARGETS, &targets, sizeof(targets));
 	return targets;
+}
+
+std::string Context::getTargetName(int target_index)
+{
+	vx_target target;
+	vx_status status;
+	vx_char target_name[VX_MAX_TARGET_NAME];
+	
+	target = vxGetTargetByIndex(m_context, target_index);
+	GET_STATUS_CHECK(target);
+	
+	status = vxQueryTarget(target, VX_TARGET_ATTRIBUTE_NAME, target_name, VX_MAX_TARGET_NAME);
+	ERROR_CHECK(status);
+	
+	return std::string(target_name);
 }
 #endif
 

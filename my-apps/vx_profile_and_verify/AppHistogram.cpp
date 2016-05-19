@@ -5,7 +5,7 @@ using namespace OpenVX;
 using namespace cv;
 
 AppHistogram::AppHistogram(Context &context)
-	: Application(context), mKernel_e(VX_KERNEL_HISTOGRAM)
+	: Application(context, VX_KERNEL_HISTOGRAM)
 {
 }
 
@@ -19,9 +19,12 @@ void AppHistogram::prepareInput()
 	NULLPTR_CHECK(src.data);
 	resize(src, src, Size(IMG_WIDTH, IMG_HEIGHT));
 	cvtColor(src, src, CV_RGB2GRAY);
+}
 
+void AppHistogram::setup()
+{
 	in = new Image(mContext, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8, src);
-
+	
 	vx_size numBins = NUM_OF_BIN;
 	vx_int32 offset = 0;
 	vx_uint32 range = 180;
@@ -29,9 +32,9 @@ void AppHistogram::prepareInput()
 	GET_STATUS_CHECK(distribution);
 }
 
-void AppHistogram::process()
+void AppHistogram::process(enum Target target_e)
 {
-	Node *node = mGraph->addNode(mKernel_e, TARGET_OPENCL);
+	Node *node = mGraph->addNode(mKernel_e, target_e);
 	node->connect(2, in->getVxImage(), distribution);
 	if (mGraph->verify())
 		mGraph->process();

@@ -30,6 +30,7 @@ static struct { const char * name; Target value; } t_table_constants[] = {
 	{ "khronos.c_model", TARGET_C_MODEL },
 	{ "pc.opencl", TARGET_OPENCL },
 	{ "khronos.openmp", TARGET_OPENMP },
+	{ "android.hexagon", TARGET_HEXAGON },
 	{ NULL, TARGET_UNKNOWN }
 };
 
@@ -80,7 +81,7 @@ static struct { const char * name; vx_kernel_e value; } k_table_constants[] = {
 	{ NULL, VX_KERNEL_MAX_1_0 }
 };
 
-Kernel *Kernel::getKernel(vx_kernel_e kernel_e, enum Target target_e)
+std::string Kernel::getFullKernelName(vx_kernel_e kernel_e, enum Target target_e)
 {
 	for (vx_uint32 t = 0; t_table_constants[t].name; t++) 
 	{
@@ -91,10 +92,17 @@ Kernel *Kernel::getKernel(vx_kernel_e kernel_e, enum Target target_e)
 				if (k_table_constants[k].value == kernel_e) {
 					stringstream ss;
 					ss << t_table_constants[t].name << ":" << k_table_constants[k].name;
-					return new Kernel(ss.str().c_str());
+					return ss.str();
 				}
 			}
 		}
 	}
-	return NULL;
+	ReportError("Kernel not found");
+	return std::string("");
+}
+
+Kernel *Kernel::getKernel(vx_kernel_e kernel_e, enum Target target_e)
+{
+	std::string fullName = getFullKernelName(kernel_e, target_e);
+	return new Kernel(fullName.c_str());
 }

@@ -4,7 +4,7 @@ using namespace OpenVX;
 using namespace cv;
 
 AppTableLookup::AppTableLookup(Context &context)
-	: Application(context), mKernel_e(VX_KERNEL_TABLE_LOOKUP), resultVX(NULL)
+	: Application(context, VX_KERNEL_TABLE_LOOKUP), resultVX(NULL)
 {
 }
 
@@ -18,9 +18,6 @@ void AppTableLookup::prepareInput()
 	NULLPTR_CHECK(src.data);
 	resize(src, src, Size(IMG_WIDTH, IMG_HEIGHT));
 	cvtColor(src, src, CV_RGB2GRAY);
-
-	in = new Image(mContext, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8, src);
-	out = new Image(mContext, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
 
 	lut = vxCreateLUT(mContext.getVxContext(), VX_TYPE_UINT8, LUT_SIZE);
 	GET_STATUS_CHECK(lut);
@@ -40,9 +37,15 @@ void AppTableLookup::prepareInput()
 	ERROR_CHECK(status);
 }
 
-void AppTableLookup::process()
+void AppTableLookup::setup()
 {
-	Node *node = mGraph->addNode(mKernel_e, TARGET_OPENCL);
+	in = new Image(mContext, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8, src);
+	out = new Image(mContext, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+}
+
+void AppTableLookup::process(enum Target target_e)
+{
+	Node *node = mGraph->addNode(mKernel_e, target_e);
 	node->connect(3, in->getVxImage(), lut, out->getVxImage());
 	if (mGraph->verify())
 		mGraph->process();

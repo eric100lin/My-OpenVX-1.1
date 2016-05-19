@@ -3,7 +3,8 @@
 using namespace OpenVX;
 using namespace cv;
 
-Application::Application(Context &context) : mContext(context)
+Application::Application(Context &context, vx_kernel_e kernel_e) 
+	: mContext(context), mKernel_e(kernel_e)
 {
 	mGraph = new Graph(context);
 }
@@ -11,6 +12,11 @@ Application::Application(Context &context) : mContext(context)
 Application::~Application()
 {
 	delete mGraph;
+}
+
+std::string Application::getKernelFullName(enum Target target_e)
+{
+	return Kernel::getFullKernelName(mKernel_e, target_e);
 }
 
 bool Application::verifyTwoMat(Mat inMat, Mat resultMat)

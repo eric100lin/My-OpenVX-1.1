@@ -33,6 +33,7 @@ namespace OpenVX
 		vx_uint32 numRefs();
 #if defined(EXPERIMENTAL_USE_TARGET)
 		vx_uint32 numTargets();
+		std::string getTargetName(int target_index);
 #endif
 		const char* implementation();
 		vx_size extensionSize();

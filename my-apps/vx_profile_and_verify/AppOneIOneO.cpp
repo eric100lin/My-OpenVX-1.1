@@ -4,7 +4,7 @@ using namespace OpenVX;
 using namespace cv;
 
 AppOneIOneO::AppOneIOneO(Context &context, vx_kernel_e kernel_e)
-	: Application(context), mKernel_e(kernel_e), resultVX(NULL)
+	: Application(context, kernel_e), resultVX(NULL)
 {
 }
 
@@ -18,14 +18,17 @@ void AppOneIOneO::prepareInput()
 	NULLPTR_CHECK(lena_src.data);
 	resize(lena_src, lena_src, Size(IMG_WIDTH, IMG_HEIGHT));
 	cvtColor(lena_src, lena_src, CV_RGB2GRAY);
+}
 
+void AppOneIOneO::setup()
+{
 	in = new Image(mContext, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8, lena_src);
 	out = new Image(mContext, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
 }
 
-void AppOneIOneO::process()
+void AppOneIOneO::process(enum Target target_e)
 {
-	Node *node = mGraph->addNode(mKernel_e, TARGET_OPENCL);
+	Node *node = mGraph->addNode(mKernel_e, target_e);
 	node->connect(2, in->getVxImage(), out->getVxImage());
 	if (mGraph->verify())
 		mGraph->process();

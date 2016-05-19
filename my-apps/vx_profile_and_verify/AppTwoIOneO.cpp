@@ -4,7 +4,7 @@ using namespace OpenVX;
 using namespace cv;
 
 AppTwoIOneO::AppTwoIOneO(Context &context, vx_kernel_e kernel_e)
-	: Application(context), mKernel_e(kernel_e), resultVX(NULL)
+	: Application(context, kernel_e), resultVX(NULL)
 {
 }
 
@@ -23,15 +23,18 @@ void AppTwoIOneO::prepareInput()
 	NULLPTR_CHECK(src2.data);
 	resize(src2, src2, Size(IMG_WIDTH, IMG_HEIGHT));
 	cvtColor(src2, src2, CV_RGB2GRAY);
+}
 
+void AppTwoIOneO::setup()
+{
 	in1 = new Image(mContext, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8, src1);
 	in2 = new Image(mContext, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8, src2);
 	out = new Image(mContext, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
 }
 
-void AppTwoIOneO::process()
+void AppTwoIOneO::process(enum Target target_e)
 {
-	Node *node = mGraph->addNode(mKernel_e, TARGET_OPENCL);
+	Node *node = mGraph->addNode(mKernel_e, target_e);
 	node->connect(3, in1->getVxImage(), in2->getVxImage(), out->getVxImage());
 	if (mGraph->verify())
 		mGraph->process();

@@ -16,7 +16,7 @@
 
 namespace OpenVX
 {
-	enum Target { TARGET_C_MODEL, TARGET_OPENCL, TARGET_OPENMP, TARGET_UNKNOWN };
+	enum Target { TARGET_C_MODEL, TARGET_OPENCL, TARGET_OPENMP, TARGET_HEXAGON, TARGET_UNKNOWN };
 	
 	class Context;
 	class Graph;
