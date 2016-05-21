@@ -55,6 +55,17 @@ void AppTableLookup::process(enum Target target_e)
 	mGraph->removeNode(node);
 }
 
+void AppTableLookup::profiling(int n_times, enum Target target_e)
+{
+	Node *node = mGraph->addNode(mKernel_e, target_e);
+	node->connect(3, in->getVxImage(), lut, out->getVxImage());
+	if (!mGraph->verify())
+		return;
+
+	Node *nodes[] = { node };
+	printProfilingResult(n_times, 1, nodes);
+}
+
 bool AppTableLookup::verify()
 {
 	Mat *resultGolden;

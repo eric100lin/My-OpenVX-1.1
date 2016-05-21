@@ -20,6 +20,8 @@ namespace OpenVX
 		void removeNode(Node *node);
 
 		vx_graph getVxGraph() const;
+		
+		vx_perf_t getPerformance() const;
 
 		Context &getContext() const;
 

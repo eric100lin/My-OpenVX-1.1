@@ -38,6 +38,17 @@ void AppOneIOneO::process(enum Target target_e)
 	mGraph->removeNode(node);
 }
 
+void AppOneIOneO::profiling(int n_times, enum Target target_e)
+{
+	Node *node = mGraph->addNode(mKernel_e, target_e);
+	node->connect(2, in->getVxImage(), out->getVxImage());
+	if (!mGraph->verify())
+		return;
+	
+	Node *nodes[] = { node };
+	printProfilingResult(n_times, 1, nodes);
+}
+
 bool AppOneIOneO::verify()
 {
 	Mat *resultGolden;

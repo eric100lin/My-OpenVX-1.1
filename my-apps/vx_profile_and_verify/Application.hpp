@@ -15,6 +15,7 @@ namespace OpenVX
 		Graph *mGraph;
 		vx_kernel_e mKernel_e;
 		bool verifyTwoMat(cv::Mat inMat, cv::Mat resultMat);
+		void printProfilingResult(int n_times, int n_nodes, Node *nodes[]);
 	public:
 		Application(Context &context, vx_kernel_e kernel_e);
 		virtual ~Application();
@@ -23,6 +24,7 @@ namespace OpenVX
 		virtual void prepareInput() = 0;
 		virtual void setup() = 0;
 		virtual void process(enum Target target_e) = 0;
+		virtual void profiling(int n_times, enum Target target_e) = 0;
 		virtual bool verify() = 0;
 		virtual void release() = 0;
 	};
@@ -39,6 +41,7 @@ namespace OpenVX
 		void prepareInput();
 		void setup();
 		void process(enum Target target_e);
+		void profiling(int n_times, enum Target target_e);
 		bool verify();
 		void release();
 	};
@@ -55,6 +58,7 @@ namespace OpenVX
 		void prepareInput();
 		void setup();
 		void process(enum Target target_e);
+		void profiling(int n_times, enum Target target_e);
 		bool verify();
 		void release();
 	};
@@ -72,6 +76,7 @@ namespace OpenVX
 		void prepareInput();
 		void setup();
 		void process(enum Target target_e);
+		void profiling(int n_times, enum Target target_e);
 		bool verify();
 		void release();
 	};
@@ -89,6 +94,7 @@ namespace OpenVX
 		void prepareInput();
 		void setup();
 		void process(enum Target target_e);
+		void profiling(int n_times, enum Target target_e);
 		bool verify();
 		void release();
 	};

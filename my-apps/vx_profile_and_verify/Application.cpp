@@ -1,5 +1,6 @@
 #include "Application.hpp"
 
+#define NS_TO_MS (1000*1000)
 using namespace OpenVX;
 using namespace cv;
 
@@ -17,6 +18,32 @@ Application::~Application()
 std::string Application::getKernelFullName(enum Target target_e)
 {
 	return Kernel::getFullKernelName(mKernel_e, target_e);
+}
+
+void Application::printProfilingResult(int n_times, int n_nodes, Node *nodes[])
+{
+	vx_perf_t *firstTimePerf = new vx_perf_t[n_nodes];
+	
+	mGraph->process();
+	for(int n=0; n<n_nodes; n++)
+		firstTimePerf[n] = nodes[n]->getPerformance();
+	
+	for(int i=0; i<n_times; i++)
+		mGraph->process();
+	
+	for(int n=0; n<n_nodes; n++)
+	{
+		vx_perf_t nodePerf = nodes[n]->getPerformance();
+		std::cout << "\tnode[" << n << "] - "
+				  << "first: " << firstTimePerf[n].tmp/NS_TO_MS << " ms "
+				  << "min: " << nodePerf.min/NS_TO_MS << " ms "
+				  << "max: " << nodePerf.max/NS_TO_MS  << " ms "
+				  << "avg: " << (nodePerf.sum-firstTimePerf[n].tmp)/(n_times*NS_TO_MS) << " ms " 
+				  << std::endl;
+	}
+	
+	for(int n=0; n<n_nodes; n++)
+		mGraph->removeNode(nodes[n]);
 }
 
 bool Application::verifyTwoMat(Mat inMat, Mat resultMat)

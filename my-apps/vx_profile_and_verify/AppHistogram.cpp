@@ -43,6 +43,17 @@ void AppHistogram::process(enum Target target_e)
 	mGraph->removeNode(node);
 }
 
+void AppHistogram::profiling(int n_times, enum Target target_e)
+{
+	Node *node = mGraph->addNode(mKernel_e, target_e);
+	node->connect(2, in->getVxImage(), distribution);
+	if (!mGraph->verify())
+		return;
+
+	Node *nodes[] = { node };
+	printProfilingResult(n_times, 1, nodes);
+}
+
 bool AppHistogram::verify()
 {
 	vx_uint32 resultVX[NUM_OF_BIN], resultGolden[NUM_OF_BIN];

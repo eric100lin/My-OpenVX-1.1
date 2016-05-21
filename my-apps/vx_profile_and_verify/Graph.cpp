@@ -33,6 +33,14 @@ vx_graph Graph::getVxGraph() const
 	return m_graph;
 }
 
+vx_perf_t Graph::getPerformance() const
+{
+	vx_perf_t perf_graph;
+	vx_status status = vxQueryGraph(m_graph, VX_GRAPH_PERFORMANCE, &perf_graph, sizeof(vx_perf_t));
+	ERROR_CHECK(status);
+	return perf_graph;
+}
+
 Context &Graph::getContext() const
 {
 	return m_ontext;
