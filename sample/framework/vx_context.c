@@ -24,6 +24,11 @@
 #include <vx_internal.h>
 #include <ctype.h>
 
+#ifdef EXPERIMENTAL_USE_HEXAGON
+#include <remote.h>
+#define OPENVX_HEXAGON_NAME "openvx-hexagon"
+#endif
+
 const vx_char implementation[VX_MAX_IMPLEMENTATION_NAME] = "khronos.sample";
 
 vx_char targetModules[][VX_MAX_TARGET_NAME] = {
@@ -35,7 +40,7 @@ vx_char targetModules[][VX_MAX_TARGET_NAME] = {
     "openvx-openmp",
 #endif
 #if defined(EXPERIMENTAL_USE_HEXAGON)
-    "openvx-hexagon",
+    OPENVX_HEXAGON_NAME,
 #endif
 };
 
@@ -445,6 +450,10 @@ static vx_context_t *single_context = NULL;
 static vx_sem_t context_lock;
 static vx_sem_t global_lock;
 
+#ifdef EXPERIMENTAL_USE_HEXAGON
+static remote_handle tmp_ph;
+#endif
+
 /* Note: context is an exception in term of error management since it
    returns 0 in case of error. This is due to the fact that error
    objects belong to the context in this implementation. But since
@@ -496,6 +505,9 @@ VX_API_ENTRY vx_context VX_API_CALL vxCreateContext()
                                                   context);
             vxCreateConstErrors(context);
 
+#ifdef EXPERIMENTAL_USE_HEXAGON
+            remote_handle_open((const char *)OPENVX_HEXAGON_NAME, &tmp_ph);
+#endif
             /* load all targets */
             for (t = 0u; t < dimof(targetModules); t++)
             {
@@ -683,6 +695,11 @@ VX_API_ENTRY vx_status VX_API_CALL vxReleaseContext(vx_context *c)
                 if(context->reftable[r])
                     VX_PRINT(VX_ZONE_ERROR,"Reference %d not removed\n", r);
             }
+
+
+#ifdef EXPERIMENTAL_USE_HEXAGON
+            remote_handle_close(tmp_ph);
+#endif
 
             /*! \internal wipe away the context memory first */
             /* Normally destroy sem is part of release reference, but can't for context */

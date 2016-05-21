@@ -166,12 +166,21 @@ if ( EXPERIMENTAL_USE_OPENCL AND NOT USE_POCL_OPENCL)
 endif ( EXPERIMENTAL_USE_OPENCL AND NOT USE_POCL_OPENCL)
 
 if ( ANDROID AND EXPERIMENTAL_USE_HEXAGON )
+  #Check for VX_HEXAGON_LIB_PATH environment variable
   if (DEFINED ENV{VX_HEXAGON_LIB_PATH})
     set( HEXAGON_LIB_PATH $ENV{VX_HEXAGON_LIB_PATH} )
     message( "Use Hexagon library from: " ${HEXAGON_LIB_PATH} )
   else(DEFINED ENV{VX_HEXAGON_LIB_PATH})
     message(FATAL_ERROR "Please set 'VX_HEXAGON_LIB_PATH' env. variable and reconfigure")
   endif (DEFINED ENV{VX_HEXAGON_LIB_PATH})
+  
+  #Check for VX_HEXAGON_REMOTE_PATH environment variable
+  if (DEFINED ENV{VX_HEXAGON_REMOTE_PATH})
+    set( HEXAGON_REMOTE_PATH $ENV{VX_HEXAGON_REMOTE_PATH} )
+    message( "Use Hexagon remote header and library from: " ${HEXAGON_REMOTE_PATH} )
+  else(DEFINED ENV{VX_HEXAGON_REMOTE_PATH})
+    message(FATAL_ERROR "Please set 'VX_HEXAGON_REMOTE_PATH' env. variable and reconfigure")
+  endif (DEFINED ENV{VX_HEXAGON_REMOTE_PATH})
 endif ( ANDROID AND EXPERIMENTAL_USE_HEXAGON)
 
 if (CMAKE_TOOLCHAIN_FILE)
