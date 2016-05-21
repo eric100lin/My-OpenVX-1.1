@@ -573,6 +573,7 @@ void vxInitPerf(vx_perf_t *perf)
 {
     memset(perf, 0, sizeof(vx_perf_t));
     perf->min = UINT64_MAX;
+	perf->max = 0;
 }
 
 void vxPrintQueue(vx_queue_t *q)
