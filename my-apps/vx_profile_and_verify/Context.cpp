@@ -10,11 +10,8 @@ Context::Context()
 
 Context::~Context()
 {
-	std::cout << "Before vxReleaseContext" << std::endl;
 	vx_status status = vxReleaseContext(&m_context);
-	std::cout << "vxReleaseContext status:" << status << std::endl;
 	ERROR_CHECK(status);
-	std::cout << "After vxReleaseContext ERROR_CHECK(status)" << std::endl;
 }
 
 vx_status Context::setImmediateBorderMode(vx_border_t *config)
