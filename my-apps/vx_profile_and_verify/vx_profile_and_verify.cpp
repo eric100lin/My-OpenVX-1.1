@@ -16,8 +16,8 @@ int main(int argc, char **argv)
 		new AppOneIOneO(context, VX_KERNEL_NOT),
 		new AppTwoIOneO(context, VX_KERNEL_AND),
 		new AppTwoIOneO(context, VX_KERNEL_XOR),
-		//new AppOneIOneO(context, VX_KERNEL_BOX_3x3),		//VX_ERROR_NOT_IMPLEMENTED in HEXAGON kernels
-		//new AppOneIOneO(context, VX_KERNEL_GAUSSIAN_3x3),	//VX_ERROR_NOT_IMPLEMENTED in HEXAGON kernels
+		new AppOneIOneO(context, VX_KERNEL_BOX_3x3),
+		new AppOneIOneO(context, VX_KERNEL_GAUSSIAN_3x3),
 		//new AppTwoIOneO(context, VX_KERNEL_OR),			//NO fcv function
 		//new AppTableLookup(context),
 		//new AppHistogram(context),
@@ -41,11 +41,10 @@ int main(int argc, char **argv)
 			
 			apps[i]->process(targets[t]);
 			
-			std::cout << "\tverify ";
 			if (!apps[i]->verify())
-				std::cout << "fail" << std::endl;
+				std::cout << "\tverify fail" << std::endl;
 			else
-				std::cout << "success" << std::endl;
+				std::cout << "\tverify success" << std::endl;
 		}
 		apps[i]->release();
 	}
