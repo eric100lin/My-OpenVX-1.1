@@ -32,7 +32,7 @@
 #include <VX/vx_khr_variants.h>
 #include <vx_debug.h>
 #include <vx_internal.h>
-#include <vx_interface.h>
+#include "vx_interface.h"
 #include <vx_support.h>
 
 static const vx_char name[VX_MAX_TARGET_NAME] = "pc.opencl";

@@ -21,8 +21,8 @@
  * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  */
 
-#ifndef _OPENVX_INTERFACE_H_
-#define _OPENVX_INTERFACE_H_
+#ifndef _VX_TAGET_C_MODEL_INTERFACE_H_
+#define _VX_TAGET_C_MODEL_INTERFACE_H_
 
 #include <c_model.h>
 #include <VX/vx_helper.h>

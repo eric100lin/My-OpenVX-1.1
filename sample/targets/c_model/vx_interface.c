@@ -31,7 +31,7 @@
 #include <VX/vx_helper.h>
 
 #include <vx_internal.h>
-#include <vx_interface.h>
+#include "vx_interface.h"
 
 vx_status VX_CALLBACK vxTilingKernel(vx_node node, vx_reference parameters[], vx_uint32 num);
 

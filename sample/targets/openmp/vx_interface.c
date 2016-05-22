@@ -31,7 +31,7 @@
 #include <VX/vx_helper.h>
 
 #include <vx_internal.h>
-#include <vx_interface.h>
+#include "vx_interface.h"
 
 static const vx_char name[VX_MAX_TARGET_NAME] = "khronos.openmp";
 

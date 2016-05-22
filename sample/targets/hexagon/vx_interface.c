@@ -10,7 +10,7 @@
 #include <vx_debug.h>
 
 #include <vx_internal.h>
-#include <vx_interface.h>
+#include "vx_interface.h"
 #include <hexagon_model.h>
 
 static const vx_char name[VX_MAX_TARGET_NAME] = "android.hexagon";
