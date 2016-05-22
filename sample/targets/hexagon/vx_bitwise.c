@@ -110,7 +110,7 @@ static vx_status VX_CALLBACK vxAndKernel(vx_node node, const vx_reference *param
         vx_image in1 = (vx_image)parameters[0];
         vx_image in2 = (vx_image)parameters[1];
         vx_image output = (vx_image)parameters[2];
-        return vxAnd(in1, in2, output);
+        return vxAnd(node, in1, in2, output);
     }
     return VX_ERROR_INVALID_PARAMETERS;
 }
@@ -134,7 +134,7 @@ static vx_status VX_CALLBACK vxXorKernel(vx_node node, const vx_reference *param
         vx_image in1 = (vx_image)parameters[0];
         vx_image in2 = (vx_image)parameters[1];
         vx_image output = (vx_image)parameters[2];
-        return vxXor(in1, in2, output);
+        return vxXor(node, in1, in2, output);
     }
     return VX_ERROR_INVALID_PARAMETERS;
 }
@@ -215,7 +215,7 @@ static vx_status VX_CALLBACK vxNotKernel(vx_node node, const vx_reference *param
     {
         vx_image input = (vx_image)parameters[0];
         vx_image output = (vx_image)parameters[1];
-        return vxNot(input, output);
+        return vxNot(node, input, output);
     }
     return VX_ERROR_INVALID_PARAMETERS;
 }

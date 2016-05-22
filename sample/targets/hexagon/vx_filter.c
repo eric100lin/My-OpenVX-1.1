@@ -21,7 +21,7 @@ static vx_status VX_CALLBACK vxMedian3x3Kernel(vx_node node, const vx_reference 
         status = vxQueryNode(node, VX_NODE_BORDER, &bordermode, sizeof(bordermode));
         if (status == VX_SUCCESS)
         {
-            status = vxMedian3x3(src, dst, &bordermode);
+            status = vxMedian3x3(node, src, dst, &bordermode);
         }
     }
     return status;
@@ -38,7 +38,7 @@ static vx_status VX_CALLBACK vxBox3x3Kernel(vx_node node, const vx_reference *pa
         status = vxQueryNode(node, VX_NODE_BORDER, &bordermode, sizeof(bordermode));
         if (status == VX_SUCCESS)
         {
-            status = vxBox3x3(src, dst, &bordermode);
+            status = vxBox3x3(node, src, dst, &bordermode);
         }
     }
     return status;
@@ -55,7 +55,7 @@ static vx_status VX_CALLBACK vxGaussian3x3Kernel(vx_node node, const vx_referenc
         status = vxQueryNode(node, VX_NODE_BORDER, &bordermode, sizeof(bordermode));
         if (status == VX_SUCCESS)
         {
-            status = vxGaussian3x3(src, dst, &bordermode);
+            status = vxGaussian3x3(node, src, dst, &bordermode);
         }
     }
     return status;

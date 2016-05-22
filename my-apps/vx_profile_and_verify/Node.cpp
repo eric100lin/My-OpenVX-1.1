@@ -28,6 +28,14 @@ vx_perf_t Node::getPerformance() const
 	return perf_node;
 }
 
+vx_perf_t Node::getComputationTime() const
+{
+	vx_perf_t perf_node;
+	vx_status status = vxQueryNode(m_node, VX_NODE_COMPUTATION_TIME, &perf_node, sizeof(vx_perf_t));
+	ERROR_CHECK(status);
+	return perf_node;
+}
+
 void Node::connect(int n, ...)
 {
 	va_list parameter_list;

@@ -22,11 +22,15 @@ std::string Application::getKernelFullName(enum Target target_e)
 
 void Application::printProfilingResult(int n_times, int n_nodes, Node *nodes[])
 {
+	vx_perf_t *firstTimeCompute = new vx_perf_t[n_nodes];
 	vx_perf_t *firstTimePerf = new vx_perf_t[n_nodes];
 	
 	mGraph->process();
 	for(int n=0; n<n_nodes; n++)
+	{
 		firstTimePerf[n] = nodes[n]->getPerformance();
+		firstTimeCompute[n] = nodes[n]->getComputationTime();
+	}
 	
 	for(int i=0; i<n_times; i++)
 		mGraph->process();
@@ -34,18 +38,31 @@ void Application::printProfilingResult(int n_times, int n_nodes, Node *nodes[])
 	for(int n=0; n<n_nodes; n++)
 	{
 		vx_perf_t nodePerf = nodes[n]->getPerformance();
-		std::cout << "\tnode[" << n << "] - "
+		vx_perf_t nodeCompute = nodes[n]->getComputationTime();
+		std::cout << "\tnode[" << n << "] - " << std::endl
+				  << "\t total " 
 				  << "first: " << firstTimePerf[n].tmp/NS_TO_MS << " ms "
 				  << "min: " << nodePerf.min/NS_TO_MS << " ms "
 				  << "max: " << nodePerf.max/NS_TO_MS  << " ms "
-				  << "avg: " << (nodePerf.sum-firstTimePerf[n].tmp)/(n_times*NS_TO_MS) << " ms " 
-				  << std::endl;
+				  << "avg: " << (nodePerf.sum-firstTimePerf[n].tmp)/(n_times*NS_TO_MS) << " ms " << std::endl
+				  << "\t compute " 
+				  << "first: " << firstTimeCompute[n].tmp/NS_TO_MS << " ms "
+				  << "min: " << nodeCompute.min/NS_TO_MS << " ms "
+				  << "max: " << nodeCompute.max/NS_TO_MS  << " ms "
+				  << "avg: " << (nodeCompute.sum-firstTimeCompute[n].tmp)/(n_times*NS_TO_MS) << " ms " << std::endl
+				  << "\t transfer " 
+				  << "first: " << (firstTimePerf[n].tmp-firstTimeCompute[n].tmp)/NS_TO_MS << " ms "
+				  << "min: " << (nodePerf.min-nodeCompute.min)/NS_TO_MS << " ms "
+				  << "max: " << (nodePerf.max-nodeCompute.min)/NS_TO_MS  << " ms "
+				  << "avg: " << ((nodePerf.sum-firstTimePerf[n].tmp)-
+								 (nodeCompute.sum-firstTimeCompute[n].tmp))/(n_times*NS_TO_MS) << " ms " << std::endl;
 	}
 	
 	for(int n=0; n<n_nodes; n++)
 		mGraph->removeNode(nodes[n]);
 	
 	delete [] firstTimePerf;
+	delete [] firstTimeCompute;
 }
 
 bool Application::verifyTwoMat(Mat inMat, Mat resultMat)

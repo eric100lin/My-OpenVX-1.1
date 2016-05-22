@@ -18,6 +18,8 @@ namespace OpenVX
 		vx_node getVxNode() const;
 		
 		vx_perf_t getPerformance() const;
+		
+		vx_perf_t getComputationTime() const;
 
 		void connect(int n, ...);
 	};

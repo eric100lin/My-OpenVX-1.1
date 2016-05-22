@@ -85,6 +85,16 @@ vx_status vxSetChildGraphOfNode(vx_node node, vx_graph graph);
  */
 vx_graph vxGetChildGraphOfNode(vx_node node);
 
+/*! \brief Used to call vxStartCapture() without the knowledge of 
+ *         the vx_node data structure
+ */
+void vxNodeStartTimeCapture(vx_node node);
+
+/*! \brief Used to call vxStopCapture() without the knowledge of 
+ *         the vx_node data structure
+ */
+void vxNodeStopTimeCapture(vx_node node);
+
 #ifdef __cplusplus
 }
 #endif
