@@ -74,5 +74,8 @@ void AppTwoIOneO::release()
 	delete in2;
 	delete out;
 	if (resultVX != NULL)
+	{
 		delete resultVX;
+		resultVX = NULL;
+	}
 }

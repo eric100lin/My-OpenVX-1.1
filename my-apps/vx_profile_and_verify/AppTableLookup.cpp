@@ -86,5 +86,8 @@ void AppTableLookup::release()
 	delete in;
 	delete out;
 	if (resultVX != NULL)
+	{
 		delete resultVX;
+		resultVX = NULL;
+	}
 }
