@@ -44,6 +44,8 @@ void Application::printProfilingResult(int n_times, int n_nodes, Node *nodes[])
 	
 	for(int n=0; n<n_nodes; n++)
 		mGraph->removeNode(nodes[n]);
+	
+	delete [] firstTimePerf;
 }
 
 bool Application::verifyTwoMat(Mat inMat, Mat resultMat)

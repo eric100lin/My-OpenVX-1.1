@@ -47,16 +47,16 @@ int main(int argc, char **argv)
 				std::cout << "\tverify fail" << std::endl;
 			else
 				std::cout << "\tverify success" << std::endl;
+			
+			apps[i]->release();
 		}
-		apps[i]->release();
 	}
 	std::cout << std::endl;
 	
-	std::cout << "Profile " << n_apps << "apps over " << N_TIMES << " loop:" << std::endl;
+	std::cout << "Profile " << n_apps << " apps over " << N_TIMES << " loop:" << std::endl;
 	for (int i = 0; i < n_apps; i++)
 	{
 		std::cout << "apps[" << i << "]:" << std::endl;
-		apps[i]->prepareInput();
 		for (int t = 0; t < n_targets; t++)
 		{
 			std::cout << " Target[" << t << "]: " << 
@@ -65,8 +65,9 @@ int main(int argc, char **argv)
 			apps[i]->setup();
 			
 			apps[i]->profiling(N_TIMES, targets[t]);
+			
+			apps[i]->release();
 		}
-		apps[i]->release();
 	}
 	std::cout << std::endl;
 
