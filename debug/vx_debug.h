@@ -75,10 +75,14 @@ enum vx_debug_zone_e {
     VX_ZONE_MAX         = 32
 };
 
+#ifdef OPENVX_DEBUGGING
 #if defined(_WIN32) && !defined(__GNUC__)
-#define VX_PRINT(zone, message, ...) do { vx_print(zone, "[%s:%u] "message, __FUNCTION__, __LINE__, __VA_ARGS__); } while (0)
+	#define VX_PRINT(zone, message, ...) do { vx_print(zone, "[%s:%u] "message, __FUNCTION__, __LINE__, __VA_ARGS__); } while (0)
 #else
-#define VX_PRINT(zone, message, ...) do { vx_print(zone, "[%s:%u] "message, __FUNCTION__, __LINE__, ## __VA_ARGS__); } while (0)
+	#define VX_PRINT(zone, message, ...) do { vx_print(zone, "[%s:%u] "message, __FUNCTION__, __LINE__, ## __VA_ARGS__); } while (0)
+#endif
+#else
+	#define VX_PRINT(zone, message, ...) 
 #endif
 
 /*! \def VX_PRINT
