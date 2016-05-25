@@ -5,7 +5,7 @@ using namespace OpenVX;
 using namespace cv;
 
 AppHistogram::AppHistogram(Context &context)
-	: Application(context, 1, VX_KERNEL_HISTOGRAM)
+	: Application(context, APP_ONE_NODE, VX_KERNEL_HISTOGRAM)
 {
 }
 
@@ -34,7 +34,7 @@ void AppHistogram::setup()
 
 void AppHistogram::process(int variant_numer)
 {
-	enum Target targets[1];
+	enum Target targets[APP_ONE_NODE];
 	getVariantTarget(variant_numer, targets);
 	Node *node = mGraph->addNode(mKernel_es[0], targets[0]);
 	node->connect(2, in->getVxImage(), distribution);
@@ -47,7 +47,7 @@ void AppHistogram::process(int variant_numer)
 
 void AppHistogram::profiling(int n_times, int variant_numer)
 {
-	enum Target targets[1];
+	enum Target targets[APP_ONE_NODE];
 	getVariantTarget(variant_numer, targets);
 	Node *node = mGraph->addNode(mKernel_es[0], targets[0]);
 	node->connect(2, in->getVxImage(), distribution);
@@ -55,7 +55,7 @@ void AppHistogram::profiling(int n_times, int variant_numer)
 		return;
 
 	Node *nodes[] = { node };
-	printProfilingResult(n_times, 1, nodes);
+	printProfilingResult(n_times, APP_ONE_NODE, nodes);
 }
 
 bool AppHistogram::verify()

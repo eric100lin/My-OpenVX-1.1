@@ -6,6 +6,10 @@
 #define SRC_IMG_NAME1 "lena.jpg"
 #define SRC_IMG_NAME2 "baboon.jpg"
 
+#define APP_ONE_NODE (1)
+#define APP_TWO_NODE (2)
+#define APP_THREE_NODE (3)
+
 namespace OpenVX
 {
 	class Application
@@ -71,6 +75,8 @@ namespace OpenVX
 		bool verify();
 		void release();
 		void releaseInput();
+
+		static void generateApps(Context &context, std::vector<Application *> *apps);
 	};
 
 	class AppTableLookup : public Application
@@ -130,6 +136,48 @@ namespace OpenVX
 		void release();
 		void releaseInput();
 		
+		static void generateApps(Context &context, std::vector<Application *> *apps);
+	};
+
+	class App2Node_2I1O_1I1O : public Application
+	{
+		cv::Mat src1, src2, *resultVX;
+		Image *in1, *in2, *out;
+		VirtualImage *tmp;
+
+	public:
+		App2Node_2I1O_1I1O(Context &context, vx_kernel_e kernel_e1, vx_kernel_e kernel_e2);
+		virtual ~App2Node_2I1O_1I1O();
+
+		void prepareInput();
+		void setup();
+		void process(int variant_numer);
+		void profiling(int n_times, int variant_numer);
+		bool verify();
+		void release();
+		void releaseInput();
+
+		static void generateApps(Context &context, std::vector<Application *> *apps);
+	};
+
+	class App3Node_1I1O_1I1O_2I1O : public Application
+	{
+		cv::Mat src1, src2, *resultVX;
+		Image *in1, *in2, *out;
+		VirtualImage *tmp1, *tmp2;
+
+	public:
+		App3Node_1I1O_1I1O_2I1O(Context &context, vx_kernel_e kernel_e1, vx_kernel_e kernel_e2, vx_kernel_e kernel_e3);
+		virtual ~App3Node_1I1O_1I1O_2I1O();
+
+		void prepareInput();
+		void setup();
+		void process(int variant_numer);
+		void profiling(int n_times, int variant_numer);
+		bool verify();
+		void release();
+		void releaseInput();
+
 		static void generateApps(Context &context, std::vector<Application *> *apps);
 	};
 }

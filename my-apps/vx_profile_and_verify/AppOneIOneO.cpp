@@ -4,7 +4,7 @@ using namespace OpenVX;
 using namespace cv;
 
 AppOneIOneO::AppOneIOneO(Context &context, vx_kernel_e kernel_e)
-	: Application(context, 1, kernel_e), resultVX(NULL)
+	: Application(context, APP_ONE_NODE, kernel_e), resultVX(NULL)
 {
 }
 
@@ -28,7 +28,7 @@ void AppOneIOneO::setup()
 
 void AppOneIOneO::process(int variant_numer)
 {
-	enum Target targets[1];
+	enum Target targets[APP_ONE_NODE];
 	getVariantTarget(variant_numer, targets);
 	Node *node = mGraph->addNode(mKernel_es[0], targets[0]);
 	node->connect(2, in->getVxImage(), out->getVxImage());
@@ -42,7 +42,7 @@ void AppOneIOneO::process(int variant_numer)
 
 void AppOneIOneO::profiling(int n_times, int variant_numer)
 {
-	enum Target targets[1];
+	enum Target targets[APP_ONE_NODE];
 	getVariantTarget(variant_numer, targets);
 	Node *node = mGraph->addNode(mKernel_es[0], targets[0]);
 	node->connect(2, in->getVxImage(), out->getVxImage());
@@ -50,7 +50,7 @@ void AppOneIOneO::profiling(int n_times, int variant_numer)
 		return;
 	
 	Node *nodes[] = { node };
-	printProfilingResult(n_times, 1, nodes);
+	printProfilingResult(n_times, APP_ONE_NODE, nodes);
 }
 
 bool AppOneIOneO::verify()
@@ -88,9 +88,9 @@ void AppOneIOneO::generateApps(Context &context, std::vector<Application *> *app
 {
 	vx_kernel_e kernels[] = { VX_KERNEL_NOT, VX_KERNEL_BOX_3x3, VX_KERNEL_GAUSSIAN_3x3 };
 	int n_kernels = sizeof(kernels) / sizeof(kernels[0]);
-#ifdef EXPERIMENTAL_USE_HEXAGON	&& EXPERIMENTAL_USE_OPENCL
+#if defined(EXPERIMENTAL_USE_HEXAGON) && defined(EXPERIMENTAL_USE_OPENCL)
 	int node_index = 0, support_target = 3;
-#elif EXPERIMENTAL_USE_OPENCL
+#elif defined(EXPERIMENTAL_USE_OPENCL)
 	int node_index = 0, support_target = 2;
 #else
 	int node_index = 0, support_target = 1;
@@ -99,9 +99,9 @@ void AppOneIOneO::generateApps(Context &context, std::vector<Application *> *app
 	for(int i=0; i<n_kernels; i++)
 	{
 		AppOneIOneO *app = new AppOneIOneO(context, kernels[i]);
-#ifdef EXPERIMENTAL_USE_HEXAGON	&& EXPERIMENTAL_USE_OPENCL
+#if defined(EXPERIMENTAL_USE_HEXAGON) && defined(EXPERIMENTAL_USE_OPENCL)
 		app->setSupportTargets(node_index, support_target, TARGET_C_MODEL, TARGET_OPENCL, TARGET_HEXAGON);
-#elif EXPERIMENTAL_USE_OPENCL
+#elif defined(EXPERIMENTAL_USE_OPENCL)
 		app->setSupportTargets(node_index, support_target, TARGET_C_MODEL, TARGET_OPENCL);
 #else
 		app->setSupportTargets(node_index, support_target, TARGET_C_MODEL);

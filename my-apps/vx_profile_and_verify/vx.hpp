@@ -7,6 +7,7 @@
 #endif
 #include "vxUtils.h"
 
+#include <stdarg.h>
 #include <iostream>
 #include <string>
 #include <sstream>

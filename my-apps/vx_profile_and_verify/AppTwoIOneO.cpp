@@ -4,7 +4,7 @@ using namespace OpenVX;
 using namespace cv;
 
 AppTwoIOneO::AppTwoIOneO(Context &context, vx_kernel_e kernel_e)
-	: Application(context, 1, kernel_e), resultVX(NULL)
+	: Application(context, APP_ONE_NODE, kernel_e), resultVX(NULL)
 {
 }
 
@@ -34,7 +34,7 @@ void AppTwoIOneO::setup()
 
 void AppTwoIOneO::process(int variant_numer)
 {
-	enum Target targets[1];
+	enum Target targets[APP_ONE_NODE];
 	getVariantTarget(variant_numer, targets);
 	
 	Node *node = mGraph->addNode(mKernel_es[0], targets[0]);
@@ -49,7 +49,7 @@ void AppTwoIOneO::process(int variant_numer)
 
 void AppTwoIOneO::profiling(int n_times, int variant_numer)
 {
-	enum Target targets[1];
+	enum Target targets[APP_ONE_NODE];
 	getVariantTarget(variant_numer, targets);
 	
 	Node *node = mGraph->addNode(mKernel_es[0], targets[0]);
@@ -58,7 +58,7 @@ void AppTwoIOneO::profiling(int n_times, int variant_numer)
 		return;
 
 	Node *nodes[] = { node };
-	printProfilingResult(n_times, 1, nodes);
+	printProfilingResult(n_times, APP_ONE_NODE, nodes);
 }
 
 bool AppTwoIOneO::verify()
@@ -71,7 +71,9 @@ bool AppTwoIOneO::verify()
 	out->getCvMat(&resultGolden);
 	mGraph->removeNode(node);
 
-	return verifyTwoMat(*resultGolden, *resultVX);
+	bool result = verifyTwoMat(*resultGolden, *resultVX);
+	delete resultGolden;
+	return result;
 }
 
 void AppTwoIOneO::release()
@@ -90,4 +92,30 @@ void AppTwoIOneO::releaseInput()
 {
 	src1.release();
 	src2.release();
+}
+
+void AppTwoIOneO::generateApps(Context &context, std::vector<Application *> *apps)
+{
+	vx_kernel_e kernels[] = { VX_KERNEL_AND, VX_KERNEL_XOR };
+	int n_kernels = sizeof(kernels) / sizeof(kernels[0]);
+#if defined(EXPERIMENTAL_USE_HEXAGON) && defined(EXPERIMENTAL_USE_OPENCL)
+	int node_index = 0, support_target = 3;
+#elif defined(EXPERIMENTAL_USE_OPENCL)
+	int node_index = 0, support_target = 2;
+#else
+	int node_index = 0, support_target = 1;
+#endif
+
+	for (int i = 0; i<n_kernels; i++)
+	{
+		AppTwoIOneO *app = new AppTwoIOneO(context, kernels[i]);
+#if defined(EXPERIMENTAL_USE_HEXAGON) && defined(EXPERIMENTAL_USE_OPENCL)
+		app->setSupportTargets(node_index, support_target, TARGET_C_MODEL, TARGET_OPENCL, TARGET_HEXAGON);
+#elif defined(EXPERIMENTAL_USE_OPENCL)
+		app->setSupportTargets(node_index, support_target, TARGET_C_MODEL, TARGET_OPENCL);
+#else
+		app->setSupportTargets(node_index, support_target, TARGET_C_MODEL);
+#endif
+		apps->push_back(app);
+	}
 }

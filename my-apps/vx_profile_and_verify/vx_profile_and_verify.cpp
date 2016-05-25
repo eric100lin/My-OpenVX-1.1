@@ -24,7 +24,9 @@ int main(int argc, char **argv)
 
 	std::vector<Application *> apps;
 	AppOneIOneO::generateApps(context, &apps);
+	AppTwoIOneO::generateApps(context, &apps);
 	App2Node_1I1O_1I1O::generateApps(context, &apps);
+	App2Node_2I1O_1I1O::generateApps(context, &apps);
 	
 	//apps.push_back(new AppTwoIOneO(context, VX_KERNEL_OR));		//NO fcv function
 	//apps.push_back(new AppTableLookup(context));	//Not passed

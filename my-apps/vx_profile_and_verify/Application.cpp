@@ -13,7 +13,8 @@ Application::Application(Context &context, int n_kernels, ...)
 	va_start(parameter_list, n_kernels);
 	for(int i=0; i<n_kernels; i++)
 	{
-		vx_kernel_e kernel_e = va_arg(parameter_list, vx_kernel_e);
+		int int_kernel_e = va_arg(parameter_list, int);
+		vx_kernel_e kernel_e = static_cast<vx_kernel_e>(int_kernel_e);
 		mKernel_es.push_back(kernel_e);
 		support_targets.insert( std::make_pair( i, std::vector<enum Target>()));
 	}
@@ -31,8 +32,9 @@ void Application::setSupportTargets(int kernel_index, int n_targets, ...)
 	va_start(parameter_list, n_targets);
 	for(int i=0; i<n_targets; i++)
 	{
-		enum Target target = va_arg(parameter_list, enum Target);
-		support_targets[kernel_index].push_back(target);
+		int int_target_e = va_arg(parameter_list, int);
+		Target target_e = static_cast<Target>(int_target_e);
+		support_targets[kernel_index].push_back(target_e);
 	}
 	va_end(parameter_list);
 }
@@ -97,10 +99,10 @@ void Application::printProfilingResult(int n_times, int n_nodes, Node *nodes[])
 
 	graphPref = mGraph->getPerformance();
 	std::cout << "   "
-		<< "first: " << graphPref.tmp / NS_TO_MS << " ms "
+		<< "first: " << firstTimePerfG.tmp / NS_TO_MS << " ms "
 		<< "min: " << graphPref.min / NS_TO_MS << " ms "
 		<< "max: " << graphPref.max / NS_TO_MS << " ms "
-		<< "avg: " << (graphPref.sum - firstTimePerfG.tmp) / (n_times*NS_TO_MS) << " ms " << std::endl;
+		<< "avg: " << (graphPref.sum - firstTimePerfG.sum) / (n_times*NS_TO_MS) << " ms " << std::endl;
 
 	for(int n=0; n<n_nodes; n++)
 	{
@@ -111,18 +113,18 @@ void Application::printProfilingResult(int n_times, int n_nodes, Node *nodes[])
 				  << "first: " << firstTimePerfN[n].tmp/NS_TO_MS << " ms "
 				  << "min: "   << nodePerf.min/NS_TO_MS << " ms "
 				  << "max: "   << nodePerf.max/NS_TO_MS  << " ms "
-				  << "avg: "   << (nodePerf.sum-firstTimePerfN[n].tmp)/(n_times*NS_TO_MS) << " ms " << std::endl
+				  << "avg: "   << (nodePerf.sum-firstTimePerfN[n].sum)/(n_times*NS_TO_MS) << " ms " << std::endl
 				  << "\t compute  " 
 				  << "first: " << firstTimeComputeN[n].tmp/NS_TO_MS << " ms "
 				  << "min: "   << nodeCompute.min/NS_TO_MS << " ms "
 				  << "max: "   << nodeCompute.max/NS_TO_MS  << " ms "
-				  << "avg: "   << (nodeCompute.sum-firstTimeComputeN[n].tmp)/(n_times*NS_TO_MS) << " ms " << std::endl
+				  << "avg: "   << (nodeCompute.sum-firstTimeComputeN[n].sum)/(n_times*NS_TO_MS) << " ms " << std::endl
 				  << "\t transfer " 
 				  << "first: " << (firstTimePerfN[n].tmp-firstTimeComputeN[n].tmp)/NS_TO_MS << " ms "
 				  << "min: "   << (nodePerf.min-nodeCompute.min)/NS_TO_MS << " ms "
 				  << "max: "   << (nodePerf.max-nodeCompute.min)/NS_TO_MS  << " ms "
-				  << "avg: "   << ((nodePerf.sum-firstTimePerfN[n].tmp)-
-								                   (nodeCompute.sum-firstTimeComputeN[n].tmp))/(n_times*NS_TO_MS) << " ms " 
+				  << "avg: "   << ((nodePerf.sum-firstTimePerfN[n].sum)-
+								   (nodeCompute.sum-firstTimeComputeN[n].sum))/(n_times*NS_TO_MS) << " ms "
 				  << std::endl;
 	}
 	

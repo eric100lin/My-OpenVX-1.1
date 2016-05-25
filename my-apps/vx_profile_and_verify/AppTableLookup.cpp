@@ -4,7 +4,7 @@ using namespace OpenVX;
 using namespace cv;
 
 AppTableLookup::AppTableLookup(Context &context)
-	: Application(context, 1, VX_KERNEL_TABLE_LOOKUP), resultVX(NULL)
+	: Application(context, APP_ONE_NODE, VX_KERNEL_TABLE_LOOKUP), resultVX(NULL)
 {
 }
 
@@ -45,7 +45,7 @@ void AppTableLookup::setup()
 
 void AppTableLookup::process(int variant_numer)
 {
-	enum Target targets[1];
+	enum Target targets[APP_ONE_NODE];
 	getVariantTarget(variant_numer, targets);
 	Node *node = mGraph->addNode(mKernel_es[0], targets[0]);
 	node->connect(3, in->getVxImage(), lut, out->getVxImage());
@@ -59,7 +59,7 @@ void AppTableLookup::process(int variant_numer)
 
 void AppTableLookup::profiling(int n_times, int variant_numer)
 {
-	enum Target targets[1];
+	enum Target targets[APP_ONE_NODE];
 	getVariantTarget(variant_numer, targets);
 	Node *node = mGraph->addNode(mKernel_es[0], targets[0]);
 	node->connect(3, in->getVxImage(), lut, out->getVxImage());
@@ -67,7 +67,7 @@ void AppTableLookup::profiling(int n_times, int variant_numer)
 		return;
 
 	Node *nodes[] = { node };
-	printProfilingResult(n_times, 1, nodes);
+	printProfilingResult(n_times, APP_ONE_NODE, nodes);
 }
 
 bool AppTableLookup::verify()
