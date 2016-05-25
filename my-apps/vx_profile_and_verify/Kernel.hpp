@@ -21,6 +21,8 @@ namespace OpenVX
 		
 		static Kernel *getKernel(vx_kernel_e kernel_e, enum Target target_e);
 		
+		static std::string getKernelTypeName(vx_kernel_e kernel_e);
+
 		static std::string getFullKernelName(vx_kernel_e kernel_e, enum Target target_e);
 	};
 

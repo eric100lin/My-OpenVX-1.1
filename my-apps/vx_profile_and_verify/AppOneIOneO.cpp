@@ -4,7 +4,7 @@ using namespace OpenVX;
 using namespace cv;
 
 AppOneIOneO::AppOneIOneO(Context &context, vx_kernel_e kernel_e)
-	: Application(context, kernel_e), resultVX(NULL)
+	: Application(context, 1, kernel_e), resultVX(NULL)
 {
 }
 
@@ -26,9 +26,11 @@ void AppOneIOneO::setup()
 	out = new Image(mContext, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
 }
 
-void AppOneIOneO::process(enum Target target_e)
+void AppOneIOneO::process(int variant_numer)
 {
-	Node *node = mGraph->addNode(mKernel_e, target_e);
+	enum Target targets[1];
+	getVariantTarget(variant_numer, targets);
+	Node *node = mGraph->addNode(mKernel_es[0], targets[0]);
 	node->connect(2, in->getVxImage(), out->getVxImage());
 	if (mGraph->verify())
 		mGraph->process();
@@ -38,9 +40,11 @@ void AppOneIOneO::process(enum Target target_e)
 	mGraph->removeNode(node);
 }
 
-void AppOneIOneO::profiling(int n_times, enum Target target_e)
+void AppOneIOneO::profiling(int n_times, int variant_numer)
 {
-	Node *node = mGraph->addNode(mKernel_e, target_e);
+	enum Target targets[1];
+	getVariantTarget(variant_numer, targets);
+	Node *node = mGraph->addNode(mKernel_es[0], targets[0]);
 	node->connect(2, in->getVxImage(), out->getVxImage());
 	if (!mGraph->verify())
 		return;
@@ -52,14 +56,16 @@ void AppOneIOneO::profiling(int n_times, enum Target target_e)
 bool AppOneIOneO::verify()
 {
 	Mat *resultGolden;
-	Node *node = mGraph->addNode(mKernel_e, TARGET_C_MODEL);
+	Node *node = mGraph->addNode(mKernel_es[0], TARGET_C_MODEL);
 	node->connect(2, in->getVxImage(), out->getVxImage());
 	if (mGraph->verify())
 		mGraph->process();
 	out->getCvMat(&resultGolden);
 	mGraph->removeNode(node);
 
-	return verifyTwoMat(*resultGolden, *resultVX);
+	bool result = verifyTwoMat(*resultGolden, *resultVX);
+	delete resultGolden;
+	return result;
 }
 
 void AppOneIOneO::release()
@@ -70,5 +76,36 @@ void AppOneIOneO::release()
 	{
 		delete resultVX;
 		resultVX = NULL;
+	}
+}
+
+void AppOneIOneO::releaseInput()
+{
+	lena_src.release();
+}
+
+void AppOneIOneO::generateApps(Context &context, std::vector<Application *> *apps)
+{
+	vx_kernel_e kernels[] = { VX_KERNEL_NOT, VX_KERNEL_BOX_3x3, VX_KERNEL_GAUSSIAN_3x3 };
+	int n_kernels = sizeof(kernels) / sizeof(kernels[0]);
+#ifdef EXPERIMENTAL_USE_HEXAGON	&& EXPERIMENTAL_USE_OPENCL
+	int node_index = 0, support_target = 3;
+#elif EXPERIMENTAL_USE_OPENCL
+	int node_index = 0, support_target = 2;
+#else
+	int node_index = 0, support_target = 1;
+#endif
+
+	for(int i=0; i<n_kernels; i++)
+	{
+		AppOneIOneO *app = new AppOneIOneO(context, kernels[i]);
+#ifdef EXPERIMENTAL_USE_HEXAGON	&& EXPERIMENTAL_USE_OPENCL
+		app->setSupportTargets(node_index, support_target, TARGET_C_MODEL, TARGET_OPENCL, TARGET_HEXAGON);
+#elif EXPERIMENTAL_USE_OPENCL
+		app->setSupportTargets(node_index, support_target, TARGET_C_MODEL, TARGET_OPENCL);
+#else
+		app->setSupportTargets(node_index, support_target, TARGET_C_MODEL);
+#endif
+		apps->push_back(app);
 	}
 }

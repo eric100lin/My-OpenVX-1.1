@@ -4,7 +4,7 @@ using namespace OpenVX;
 using namespace cv;
 
 AppTwoIOneO::AppTwoIOneO(Context &context, vx_kernel_e kernel_e)
-	: Application(context, kernel_e), resultVX(NULL)
+	: Application(context, 1, kernel_e), resultVX(NULL)
 {
 }
 
@@ -32,9 +32,12 @@ void AppTwoIOneO::setup()
 	out = new Image(mContext, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
 }
 
-void AppTwoIOneO::process(enum Target target_e)
+void AppTwoIOneO::process(int variant_numer)
 {
-	Node *node = mGraph->addNode(mKernel_e, target_e);
+	enum Target targets[1];
+	getVariantTarget(variant_numer, targets);
+	
+	Node *node = mGraph->addNode(mKernel_es[0], targets[0]);
 	node->connect(3, in1->getVxImage(), in2->getVxImage(), out->getVxImage());
 	if (mGraph->verify())
 		mGraph->process();
@@ -44,9 +47,12 @@ void AppTwoIOneO::process(enum Target target_e)
 	mGraph->removeNode(node);
 }
 
-void AppTwoIOneO::profiling(int n_times, enum Target target_e)
+void AppTwoIOneO::profiling(int n_times, int variant_numer)
 {
-	Node *node = mGraph->addNode(mKernel_e, target_e);
+	enum Target targets[1];
+	getVariantTarget(variant_numer, targets);
+	
+	Node *node = mGraph->addNode(mKernel_es[0], targets[0]);
 	node->connect(3, in1->getVxImage(), in2->getVxImage(), out->getVxImage());
 	if (!mGraph->verify())
 		return;
@@ -58,7 +64,7 @@ void AppTwoIOneO::profiling(int n_times, enum Target target_e)
 bool AppTwoIOneO::verify()
 {
 	Mat *resultGolden;
-	Node *node = mGraph->addNode(mKernel_e, TARGET_C_MODEL);
+	Node *node = mGraph->addNode(mKernel_es[0], TARGET_C_MODEL);
 	node->connect(3, in1->getVxImage(), in2->getVxImage(), out->getVxImage());
 	if (mGraph->verify())
 		mGraph->process();
@@ -78,4 +84,10 @@ void AppTwoIOneO::release()
 		delete resultVX;
 		resultVX = NULL;
 	}
+}
+
+void AppTwoIOneO::releaseInput()
+{
+	src1.release();
+	src2.release();
 }

@@ -4,7 +4,7 @@ using namespace OpenVX;
 using namespace cv;
 
 AppTableLookup::AppTableLookup(Context &context)
-	: Application(context, VX_KERNEL_TABLE_LOOKUP), resultVX(NULL)
+	: Application(context, 1, VX_KERNEL_TABLE_LOOKUP), resultVX(NULL)
 {
 }
 
@@ -19,10 +19,7 @@ void AppTableLookup::prepareInput()
 	resize(src, src, Size(IMG_WIDTH, IMG_HEIGHT));
 	cvtColor(src, src, CV_RGB2GRAY);
 
-	lut = vxCreateLUT(mContext.getVxContext(), VX_TYPE_UINT8, LUT_SIZE);
-	GET_STATUS_CHECK(lut);
-
-	uchar lut_data[LUT_SIZE];
+	lut_data = new uchar[LUT_SIZE];
 	uchar *pSrc = src.data;
 	memset(lut_data, 0, LUT_SIZE*sizeof(uchar));
 	for (int h = 0; h < src.rows; h++)
@@ -33,19 +30,24 @@ void AppTableLookup::prepareInput()
 			pSrc++;
 		}
 	}
-	vx_status status = vxCopyLUT(lut, lut_data, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
-	ERROR_CHECK(status);
 }
 
 void AppTableLookup::setup()
 {
 	in = new Image(mContext, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8, src);
 	out = new Image(mContext, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	
+	lut = vxCreateLUT(mContext.getVxContext(), VX_TYPE_UINT8, LUT_SIZE);
+	GET_STATUS_CHECK(lut);
+	vx_status status = vxCopyLUT(lut, lut_data, VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
+	ERROR_CHECK(status);
 }
 
-void AppTableLookup::process(enum Target target_e)
+void AppTableLookup::process(int variant_numer)
 {
-	Node *node = mGraph->addNode(mKernel_e, target_e);
+	enum Target targets[1];
+	getVariantTarget(variant_numer, targets);
+	Node *node = mGraph->addNode(mKernel_es[0], targets[0]);
 	node->connect(3, in->getVxImage(), lut, out->getVxImage());
 	if (mGraph->verify())
 		mGraph->process();
@@ -55,9 +57,11 @@ void AppTableLookup::process(enum Target target_e)
 	mGraph->removeNode(node);
 }
 
-void AppTableLookup::profiling(int n_times, enum Target target_e)
+void AppTableLookup::profiling(int n_times, int variant_numer)
 {
-	Node *node = mGraph->addNode(mKernel_e, target_e);
+	enum Target targets[1];
+	getVariantTarget(variant_numer, targets);
+	Node *node = mGraph->addNode(mKernel_es[0], targets[0]);
 	node->connect(3, in->getVxImage(), lut, out->getVxImage());
 	if (!mGraph->verify())
 		return;
@@ -69,7 +73,7 @@ void AppTableLookup::profiling(int n_times, enum Target target_e)
 bool AppTableLookup::verify()
 {
 	Mat *resultGolden;
-	Node *node = mGraph->addNode(mKernel_e, TARGET_C_MODEL);
+	Node *node = mGraph->addNode(mKernel_es[0], TARGET_C_MODEL);
 	node->connect(3, in->getVxImage(), lut, out->getVxImage());
 	if (mGraph->verify())
 		mGraph->process();
@@ -90,4 +94,10 @@ void AppTableLookup::release()
 		delete resultVX;
 		resultVX = NULL;
 	}
+}
+
+void AppTableLookup::releaseInput()
+{
+	src.release();
+	delete [] lut_data;
 }

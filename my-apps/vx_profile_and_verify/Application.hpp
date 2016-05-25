@@ -13,20 +13,26 @@ namespace OpenVX
 	protected:
 		Context &mContext;
 		Graph *mGraph;
-		vx_kernel_e mKernel_e;
+		std::vector<vx_kernel_e> mKernel_es;
+		std::map<int, std::vector<enum Target>> support_targets;
 		bool verifyTwoMat(cv::Mat inMat, cv::Mat resultMat);
 		void printProfilingResult(int n_times, int n_nodes, Node *nodes[]);
+		void getVariantTarget(int variant_numer, enum Target *ptrTargets);
 	public:
-		Application(Context &context, vx_kernel_e kernel_e);
+		Application(Context &context, int n_kernels, ...);
 		virtual ~Application();
-		virtual std::string getKernelFullName(enum Target target_e);
+		void setSupportTargets(int kernel_index, int n_targets, ...);
+		int getVariantCount();
+		std::string getKernelesType();
+		std::vector<std::string> getNodesName(int variant_numer);
 		
 		virtual void prepareInput() = 0;
 		virtual void setup() = 0;
-		virtual void process(enum Target target_e) = 0;
-		virtual void profiling(int n_times, enum Target target_e) = 0;
+		virtual void process(int variant_numer) = 0;
+		virtual void profiling(int n_times, int variant_numer) = 0;
 		virtual bool verify() = 0;
 		virtual void release() = 0;
+		virtual void releaseInput() = 0;
 	};
 
 	class AppOneIOneO : public Application
@@ -40,10 +46,13 @@ namespace OpenVX
 
 		void prepareInput();
 		void setup();
-		void process(enum Target target_e);
-		void profiling(int n_times, enum Target target_e);
+		void process(int variant_numer);
+		void profiling(int n_times, int variant_numer);
 		bool verify();
 		void release();
+		void releaseInput();
+		
+		static void generateApps(Context &context, std::vector<Application *> *apps);
 	};
 
 	class AppTwoIOneO : public Application
@@ -57,10 +66,11 @@ namespace OpenVX
 
 		void prepareInput();
 		void setup();
-		void process(enum Target target_e);
-		void profiling(int n_times, enum Target target_e);
+		void process(int variant_numer);
+		void profiling(int n_times, int variant_numer);
 		bool verify();
 		void release();
+		void releaseInput();
 	};
 
 	class AppTableLookup : public Application
@@ -68,6 +78,7 @@ namespace OpenVX
 		cv::Mat src, *resultVX;
 		Image *in, *out;
 		vx_lut lut;
+		uchar *lut_data;
 
 	public:
 		AppTableLookup(Context &context);
@@ -75,10 +86,11 @@ namespace OpenVX
 
 		void prepareInput();
 		void setup();
-		void process(enum Target target_e);
-		void profiling(int n_times, enum Target target_e);
+		void process(int variant_numer);
+		void profiling(int n_times, int variant_numer);
 		bool verify();
 		void release();
+		void releaseInput();
 	};
 
 	class AppHistogram : public Application
@@ -93,10 +105,32 @@ namespace OpenVX
 
 		void prepareInput();
 		void setup();
-		void process(enum Target target_e);
-		void profiling(int n_times, enum Target target_e);
+		void process(int variant_numer);
+		void profiling(int n_times, int variant_numer);
 		bool verify();
 		void release();
+		void releaseInput();
+	};
+	
+	class App2Node_1I1O_1I1O : public Application
+	{
+		cv::Mat lena_src, *resultVX;
+		Image *in, *out;
+		VirtualImage *tmp;
+
+	public:
+		App2Node_1I1O_1I1O(Context &context, vx_kernel_e kernel_e1, vx_kernel_e kernel_e2);
+		virtual ~App2Node_1I1O_1I1O();
+
+		void prepareInput();
+		void setup();
+		void process(int variant_numer);
+		void profiling(int n_times, int variant_numer);
+		bool verify();
+		void release();
+		void releaseInput();
+		
+		static void generateApps(Context &context, std::vector<Application *> *apps);
 	};
 }
 

@@ -10,6 +10,10 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <iomanip>
+#include <vector>
+#include <map>
+#include <iterator>
 
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>

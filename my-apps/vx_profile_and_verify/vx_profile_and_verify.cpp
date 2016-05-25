@@ -1,9 +1,20 @@
 #include <iostream>
+#include <vector>
 #include "vx.hpp"
 #include "Application.hpp"
 #define N_TIMES 100
 using namespace cv;
 using namespace OpenVX;
+
+void printNodesNames(Application *app, int variant)
+{
+	std::vector<std::string> nodesNames = app->getNodesName(variant);
+	std::cout << std::setw(2) << variant + 1 << "." << "node[0]: " << nodesNames[0] << std::endl;
+	for (int i = 1; i < nodesNames.size(); i++)
+	{
+		std::cout << "   " << "node[" << i << "]: " << nodesNames[i] << std::endl;
+	}
+}
 
 int main(int argc, char **argv)
 {
@@ -11,37 +22,30 @@ int main(int argc, char **argv)
 	context.selfTest();
 	std::cout << std::endl;
 
-	Application *apps[] = 
-	{
-		new AppOneIOneO(context, VX_KERNEL_NOT),
-		new AppTwoIOneO(context, VX_KERNEL_AND),
-		new AppTwoIOneO(context, VX_KERNEL_XOR),
-		new AppOneIOneO(context, VX_KERNEL_BOX_3x3),
-		new AppOneIOneO(context, VX_KERNEL_GAUSSIAN_3x3),
-		//new AppTwoIOneO(context, VX_KERNEL_OR),			//NO fcv function
-		//new AppTableLookup(context),
-		//new AppHistogram(context),
-	};
-	enum Target targets[] = 
-	{ 
-		TARGET_C_MODEL, TARGET_OPENCL, TARGET_HEXAGON 
-	};
-	int n_apps = sizeof(apps) / sizeof(apps[0]);
-	int n_targets = sizeof(targets) / sizeof(targets[0]);
+	std::vector<Application *> apps;
+	AppOneIOneO::generateApps(context, &apps);
+	App2Node_1I1O_1I1O::generateApps(context, &apps);
+	
+	//apps.push_back(new AppTwoIOneO(context, VX_KERNEL_OR));		//NO fcv function
+	//apps.push_back(new AppTableLookup(context));	//Not passed
+	//apps.push_back(new AppHistogram(context));	//Not passed
+	
+	int n_apps = apps.size();
 	
 	std::cout << "Process and Verify:" << std::endl;
 	for (int i = 0; i < n_apps; i++)
 	{
-		std::cout << "apps[" << i << "]:" << std::endl;
+		std::cout << "apps[" << i << "]: " << apps[i]->getKernelesType() << std::endl;
+
 		apps[i]->prepareInput();
-		for (int t = 1; t < n_targets; t++)
+		int variants = apps[i]->getVariantCount();
+		for (int v = 0; v < variants; v++)
 		{
-			std::cout << " Target[" << t << "]: " << 
-				apps[i]->getKernelFullName(targets[t]) << std::endl;
+			printNodesNames(apps[i], v);
 			
 			apps[i]->setup();
 			
-			apps[i]->process(targets[t]);
+			apps[i]->process(v);
 			
 			if (!apps[i]->verify())
 				std::cout << "\tverify fail" << std::endl;
@@ -50,24 +54,28 @@ int main(int argc, char **argv)
 			
 			apps[i]->release();
 		}
+		apps[i]->releaseInput();
 	}
 	std::cout << std::endl;
 	
 	std::cout << "Profile " << n_apps << " apps over " << N_TIMES << " loop:" << std::endl;
 	for (int i = 0; i < n_apps; i++)
 	{
-		std::cout << "apps[" << i << "]:" << std::endl;
-		for (int t = 0; t < n_targets; t++)
+		std::cout << "apps[" << i << "]: " << apps[i]->getKernelesType() << std::endl;
+
+		apps[i]->prepareInput();
+		int variants = apps[i]->getVariantCount();
+		for (int v = 0; v < variants; v++)
 		{
-			std::cout << " Target[" << t << "]: " << 
-				apps[i]->getKernelFullName(targets[t]) << std::endl;
+			printNodesNames(apps[i], v);
 			
 			apps[i]->setup();
 			
-			apps[i]->profiling(N_TIMES, targets[t]);
+			apps[i]->profiling(N_TIMES, v);
 			
 			apps[i]->release();
 		}
+		apps[i]->releaseInput();
 	}
 	std::cout << std::endl;
 

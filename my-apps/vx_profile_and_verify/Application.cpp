@@ -1,13 +1,23 @@
 #include "Application.hpp"
 
-#define NS_TO_MS (1000*1000)
+#define NS_TO_MS (1000*1000*1.0)
 using namespace OpenVX;
 using namespace cv;
 
-Application::Application(Context &context, vx_kernel_e kernel_e) 
-	: mContext(context), mKernel_e(kernel_e)
+Application::Application(Context &context, int n_kernels, ...) 
+	: mContext(context)
 {
 	mGraph = new Graph(context);
+	
+	va_list parameter_list;
+	va_start(parameter_list, n_kernels);
+	for(int i=0; i<n_kernels; i++)
+	{
+		vx_kernel_e kernel_e = va_arg(parameter_list, vx_kernel_e);
+		mKernel_es.push_back(kernel_e);
+		support_targets.insert( std::make_pair( i, std::vector<enum Target>()));
+	}
+	va_end(parameter_list);
 }
 
 Application::~Application()
@@ -15,54 +25,146 @@ Application::~Application()
 	delete mGraph;
 }
 
-std::string Application::getKernelFullName(enum Target target_e)
+void Application::setSupportTargets(int kernel_index, int n_targets, ...)
 {
-	return Kernel::getFullKernelName(mKernel_e, target_e);
+	va_list parameter_list;
+	va_start(parameter_list, n_targets);
+	for(int i=0; i<n_targets; i++)
+	{
+		enum Target target = va_arg(parameter_list, enum Target);
+		support_targets[kernel_index].push_back(target);
+	}
+	va_end(parameter_list);
+}
+
+int Application::getVariantCount()
+{
+	ERROR_CHECK(support_targets.size()==0);
+	int variants = 1;
+	for (std::map<int, std::vector<enum Target>>::iterator it=support_targets.begin(); 
+		 it!=support_targets.end(); ++it)
+	{
+		std::vector<enum Target> targets = it->second;
+		variants *= targets.size();
+	}
+	return variants;
+}
+
+std::string Application::getKernelesType()
+{
+	std::stringstream ss;
+	ss << mKernel_es.size() << " kernels - ";
+	ss << Kernel::getKernelTypeName(mKernel_es[0]);
+	for (int i = 1; i < mKernel_es.size(); i++)
+	{
+		ss << ", " << Kernel::getKernelTypeName(mKernel_es[i]);
+	}
+	return ss.str();
+}
+
+std::vector<std::string> Application::getNodesName(int variant_numer)
+{
+	std::vector<std::string> nodeNames;
+	enum Target *targets = new enum Target[mKernel_es.size()];
+	getVariantTarget(variant_numer, targets);
+	for (int i = 0; i < mKernel_es.size(); i++)
+	{
+		nodeNames.push_back(Kernel::getFullKernelName(mKernel_es[i], targets[i]));
+	}
+	delete[] targets;
+	return nodeNames;
 }
 
 void Application::printProfilingResult(int n_times, int n_nodes, Node *nodes[])
 {
-	vx_perf_t *firstTimeCompute = new vx_perf_t[n_nodes];
-	vx_perf_t *firstTimePerf = new vx_perf_t[n_nodes];
+	vx_perf_t graphPref, firstTimePerfG;
+	vx_perf_t *firstTimeComputeN = new vx_perf_t[n_nodes];
+	vx_perf_t *firstTimePerfN = new vx_perf_t[n_nodes];
 	
 	mGraph->process();
+	firstTimePerfG = mGraph->getPerformance();
 	for(int n=0; n<n_nodes; n++)
 	{
-		firstTimePerf[n] = nodes[n]->getPerformance();
-		firstTimeCompute[n] = nodes[n]->getComputationTime();
+		firstTimePerfN[n] = nodes[n]->getPerformance();
+		firstTimeComputeN[n] = nodes[n]->getComputationTime();
 	}
 	
 	for(int i=0; i<n_times; i++)
 		mGraph->process();
 	
+	std::cout.precision(2);
+	std::cout << std::fixed;
+
+	graphPref = mGraph->getPerformance();
+	std::cout << "   "
+		<< "first: " << graphPref.tmp / NS_TO_MS << " ms "
+		<< "min: " << graphPref.min / NS_TO_MS << " ms "
+		<< "max: " << graphPref.max / NS_TO_MS << " ms "
+		<< "avg: " << (graphPref.sum - firstTimePerfG.tmp) / (n_times*NS_TO_MS) << " ms " << std::endl;
+
 	for(int n=0; n<n_nodes; n++)
 	{
 		vx_perf_t nodePerf = nodes[n]->getPerformance();
 		vx_perf_t nodeCompute = nodes[n]->getComputationTime();
 		std::cout << "\tnode[" << n << "] - " << std::endl
-				  << "\t total " 
-				  << "first: " << firstTimePerf[n].tmp/NS_TO_MS << " ms "
-				  << "min: " << nodePerf.min/NS_TO_MS << " ms "
-				  << "max: " << nodePerf.max/NS_TO_MS  << " ms "
-				  << "avg: " << (nodePerf.sum-firstTimePerf[n].tmp)/(n_times*NS_TO_MS) << " ms " << std::endl
-				  << "\t compute " 
-				  << "first: " << firstTimeCompute[n].tmp/NS_TO_MS << " ms "
-				  << "min: " << nodeCompute.min/NS_TO_MS << " ms "
-				  << "max: " << nodeCompute.max/NS_TO_MS  << " ms "
-				  << "avg: " << (nodeCompute.sum-firstTimeCompute[n].tmp)/(n_times*NS_TO_MS) << " ms " << std::endl
+				  << "\t total    " 
+				  << "first: " << firstTimePerfN[n].tmp/NS_TO_MS << " ms "
+				  << "min: "   << nodePerf.min/NS_TO_MS << " ms "
+				  << "max: "   << nodePerf.max/NS_TO_MS  << " ms "
+				  << "avg: "   << (nodePerf.sum-firstTimePerfN[n].tmp)/(n_times*NS_TO_MS) << " ms " << std::endl
+				  << "\t compute  " 
+				  << "first: " << firstTimeComputeN[n].tmp/NS_TO_MS << " ms "
+				  << "min: "   << nodeCompute.min/NS_TO_MS << " ms "
+				  << "max: "   << nodeCompute.max/NS_TO_MS  << " ms "
+				  << "avg: "   << (nodeCompute.sum-firstTimeComputeN[n].tmp)/(n_times*NS_TO_MS) << " ms " << std::endl
 				  << "\t transfer " 
-				  << "first: " << (firstTimePerf[n].tmp-firstTimeCompute[n].tmp)/NS_TO_MS << " ms "
-				  << "min: " << (nodePerf.min-nodeCompute.min)/NS_TO_MS << " ms "
-				  << "max: " << (nodePerf.max-nodeCompute.min)/NS_TO_MS  << " ms "
-				  << "avg: " << ((nodePerf.sum-firstTimePerf[n].tmp)-
-								 (nodeCompute.sum-firstTimeCompute[n].tmp))/(n_times*NS_TO_MS) << " ms " << std::endl;
+				  << "first: " << (firstTimePerfN[n].tmp-firstTimeComputeN[n].tmp)/NS_TO_MS << " ms "
+				  << "min: "   << (nodePerf.min-nodeCompute.min)/NS_TO_MS << " ms "
+				  << "max: "   << (nodePerf.max-nodeCompute.min)/NS_TO_MS  << " ms "
+				  << "avg: "   << ((nodePerf.sum-firstTimePerfN[n].tmp)-
+								                   (nodeCompute.sum-firstTimeComputeN[n].tmp))/(n_times*NS_TO_MS) << " ms " 
+				  << std::endl;
 	}
 	
 	for(int n=0; n<n_nodes; n++)
 		mGraph->removeNode(nodes[n]);
 	
-	delete [] firstTimePerf;
-	delete [] firstTimeCompute;
+	delete [] firstTimePerfN;
+	delete [] firstTimeComputeN;
+}
+
+static bool getVariant(int *cnt, int goal,
+	std::map<int, std::vector<enum Target>>::iterator it, 
+	std::map<int, std::vector<enum Target>>::iterator end, enum Target *ptrTargets)
+{
+	if (it == end)
+	{
+		if ((*cnt) == goal)	return true;
+		(*cnt)++;
+	}
+	else
+	{
+		std::vector<enum Target> targets = it->second;
+		std::map<int, std::vector<enum Target>>::iterator nextit = it;
+		std::advance(nextit, 1);
+		for (int i = 0; i < targets.size(); i++)
+		{
+			*ptrTargets = targets[i];
+
+			if (getVariant(cnt, goal, nextit, end, ptrTargets + 1))
+				return true;
+		}
+	}
+	return false;
+}
+
+void Application::getVariantTarget(int variant_numer, enum Target *ptrTargets)
+{
+	ERROR_CHECK(support_targets.size()==0);
+	std::map<int, std::vector<enum Target>>::iterator it = support_targets.begin();
+	
+	int cnt=0;
+	ERROR_CHECK(getVariant(&cnt, variant_numer, it, support_targets.end(), ptrTargets)!=true);
 }
 
 bool Application::verifyTwoMat(Mat inMat, Mat resultMat)

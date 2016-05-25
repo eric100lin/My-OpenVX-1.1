@@ -5,7 +5,7 @@ using namespace OpenVX;
 using namespace cv;
 
 AppHistogram::AppHistogram(Context &context)
-	: Application(context, VX_KERNEL_HISTOGRAM)
+	: Application(context, 1, VX_KERNEL_HISTOGRAM)
 {
 }
 
@@ -32,9 +32,11 @@ void AppHistogram::setup()
 	GET_STATUS_CHECK(distribution);
 }
 
-void AppHistogram::process(enum Target target_e)
+void AppHistogram::process(int variant_numer)
 {
-	Node *node = mGraph->addNode(mKernel_e, target_e);
+	enum Target targets[1];
+	getVariantTarget(variant_numer, targets);
+	Node *node = mGraph->addNode(mKernel_es[0], targets[0]);
 	node->connect(2, in->getVxImage(), distribution);
 	if (mGraph->verify())
 		mGraph->process();
@@ -43,9 +45,11 @@ void AppHistogram::process(enum Target target_e)
 	mGraph->removeNode(node);
 }
 
-void AppHistogram::profiling(int n_times, enum Target target_e)
+void AppHistogram::profiling(int n_times, int variant_numer)
 {
-	Node *node = mGraph->addNode(mKernel_e, target_e);
+	enum Target targets[1];
+	getVariantTarget(variant_numer, targets);
+	Node *node = mGraph->addNode(mKernel_es[0], targets[0]);
 	node->connect(2, in->getVxImage(), distribution);
 	if (!mGraph->verify())
 		return;
@@ -61,7 +65,7 @@ bool AppHistogram::verify()
 	vx_status status = vxCopyDistribution(distribution, resultVX, VX_READ_ONLY, VX_MEMORY_TYPE_HOST);
 	ERROR_CHECK(status);
 
-	Node *node = mGraph->addNode(mKernel_e, TARGET_C_MODEL);
+	Node *node = mGraph->addNode(mKernel_es[0], TARGET_C_MODEL);
 	node->connect(2, in->getVxImage(), distribution);
 	if (mGraph->verify())
 		mGraph->process();
@@ -87,4 +91,9 @@ void AppHistogram::release()
 	vx_status status = vxReleaseDistribution(&distribution);
 	ERROR_CHECK(status);
 	delete in;
+}
+
+void AppHistogram::releaseInput()
+{
+	src.release();
 }
