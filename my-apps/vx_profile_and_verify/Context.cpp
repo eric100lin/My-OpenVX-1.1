@@ -37,21 +37,21 @@ vx_status Context::loadKernels(const char *filepath)
 // vxQueryContext
 void Context::selfTest()
 {
-	std::cout << "vxQueryContext:" << std::endl;
-	std::cout << "\tvenderID: " << vendorID() << std::endl;
-	std::cout << "\tversion: " << version().c_str() << std::endl;
-	std::cout << "\tnumKernels: " << numKernels() << std::endl;
-	std::cout << "\tnumModules: " << numModules() << std::endl;
-	std::cout << "\tnumRefs: " << numRefs() << std::endl;
-	std::cout << "\timplementation: " << implementation() << std::endl;
-	std::cout << "\textensions: " << extensions().c_str() << std::endl;
-	std::cout << "\tconvolutionMaxDimension: " << convolutionMaxDimension() << std::endl;
+	logs() << "vxQueryContext:" << std::endl;
+	logs() << "\tvenderID: " << vendorID() << std::endl;
+	logs() << "\tversion: " << version().c_str() << std::endl;
+	logs() << "\tnumKernels: " << numKernels() << std::endl;
+	logs() << "\tnumModules: " << numModules() << std::endl;
+	logs() << "\tnumRefs: " << numRefs() << std::endl;
+	logs() << "\timplementation: " << implementation() << std::endl;
+	logs() << "\textensions: " << extensions().c_str() << std::endl;
+	logs() << "\tconvolutionMaxDimension: " << convolutionMaxDimension() << std::endl;
 	
 	int num_target = numTargets();
-	std::cout << "\tnumTargets: " << num_target << std::endl;
-	std::cout << "\tTarget list: " << std::endl;
+	logs() << "\tnumTargets: " << num_target << std::endl;
+	logs() << "\tTarget list: " << std::endl;
 	for(int i=0; i<num_target; i++)
-		std::cout << "\t [" << i << "]: " << getTargetName(i).c_str() << std::endl;
+		logs() << "\t [" << i << "]: " << getTargetName(i).c_str() << std::endl;
 }
 
 vx_uint16 Context::vendorID()

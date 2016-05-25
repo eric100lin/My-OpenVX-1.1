@@ -94,38 +94,38 @@ void Application::printProfilingResult(int n_times, int n_nodes, Node *nodes[])
 	for(int i=0; i<n_times; i++)
 		mGraph->process();
 	
-	std::cout.precision(2);
-	std::cout << std::fixed;
+	logs().precision(2);
+	logs() << std::fixed;
 
 	graphPref = mGraph->getPerformance();
-	std::cout << "   "
-		<< "first: " << firstTimePerfG.tmp / NS_TO_MS << " ms "
-		<< "min: " << graphPref.min / NS_TO_MS << " ms "
-		<< "max: " << graphPref.max / NS_TO_MS << " ms "
-		<< "avg: " << (graphPref.sum - firstTimePerfG.sum) / (n_times*NS_TO_MS) << " ms " << std::endl;
+	logs() << "   "
+		   << "first: " << firstTimePerfG.tmp / NS_TO_MS << " ms "
+		   << "min: " << graphPref.min / NS_TO_MS << " ms "
+		   << "max: " << graphPref.max / NS_TO_MS << " ms "
+		   << "avg: " << (graphPref.sum - firstTimePerfG.sum) / (n_times*NS_TO_MS) << " ms " << std::endl;
 
 	for(int n=0; n<n_nodes; n++)
 	{
 		vx_perf_t nodePerf = nodes[n]->getPerformance();
 		vx_perf_t nodeCompute = nodes[n]->getComputationTime();
-		std::cout << "\tnode[" << n << "] - " << std::endl
-				  << "\t total    " 
-				  << "first: " << firstTimePerfN[n].tmp/NS_TO_MS << " ms "
-				  << "min: "   << nodePerf.min/NS_TO_MS << " ms "
-				  << "max: "   << nodePerf.max/NS_TO_MS  << " ms "
-				  << "avg: "   << (nodePerf.sum-firstTimePerfN[n].sum)/(n_times*NS_TO_MS) << " ms " << std::endl
-				  << "\t compute  " 
-				  << "first: " << firstTimeComputeN[n].tmp/NS_TO_MS << " ms "
-				  << "min: "   << nodeCompute.min/NS_TO_MS << " ms "
-				  << "max: "   << nodeCompute.max/NS_TO_MS  << " ms "
-				  << "avg: "   << (nodeCompute.sum-firstTimeComputeN[n].sum)/(n_times*NS_TO_MS) << " ms " << std::endl
-				  << "\t transfer " 
-				  << "first: " << (firstTimePerfN[n].tmp-firstTimeComputeN[n].tmp)/NS_TO_MS << " ms "
-				  << "min: "   << (nodePerf.min-nodeCompute.min)/NS_TO_MS << " ms "
-				  << "max: "   << (nodePerf.max-nodeCompute.min)/NS_TO_MS  << " ms "
-				  << "avg: "   << ((nodePerf.sum-firstTimePerfN[n].sum)-
-								   (nodeCompute.sum-firstTimeComputeN[n].sum))/(n_times*NS_TO_MS) << " ms "
-				  << std::endl;
+		logs() << "\tnode[" << n << "] - " << std::endl
+			   << "\t total    " 
+			   << "first: " << firstTimePerfN[n].tmp/NS_TO_MS << " ms "
+			   << "min: "   << nodePerf.min/NS_TO_MS << " ms "
+			   << "max: "   << nodePerf.max/NS_TO_MS  << " ms "
+			   << "avg: "   << (nodePerf.sum-firstTimePerfN[n].sum)/(n_times*NS_TO_MS) << " ms " << std::endl
+			   << "\t compute  " 
+			   << "first: " << firstTimeComputeN[n].tmp/NS_TO_MS << " ms "
+			   << "min: "   << nodeCompute.min/NS_TO_MS << " ms "
+			   << "max: "   << nodeCompute.max/NS_TO_MS  << " ms "
+			   << "avg: "   << (nodeCompute.sum-firstTimeComputeN[n].sum)/(n_times*NS_TO_MS) << " ms " << std::endl
+			   << "\t transfer " 
+			   << "first: " << (firstTimePerfN[n].tmp-firstTimeComputeN[n].tmp)/NS_TO_MS << " ms "
+			   << "min: "   << (nodePerf.min-nodeCompute.min)/NS_TO_MS << " ms "
+			   << "max: "   << (nodePerf.max-nodeCompute.min)/NS_TO_MS  << " ms "
+			   << "avg: "   << ((nodePerf.sum-firstTimePerfN[n].sum)-
+								(nodeCompute.sum-firstTimeComputeN[n].sum))/(n_times*NS_TO_MS) << " ms "
+			   << std::endl;
 	}
 	
 	for(int n=0; n<n_nodes; n++)
@@ -186,13 +186,14 @@ bool Application::verifyTwoMat(Mat inMat, Mat resultMat)
 			if (h == 0 || w == 0 || h == height - 1 || w == width - 1)
 				continue;	//Don't verify boarder
 			
-			diff = *ptr_resMat - *ptr_inMat;
+			diff = abs(*ptr_resMat - *ptr_inMat);
 			if (diff != 0)
 			{
 				if (++cnt < 11)
 				{
-					printf(" fail at inMat[%d,%d]:%d != resultMat[%d,%d]:%d diff:%d\n",
-						h, w, *ptr_inMat, h, w, *ptr_resMat, diff);
+					logs() << " fail at inMat[" << h << "," << w << "]:"
+						   << (int)*ptr_inMat << " != resultMat[" << h << "," << w << "]:"
+						   << (int)*ptr_resMat << " diff:" << (int)diff << std::endl;
 				}
 				if(diff>max_diff)	max_diff = diff;
 				if(diff<min_diff)	min_diff = diff;
@@ -204,10 +205,11 @@ bool Application::verifyTwoMat(Mat inMat, Mat resultMat)
 	{
 		int total_pixel = height*width;
 		float percent = cnt*100.0f / total_pixel;
-		printf(" - error pixel: %d/%d (%f %%)\n", cnt, total_pixel, percent);
-		printf(" - max_diff: %d\n", max_diff);
-		printf(" - min_diff: %d\n", min_diff);
-		printf(" - average_diff: %d\n", (int)(sum_diff/cnt));
+		logs() << " - error pixel: " << cnt << "/" << total_pixel 
+			   << " (" << percent << " %)" << std::endl;
+		logs() << " - max_diff: " << (int)max_diff << std::endl;
+		logs() << " - min_diff: " << (int)min_diff << std::endl;
+		logs() << " - average_diff: " << (int)(sum_diff / cnt) << std::endl;
 	}
 	return (cnt==0);
 }

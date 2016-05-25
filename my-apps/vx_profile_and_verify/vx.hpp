@@ -7,10 +7,12 @@
 #endif
 #include "vxUtils.h"
 
+#include <stdlib.h>
 #include <stdarg.h>
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <fstream>
 #include <iomanip>
 #include <vector>
 #include <map>
@@ -29,12 +31,14 @@ namespace OpenVX
 	class Node;
 	class Image;
 	class VirtualImage;
+	class LogStream;
 }
 
 #include "Context.hpp"
 #include "Graph.hpp"
 #include "Image.hpp"
 #include "Kernel.hpp"
+#include "LogStream.h"
 #include "Node.hpp"
 #include "OpenCV_data_translator.hpp"
 #include "VirtualImage.hpp"
