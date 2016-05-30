@@ -1,13 +1,17 @@
 #include "Application.hpp"
-
+#define CSV_NAME "profiling.csv"
 #define NS_TO_MS (1000*1000*1.0)
 using namespace OpenVX;
 using namespace cv;
+
+static int instance_count = 0;
+static std::fstream csv(CSV_NAME, std::fstream::out);
 
 Application::Application(Context &context, int n_kernels, ...) 
 	: mContext(context)
 {
 	mGraph = new Graph(context);
+	instance_count++;
 	
 	va_list parameter_list;
 	va_start(parameter_list, n_kernels);
@@ -24,6 +28,7 @@ Application::Application(Context &context, int n_kernels, ...)
 Application::~Application()
 {
 	delete mGraph;
+	if (--instance_count == 0)	csv.close();
 }
 
 void Application::setSupportTargets(int kernel_index, int n_targets, ...)
@@ -77,7 +82,7 @@ std::vector<std::string> Application::getNodesName(int variant_numer)
 	return nodeNames;
 }
 
-void Application::printProfilingResult(int n_times, int n_nodes, Node *nodes[])
+void Application::printProfilingResult(int n_times, int n_nodes, Node *nodes[], enum Target targets[])
 {
 	vx_perf_t graphPref, firstTimePerfG;
 	vx_perf_t *firstTimeComputeN = new vx_perf_t[n_nodes];
@@ -126,6 +131,11 @@ void Application::printProfilingResult(int n_times, int n_nodes, Node *nodes[])
 			   << "avg: "   << ((nodePerf.sum-firstTimePerfN[n].sum)-
 								(nodeCompute.sum-firstTimeComputeN[n].sum))/(n_times*NS_TO_MS) << " ms "
 			   << std::endl;
+
+		csv << Kernel::getFullKernelName(mKernel_es[n], targets[n]) << ","
+			<< (nodeCompute.sum - firstTimeComputeN[n].sum) / (n_times*NS_TO_MS) << ","
+			<< ((nodePerf.sum - firstTimePerfN[n].sum) -
+			    (nodeCompute.sum - firstTimeComputeN[n].sum)) / (n_times*NS_TO_MS) << std::endl;
 	}
 	
 	for(int n=0; n<n_nodes; n++)

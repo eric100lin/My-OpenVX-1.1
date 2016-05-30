@@ -20,7 +20,7 @@ namespace OpenVX
 		std::vector<vx_kernel_e> mKernel_es;
 		std::map<int, std::vector<enum Target>> support_targets;
 		bool verifyTwoMat(cv::Mat inMat, cv::Mat resultMat);
-		void printProfilingResult(int n_times, int n_nodes, Node *nodes[]);
+		void printProfilingResult(int n_times, int n_nodes, Node *nodes[], enum Target targets[]);
 		void getVariantTarget(int variant_numer, enum Target *ptrTargets);
 	public:
 		Application(Context &context, int n_kernels, ...);

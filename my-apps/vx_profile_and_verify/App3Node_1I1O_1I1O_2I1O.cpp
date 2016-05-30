@@ -70,7 +70,7 @@ void App3Node_1I1O_1I1O_2I1O::profiling(int n_times, int variant_numer)
 		mGraph->process();
 	
 	Node *nodes[] = { node1, node2, node3 };
-	printProfilingResult(n_times, APP_THREE_NODE, nodes);
+	printProfilingResult(n_times, APP_THREE_NODE, nodes, targets);
 }
 
 bool App3Node_1I1O_1I1O_2I1O::verify()

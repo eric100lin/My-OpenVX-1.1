@@ -50,7 +50,7 @@ void AppOneIOneO::profiling(int n_times, int variant_numer)
 		return;
 	
 	Node *nodes[] = { node };
-	printProfilingResult(n_times, APP_ONE_NODE, nodes);
+	printProfilingResult(n_times, APP_ONE_NODE, nodes, targets);
 }
 
 bool AppOneIOneO::verify()

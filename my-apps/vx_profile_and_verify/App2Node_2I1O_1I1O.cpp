@@ -63,7 +63,7 @@ void App2Node_2I1O_1I1O::profiling(int n_times, int variant_numer)
 		return;
 	
 	Node *nodes[] = { node1, node2 };
-	printProfilingResult(n_times, APP_TWO_NODE, nodes);
+	printProfilingResult(n_times, APP_TWO_NODE, nodes, targets);
 }
 
 bool App2Node_2I1O_1I1O::verify()
