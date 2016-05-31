@@ -28,6 +28,9 @@
 #include <remote.h>
 #define OPENVX_HEXAGON_NAME "openvx-hexagon"
 #endif
+#ifdef EXPERIMENTAL_USE_FASTCV
+#define OPENVX_FASTCV_NAME "openvx-fastcv"
+#endif
 
 const vx_char implementation[VX_MAX_IMPLEMENTATION_NAME] = "khronos.sample";
 
@@ -41,6 +44,9 @@ vx_char targetModules[][VX_MAX_TARGET_NAME] = {
 #endif
 #if defined(EXPERIMENTAL_USE_HEXAGON)
     OPENVX_HEXAGON_NAME,
+#endif
+#if defined(EXPERIMENTAL_USE_FASTCV)
+    OPENVX_FASTCV_NAME,
 #endif
 };
 

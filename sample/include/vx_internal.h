@@ -813,6 +813,10 @@ enum vx_ext_target_type_e {
  * \ingroup group_int_target
  */
 enum vx_target_priority_e {
+#if defined(EXPERIMENTAL_USE_FASTCV)
+    /*! \brief Defines the priority of the FastCV Target */
+    VX_TARGET_PRIORITY_FASTCV,
+#endif
 #if defined(EXPERIMENTAL_USE_HEXAGON)
     /*! \brief Defines the priority of the Hexagon DSP Target */
     VX_TARGET_PRIORITY_HEXAGON,
