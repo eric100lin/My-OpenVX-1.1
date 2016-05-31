@@ -88,7 +88,9 @@ void AppOneIOneO::generateApps(Context &context, std::vector<Application *> *app
 {
 	vx_kernel_e kernels[] = { VX_KERNEL_NOT, VX_KERNEL_BOX_3x3, VX_KERNEL_GAUSSIAN_3x3 };
 	int n_kernels = sizeof(kernels) / sizeof(kernels[0]);
-#if defined(EXPERIMENTAL_USE_HEXAGON) && defined(EXPERIMENTAL_USE_OPENCL)
+#if defined(EXPERIMENTAL_USE_HEXAGON) && defined(EXPERIMENTAL_USE_OPENCL) && defined(EXPERIMENTAL_USE_FASTCV)
+	int node_index = 0, support_target = 4;
+#elif defined(EXPERIMENTAL_USE_HEXAGON) && defined(EXPERIMENTAL_USE_OPENCL)
 	int node_index = 0, support_target = 3;
 #elif defined(EXPERIMENTAL_USE_OPENCL)
 	int node_index = 0, support_target = 2;
@@ -99,7 +101,9 @@ void AppOneIOneO::generateApps(Context &context, std::vector<Application *> *app
 	for(int i=0; i<n_kernels; i++)
 	{
 		AppOneIOneO *app = new AppOneIOneO(context, kernels[i]);
-#if defined(EXPERIMENTAL_USE_HEXAGON) && defined(EXPERIMENTAL_USE_OPENCL)
+#if defined(EXPERIMENTAL_USE_HEXAGON) && defined(EXPERIMENTAL_USE_OPENCL) && defined(EXPERIMENTAL_USE_FASTCV)
+		app->setSupportTargets(node_index, support_target, TARGET_C_MODEL, TARGET_OPENCL, TARGET_HEXAGON, TARGET_FASTCV);
+#elif defined(EXPERIMENTAL_USE_HEXAGON) && defined(EXPERIMENTAL_USE_OPENCL)
 		app->setSupportTargets(node_index, support_target, TARGET_C_MODEL, TARGET_OPENCL, TARGET_HEXAGON);
 #elif defined(EXPERIMENTAL_USE_OPENCL)
 		app->setSupportTargets(node_index, support_target, TARGET_C_MODEL, TARGET_OPENCL);

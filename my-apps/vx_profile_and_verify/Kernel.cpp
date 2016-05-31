@@ -90,6 +90,7 @@ static struct { const char * name; Target value; } t_table_constants[] = {
 	{ "pc.opencl", TARGET_OPENCL },
 	{ "khronos.openmp", TARGET_OPENMP },
 	{ "android.hexagon", TARGET_HEXAGON },
+	{ "android.fastcv", TARGET_FASTCV },
 	{ NULL, TARGET_UNKNOWN }
 };
 
