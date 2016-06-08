@@ -49,6 +49,8 @@ static vx_cl_kernel_description_t *cl_kernels[] = {
     &orr_kernel,
     &not_kernel,
     &histogram_kernel,
+	&add_kernel,
+	&subtract_kernel,
     /*! \todo Add more OpenCL kernels here */
 };
 
@@ -701,13 +703,13 @@ vx_status vxclCallOpenCLKernel(vx_node node, const vx_reference *parameters, vx_
         }
     }
     we = 0;
-    for (pidx = 0; pidx < num; pidx++) {
-        vx_reference ref = node->parameters[pidx];
-        vx_enum dir = node->kernel->signature.directions[pidx];
-        if (dir == VX_INPUT || dir == VX_BIDIRECTIONAL) {
-            memcpy(&writeEvents[we++],&ref->event, sizeof(cl_event));
-        }
-    }
+    //for (pidx = 0; pidx < num; pidx++) {
+    //    vx_reference ref = node->parameters[pidx];
+    //    vx_enum dir = node->kernel->signature.directions[pidx];
+    //    if (dir == VX_INPUT || dir == VX_BIDIRECTIONAL) {
+    //        memcpy(&writeEvents[we++],&ref->event, sizeof(cl_event));
+    //    }
+    //}
 	
 	err = clFinish(context->queues[plidx][didx]);	//CPU -> GPU data transfer complete
 	CL_ERROR_MSG(err, "clFinish");
@@ -720,7 +722,7 @@ vx_status vxclCallOpenCLKernel(vx_node node, const vx_reference *parameters, vx_
                                  off_dim,
                                  work_dim,
                                  NULL,
-                                 we, writeEvents, &node->base.event);
+                                 0, NULL, &node->base.event);
 
     CL_ERROR_MSG(err, "clEnqueueNDRangeKernel");
 	
