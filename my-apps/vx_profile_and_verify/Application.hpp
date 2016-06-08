@@ -180,6 +180,27 @@ namespace OpenVX
 
 		static void generateApps(Context &context, std::vector<Application *> *apps);
 	};
+
+	class AppAddSub : public Application
+	{
+		cv::Mat src1, src2, *resultVX;
+		Image *in1, *in2, *out;
+		vx_scalar spolicy;
+
+	public:
+		AppAddSub(Context &context, vx_kernel_e kernel_e);
+		virtual ~AppAddSub();
+
+		void prepareInput();
+		void setup();
+		void process(int variant_numer);
+		void profiling(int n_times, int variant_numer);
+		bool verify();
+		void release();
+		void releaseInput();
+
+		static void generateApps(Context &context, std::vector<Application *> *apps);
+	};
 }
 
 #endif
