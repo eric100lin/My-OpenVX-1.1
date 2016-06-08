@@ -14,5 +14,7 @@ extern vx_kernel_description_t box3x3_kernel;
 extern vx_kernel_description_t gaussian3x3_kernel;
 extern vx_kernel_description_t and_kernel;
 extern vx_kernel_description_t xor_kernel;
+extern vx_kernel_description_t add_kernel;
+extern vx_kernel_description_t subtract_kernel;
 
 #endif
