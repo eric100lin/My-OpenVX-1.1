@@ -107,6 +107,7 @@ extern vx_cl_kernel_description_t not_kernel;
 extern vx_cl_kernel_description_t histogram_kernel;
 extern vx_cl_kernel_description_t add_kernel;
 extern vx_cl_kernel_description_t subtract_kernel;
+extern vx_cl_kernel_description_t threshold_kernel;
 
 #endif
 

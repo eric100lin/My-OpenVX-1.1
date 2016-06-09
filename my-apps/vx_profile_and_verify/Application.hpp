@@ -201,6 +201,27 @@ namespace OpenVX
 
 		static void generateApps(Context &context, std::vector<Application *> *apps);
 	};
+
+	class AppThreshold : public Application
+	{
+		cv::Mat src, *resultVX;
+		Image *in, *out;
+		vx_threshold mThreshold;
+
+	public:
+		AppThreshold(Context &context, int threshold);
+		virtual ~AppThreshold();
+
+		void prepareInput();
+		void setup();
+		void process(int variant_numer);
+		void profiling(int n_times, int variant_numer);
+		bool verify();
+		void release();
+		void releaseInput();
+
+		static void generateApps(Context &context, std::vector<Application *> *apps);
+	};
 }
 
 #endif

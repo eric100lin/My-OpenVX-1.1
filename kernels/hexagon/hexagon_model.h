@@ -27,6 +27,7 @@ vx_status vxAnd(vx_node node, vx_image in0, vx_image in1, vx_image output);
 vx_status vxXor(vx_node node, vx_image in0, vx_image in1, vx_image output);
 vx_status vxAddition(vx_node node, vx_image in0, vx_image in1, vx_scalar policy_param, vx_image output);
 vx_status vxSubtraction(vx_node node, vx_image in0, vx_image in1, vx_scalar policy_param, vx_image output);
+vx_status vxThreshold(vx_node node, vx_image src_image, vx_threshold threshold, vx_image dst_image);
 
 #ifdef __cplusplus
 }

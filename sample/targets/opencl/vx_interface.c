@@ -51,6 +51,7 @@ static vx_cl_kernel_description_t *cl_kernels[] = {
     &histogram_kernel,
 	&add_kernel,
 	&subtract_kernel,
+	&threshold_kernel,
     /*! \todo Add more OpenCL kernels here */
 };
 

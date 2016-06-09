@@ -16,5 +16,6 @@ extern vx_kernel_description_t and_kernel;
 extern vx_kernel_description_t xor_kernel;
 extern vx_kernel_description_t add_kernel;
 extern vx_kernel_description_t subtract_kernel;
+extern vx_kernel_description_t threshold_kernel;
 
 #endif

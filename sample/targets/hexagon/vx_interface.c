@@ -23,6 +23,7 @@ static vx_kernel_description_t *target_kernels[] = {
     &xor_kernel,
 	&add_kernel,
 	&subtract_kernel,
+	&threshold_kernel,
 };
 static vx_uint32 num_target_kernels = dimof(target_kernels);
 
