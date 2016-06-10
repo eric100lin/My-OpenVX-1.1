@@ -21,11 +21,13 @@ include_directories( BEFORE
 					 
 # set target name
 set( TARGET_NAME_PROFILE_AND_VERIFY vx_profile_and_verify )
+set( TARGET_NAME_MYAPP_LIB my_app_lib )
+set( TARGET_NAME_SCHEDULING_CASE vx_scheduling )
 
-FIND_SOURCES()
+FIND_SOURCES(vx_profile_and_verify.cpp vx_scheduling.cpp)
 
-# add a target named ${TARGET_NAME}
-add_executable (${TARGET_NAME_PROFILE_AND_VERIFY} ${SOURCE_FILES} ${HEADER_FILES})
+# add library ${TARGET_NAME_MYAPP_LIB}
+add_library (${TARGET_NAME_MYAPP_LIB} STATIC ${SOURCE_FILES})
 
 if (WIN32)
 	set(OPENCV_LIBS opencv_calib3d310d opencv_core310d opencv_features2d310d opencv_flann310d opencv_highgui310d opencv_imgcodecs310d opencv_imgproc310d opencv_ml310d opencv_objdetect310d opencv_photo310d opencv_shape310d opencv_stitching310d 	opencv_superres310d opencv_ts310d opencv_video310d opencv_videoio310d opencv_videostab310d)
@@ -43,11 +45,25 @@ else ()
 	set(OPENCV_LIBS cv2.so libopencv_calib3d.so libopencv_contrib.so libopencv_core.so libopencv_features2d.so libopencv_flann.so libopencv_gpu.so libopencv_highgui.so libopencv_imgproc.so libopencv_legacy.so libopencv_ml.so libopencv_nonfree.so libopencv_objdetect.so libopencv_ocl.so libopencv_photo.so libopencv_stitching.so libopencv_superres.so libopencv_video.so libopencv_videostab.so)
 	prepend(LINK_OPENCV_LIBS "${OPENCV_LIB_PATH}/" ${OPENCV_LIBS})
 endif (WIN32)
-target_link_libraries( ${TARGET_NAME_PROFILE_AND_VERIFY} openvx ${LINK_OPENCV_LIBS})
+target_link_libraries( ${TARGET_NAME_MYAPP_LIB} openvx ${LINK_OPENCV_LIBS})
+
+# add executable ${TARGET_NAME_PROFILE_AND_VERIFY}
+add_executable (${TARGET_NAME_PROFILE_AND_VERIFY} vx_profile_and_verify.cpp ${HEADER_FILES})
+target_link_libraries (${TARGET_NAME_PROFILE_AND_VERIFY} ${TARGET_NAME_MYAPP_LIB})
+
+# add executable ${TARGET_NAME_SCHEDULING_CASE}
+add_executable (${TARGET_NAME_SCHEDULING_CASE} vx_scheduling.cpp ${HEADER_FILES})
+target_link_libraries (${TARGET_NAME_SCHEDULING_CASE} ${TARGET_NAME_MYAPP_LIB})
 
 install ( TARGETS ${TARGET_NAME_PROFILE_AND_VERIFY} 
           RUNTIME DESTINATION bin
           ARCHIVE DESTINATION bin
           LIBRARY DESTINATION bin )
-		  
+install ( TARGETS ${TARGET_NAME_SCHEDULING_CASE} 
+          RUNTIME DESTINATION bin
+          ARCHIVE DESTINATION bin
+          LIBRARY DESTINATION bin )
+
+set_target_properties( ${TARGET_NAME_MYAPP_LIB} PROPERTIES FOLDER ${MYAPPS_FOLDER} )
 set_target_properties( ${TARGET_NAME_PROFILE_AND_VERIFY} PROPERTIES FOLDER ${MYAPPS_FOLDER} )
+set_target_properties( ${TARGET_NAME_SCHEDULING_CASE} PROPERTIES FOLDER ${MYAPPS_FOLDER} )
