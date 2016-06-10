@@ -73,7 +73,7 @@ static struct { const char * name; vx_kernel_e value; } k_type_constants[] = {
 	{ NULL, VX_KERNEL_MAX_1_0 }
 };
 
-std::string Kernel::getKernelTypeName(vx_kernel_e kernel_e)
+std::string Kernel::getKernelNameOfType(vx_kernel_e kernel_e)
 {
 	for (vx_uint32 t = 0; k_type_constants[t].name; t++)
 	{
@@ -83,6 +83,18 @@ std::string Kernel::getKernelTypeName(vx_kernel_e kernel_e)
 		}
 	}
 	return std::string("");
+}
+
+vx_kernel_e Kernel::getKernelTypeFromName(std::string kernelName)
+{
+	for (vx_uint32 t = 0; k_type_constants[t].value; t++)
+	{
+		if (strcmp(k_type_constants[t].name, kernelName.c_str()) == 0)
+		{
+			return k_type_constants[t].value;
+		}
+	}
+	return VX_KERNEL_MAX_1_0;
 }
 
 static struct { const char * name; Target value; } t_table_constants[] = {
@@ -165,4 +177,28 @@ Kernel *Kernel::getKernel(vx_kernel_e kernel_e, enum Target target_e)
 {
 	std::string fullName = getFullKernelName(kernel_e, target_e);
 	return new Kernel(fullName.c_str());
+}
+
+vx_kernel_e Kernel::getKernelEnumFromName(std::string kernelName)
+{
+	for (vx_uint32 t = 0; k_table_constants[t].value; t++)
+	{
+		if (strcmp(k_table_constants[t].name, kernelName.c_str()) == 0)
+		{
+			return k_table_constants[t].value;
+		}
+	}
+	return VX_KERNEL_MAX_1_0;
+}
+
+Target Kernel::getTargetEnumFromName(std::string targetName)
+{
+	for (vx_uint32 t = 0; t_table_constants[t].name; t++)
+	{
+		if (strcmp(t_table_constants[t].name, targetName.c_str()) == 0)
+		{
+			return t_table_constants[t].value;
+		}
+	}
+	return TARGET_UNKNOWN;
 }

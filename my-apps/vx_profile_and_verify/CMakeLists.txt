@@ -22,9 +22,8 @@ include_directories( BEFORE
 # set target name
 set( TARGET_NAME_PROFILE_AND_VERIFY vx_profile_and_verify )
 set( TARGET_NAME_MYAPP_LIB my_app_lib )
-set( TARGET_NAME_SCHEDULING_CASE vx_scheduling )
 
-FIND_SOURCES(vx_profile_and_verify.cpp vx_scheduling.cpp)
+FIND_SOURCES(vx_profile_and_verify.cpp)
 
 # add library ${TARGET_NAME_MYAPP_LIB}
 add_library (${TARGET_NAME_MYAPP_LIB} STATIC ${SOURCE_FILES})
@@ -51,19 +50,12 @@ target_link_libraries( ${TARGET_NAME_MYAPP_LIB} openvx ${LINK_OPENCV_LIBS})
 add_executable (${TARGET_NAME_PROFILE_AND_VERIFY} vx_profile_and_verify.cpp ${HEADER_FILES})
 target_link_libraries (${TARGET_NAME_PROFILE_AND_VERIFY} ${TARGET_NAME_MYAPP_LIB})
 
-# add executable ${TARGET_NAME_SCHEDULING_CASE}
-add_executable (${TARGET_NAME_SCHEDULING_CASE} vx_scheduling.cpp ${HEADER_FILES})
-target_link_libraries (${TARGET_NAME_SCHEDULING_CASE} ${TARGET_NAME_MYAPP_LIB})
-
 install ( TARGETS ${TARGET_NAME_PROFILE_AND_VERIFY} 
-          RUNTIME DESTINATION bin
-          ARCHIVE DESTINATION bin
-          LIBRARY DESTINATION bin )
-install ( TARGETS ${TARGET_NAME_SCHEDULING_CASE} 
           RUNTIME DESTINATION bin
           ARCHIVE DESTINATION bin
           LIBRARY DESTINATION bin )
 
 set_target_properties( ${TARGET_NAME_MYAPP_LIB} PROPERTIES FOLDER ${MYAPPS_FOLDER} )
 set_target_properties( ${TARGET_NAME_PROFILE_AND_VERIFY} PROPERTIES FOLDER ${MYAPPS_FOLDER} )
-set_target_properties( ${TARGET_NAME_SCHEDULING_CASE} PROPERTIES FOLDER ${MYAPPS_FOLDER} )
+
+add_subdirectory( vx_scheduling )

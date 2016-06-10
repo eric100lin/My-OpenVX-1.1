@@ -61,10 +61,10 @@ std::string Application::getKernelesType()
 {
 	std::stringstream ss;
 	ss << mKernel_es.size() << " kernels - ";
-	ss << Kernel::getKernelTypeName(mKernel_es[0]);
+	ss << Kernel::getKernelNameOfType(mKernel_es[0]);
 	for (int i = 1; i < mKernel_es.size(); i++)
 	{
-		ss << ", " << Kernel::getKernelTypeName(mKernel_es[i]);
+		ss << ", " << Kernel::getKernelNameOfType(mKernel_es[i]);
 	}
 	return ss.str();
 }
