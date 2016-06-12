@@ -24,9 +24,11 @@ namespace OpenVX
 		Target mTarget;
 		bool inCluster;
 
-		int getPropagateRank(int n_nodes, MyNode **nodes);
+		int getPropagateRank(std::vector<MyNode *> &nodes);
 
-		float rank(int n_nodes, MyNode **nodes, ProfileData &profileData);
+		float rank(std::vector<MyNode *> &nodes, ProfileData &profileData);
+
+		static void addNodesToVxGraph(Graph& graph, std::vector<MyNode *> &nodes);
 	public:
 		MyNode(enum vx_kernel_e kernel_e);
 
@@ -42,11 +44,15 @@ namespace OpenVX
 
 		static bool addClusterIfValid(Target target, MyNode *node);
 
-		static void generateNodes(int n_nodes, MyNode **nodes, vx_kernel_e *kernel_es);
+		static void generateNodes(int n_nodes,std::vector<MyNode *> &nodes, std::vector<vx_kernel_e> &kernel_es);
 
-		static void nodeCoarsen(Graph& graph, ProfileData &profileData, int n_nodes, vx_kernel_e *kernel_es, MyNode **nodes);
+		static void priority(Target pTarget, Graph& graph, std::vector<vx_kernel_e> &kernel_es, std::vector<MyNode *> &nodes);
 
-		static void releaseNodes(Graph& graph, int n_nodes, MyNode **nodes);
+		static void nodeCoarsen(Graph& graph, ProfileData &profileData, std::vector<vx_kernel_e> &kernel_es, std::vector<MyNode *> &nodes);
+
+		static void clusterToCSV(std::fstream &csvCluster, int n_nodes);
+
+		static void releaseNodes(Graph& graph, std::vector<MyNode *> &nodes);
 	};
 }
 

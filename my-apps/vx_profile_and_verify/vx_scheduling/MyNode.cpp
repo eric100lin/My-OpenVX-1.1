@@ -57,16 +57,17 @@ vx_kernel_e MyNode::getKernele() const
 	return m_kernel_e;
 }
 
-void MyNode::generateNodes(int n_nodes, MyNode **nodes, vx_kernel_e *kernel_es)
+void MyNode::generateNodes(int n_nodes, vector<MyNode *> &nodes, vector<vx_kernel_e> &kernel_es)
 {
 	for (int i = 0; i < n_nodes; i++)
 	{
-		nodes[i] = new MyNode(kernel_es[i]);
+		nodes.push_back(new MyNode(kernel_es[i]));
 	}
 }
 
-int MyNode::getPropagateRank(int n_nodes, MyNode **nodes)
+int MyNode::getPropagateRank(vector<MyNode *> &nodes)
 {
+	int n_nodes = nodes.size();
 	float propagateRank = 0.0f;
 	for (int i = 0; i < n_nodes; i++)
 	{
@@ -95,12 +96,13 @@ public:
 	}
 };
 
-float MyNode::rank(int n_nodes, MyNode **nodes, ProfileData &profileData)
+float MyNode::rank(vector<MyNode *> &nodes, ProfileData &profileData)
 {
+	int n_nodes = nodes.size();
 	float rank_tmp;
 
 	//Output data should be only one
-	rank_tmp = this->getPropagateRank(n_nodes, nodes);
+	rank_tmp = this->getPropagateRank(nodes);
 
 	//Transfer time for output data
 	rank_tmp += profileData.getTransferTime(this->m_kernel_e, this->mTarget);
@@ -135,8 +137,23 @@ static void clearCluster()
 	clusters.clear();
 }
 
-void MyNode::nodeCoarsen(Graph& graph, ProfileData &profileData, int n_nodes, vx_kernel_e *kernel_es, MyNode **nodes)
+void MyNode::priority(Target pTarget, Graph& graph, vector<vx_kernel_e> &kernel_es, vector<MyNode *> &nodes)
 {
+	int n_nodes = nodes.size();
+	// Assign to the priority target
+	for (int i = 0; i < n_nodes; i++)
+	{
+		//nodes[i]->mTarget = profileData.getMiniComputeTimeTarget(kernel_es[i]);
+		nodes[i]->mTarget = pTarget;
+	}
+	addNodesToVxGraph(graph, nodes);
+}
+
+void MyNode::nodeCoarsen(Graph& graph, ProfileData &profileData, 
+						 vector<vx_kernel_e> &kernel_es, vector<MyNode *> &nodes)
+{
+	int n_nodes = nodes.size();
+
 	// Assign to minimal compute target
 	for (int i = 0; i < n_nodes; i++)
 	{
@@ -150,7 +167,7 @@ void MyNode::nodeCoarsen(Graph& graph, ProfileData &profileData, int n_nodes, vx
 	// Compute the critical path
 	for (int i = n_nodes-1; i >= 0; i--)
 	{
-		nodes[i]->mRank = nodes[i]->rank(n_nodes, nodes, profileData);
+		nodes[i]->mRank = nodes[i]->rank(nodes, profileData);
 	}
 	vector<MyNode *> critical_path;
 	for (MyNode *c_node = nodes[0]; c_node != nodes[n_nodes - 1];)
@@ -330,23 +347,43 @@ void MyNode::nodeCoarsen(Graph& graph, ProfileData &profileData, int n_nodes, vx
 
 	DataObject::registerForLocalOptimized(graph, clusters);
 
+	addNodesToVxGraph(graph, nodes);
+}
+
+void MyNode::clusterToCSV(std::fstream &csvCluster, int n_nodes)
+{
+	int inClusterCnt = 0;
+	Target clusterTargetOrder[] = { TARGET_C_MODEL, TARGET_OPENCL, TARGET_HEXAGON };
+	for (int i=0; i<3; i++)
+	{
+		vector<MyNode *> &targetCluster = clusters[clusterTargetOrder[i]];
+		csvCluster << targetCluster.size() << ",";
+		inClusterCnt += targetCluster.size();
+	}
+	csvCluster << n_nodes- inClusterCnt << std::endl;
+}
+
+void MyNode::addNodesToVxGraph(Graph& graph, vector<MyNode *> &nodes)
+{
+	int n_nodes = nodes.size();
 	for (int i = 0; i < n_nodes; i++)
 	{
 		int idx = 0;
 		nodes[i]->mNode = graph.addNode(nodes[i]->m_kernel_e, nodes[i]->mTarget);
-		for (int in=0; in < nodes[i]->m_input_p_cnt; in++)
+		for (int in = 0; in < nodes[i]->m_input_p_cnt; in++)
 		{
 			nodes[i]->mNode->setParameterByIndex(idx++, nodes[i]->m_inputs[in]->m_vx_reference);
 		}
-		for (int out=0; out < nodes[i]->m_output_p_cnt; out++)
+		for (int out = 0; out < nodes[i]->m_output_p_cnt; out++)
 		{
 			nodes[i]->mNode->setParameterByIndex(idx++, nodes[i]->m_outputs[out]->m_vx_reference);
 		}
 	}
 }
 
-void MyNode::releaseNodes(Graph& graph, int n_nodes, MyNode **nodes)
+void MyNode::releaseNodes(Graph& graph, vector<MyNode *> &nodes)
 {
+	int n_nodes = nodes.size();
 	for (int i = 0; i < n_nodes; i++)
 	{
 		graph.removeNode(nodes[i]->mNode);

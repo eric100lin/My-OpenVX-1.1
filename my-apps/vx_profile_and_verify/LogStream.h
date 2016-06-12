@@ -10,14 +10,7 @@ namespace OpenVX
 	private:
 		std::ofstream recordfile;
 	public:
-		LogStream(const char *file_name)
-		{
-			if (!recordfile.is_open())
-			{
-				recordfile.open(RECODRD_FILE_NAME);
-				ERROR_CHECK(!recordfile.is_open());
-			}
-		}
+		LogStream(const char *file_name);
 
 		template <typename T>
 		friend LogStream & operator<<(LogStream &logs, const T& value)
@@ -33,19 +26,12 @@ namespace OpenVX
 			return operator<< <ostream_manipulator> (logs, pf);
 		}
 
-		void precision(int precision)
-		{
-			std::cout.precision(precision);
-			recordfile.precision(precision);
-		}
+		void precision(int precision);
 
-		void close()
-		{
-			recordfile.close();
-		}
+		void close();
 	};
 
-	inline LogStream& logs() { static LogStream l(RECODRD_FILE_NAME); return l; }
+	LogStream& logs(const char *file_name = RECODRD_FILE_NAME);
 }
 
 #endif
