@@ -107,6 +107,14 @@ make -j8 && make install
 ```
 *Support Hexagon DSP and build with prebuilt OpenCL library on Windows Host using MinGW Make
 
+At first, Hexagon kernel codes not ready. 
+You should build with SKIP_BUILD_HEXAGON_TARGET option ON, 
+so you can get OpenVX framework ready to support Hexagon and build Hexagon kernel codes with it.
+Add the following command after cmake command line options.
+```
+-DSKIP_BUILD_HEXAGON_TARGET=ON
+```
+
 Same as above, but use different CMake options; env{HEXAGON_SDK_ROOT} and env{ANDROID_BUILD_VARIANT} is set by developer during Hexagon Make.d build
 ```
 set VX_HEXAGON_REMOTE_PATH=%HEXAGON_SDK_ROOT%\lib\common\remote\ship\%ANDROID_BUILD_VARIANT%

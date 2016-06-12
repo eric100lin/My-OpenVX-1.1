@@ -2,8 +2,9 @@
 # Copyright (c) 2016 National Tsing Hua University. 
 # author Tzu-Hsiang Lin <thlin@pllab.cs.nthu.edu.tw>
 #
+option(SKIP_BUILD_HEXAGON_TARGET "Skip build Hexagon target" OFF)
 
-if ( ANDROID AND EXPERIMENTAL_USE_HEXAGON )
+if ( ANDROID AND EXPERIMENTAL_USE_HEXAGON AND NOT SKIP_BUILD_HEXAGON_TARGET)
 
   # set target name
   set( TARGET_NAME openvx-hexagon )
@@ -39,4 +40,4 @@ if ( ANDROID AND EXPERIMENTAL_USE_HEXAGON )
 			  
   set_target_properties( ${TARGET_NAME} PROPERTIES FOLDER ${SAMPLE_TARGETS_FOLDER} )
 
-endif ( ANDROID AND EXPERIMENTAL_USE_HEXAGON )
+endif ( ANDROID AND EXPERIMENTAL_USE_HEXAGON AND NOT SKIP_BUILD_HEXAGON_TARGET)
