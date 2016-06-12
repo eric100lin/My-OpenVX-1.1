@@ -36,6 +36,21 @@ ProfileData::ProfileData()
 	profile.close();
 }
 
+float ProfileData::getImproveFator(vx_kernel_e kernel_e)
+{
+	Triple_t compute_of_kernel_e = computes[kernel_e];
+	float min_compute = compute_of_kernel_e.time[0];
+	float max_compute = compute_of_kernel_e.time[0];
+	for (int i = 1; i < N_TARGETS; i++)
+	{
+		if (compute_of_kernel_e.time[i] > max_compute)
+			max_compute = compute_of_kernel_e.time[i];
+		if (compute_of_kernel_e.time[i] < min_compute)
+			min_compute = compute_of_kernel_e.time[i];
+	}
+	return max_compute / min_compute;
+}
+
 static struct { enum vx_kernel_e value; int n_parameter; } parameter_tables[] = {
 	{ VX_KERNEL_NOT, 2 },
 	{ VX_KERNEL_BOX_3x3, 2 },
@@ -83,4 +98,21 @@ Target ProfileData::getMiniComputeTimeTarget(vx_kernel_e kernel_e)
 		}
 	}
 	return miniComputeTimeTarget;
+}
+
+Target ProfileData::getMiniTurnAroundTimeTarget(vx_kernel_e kernel_e)
+{
+	Triple_t compute = computes[kernel_e];
+	Triple_t transfer = transfers[kernel_e];
+	float minimal = compute.time[0] + transfer.time[0];
+	Target miniTurnAroundTimeTarget = (Target)0;
+	for (int i = 1; i < N_TARGETS; i++)
+	{
+		if (compute.time[i] + transfer.time[i] < minimal)
+		{
+			minimal = compute.time[i] + transfer.time[i];
+			miniTurnAroundTimeTarget = (Target)i;
+		}
+	}
+	return miniTurnAroundTimeTarget;
 }

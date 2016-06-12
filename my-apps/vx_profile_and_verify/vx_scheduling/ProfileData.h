@@ -18,10 +18,12 @@ namespace OpenVX
 		std::map<vx_kernel_e, Triple_t> computes;
 	public:
 		ProfileData();
+		float getImproveFator(vx_kernel_e kernel_e);
 
 		float getTransferTime(vx_kernel_e kernel_e, Target target_e);
 		float getComputationTime(vx_kernel_e kernel_e, Target target);
 		Target getMiniComputeTimeTarget(vx_kernel_e kernel_e);
+		Target getMiniTurnAroundTimeTarget(vx_kernel_e kernel_e);
 	};
 }
 

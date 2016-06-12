@@ -22,6 +22,8 @@ namespace OpenVX
 		vx_perf_t getComputationTime() const;
 
 		void connect(int n, ...);
+
+		void setParameterByIndex(int idx, vx_reference ref);
 	};
 
 };

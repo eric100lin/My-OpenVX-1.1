@@ -50,3 +50,9 @@ void Node::connect(int n, ...)
 
 	va_end(parameter_list);
 }
+
+void Node::setParameterByIndex(int idx, vx_reference ref)
+{
+	vx_status status = vxSetParameterByIndex(m_node, idx, ref);
+	ERROR_CHECK(status);
+}
