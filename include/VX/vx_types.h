@@ -638,6 +638,8 @@ enum vx_graph_attribute_e {
     VX_GRAPH_NUMPARAMETERS = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_GRAPH) + 0x3,
     /*! \brief Returns the state of the graph. See <tt>\ref vx_graph_state_e</tt> enum. */
     VX_GRAPH_STATE = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_GRAPH) + 0x4,
+	/*! \brief Indicates the reference data object can be local optimized */
+	VX_GRAPH_DO_LOCAL_OPTIMIZED_FOR_REFERENCE = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_GRAPH) + 0x5,
 };
 
 /*! \brief The Conversion Policy Enumeration.

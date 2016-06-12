@@ -2263,3 +2263,29 @@ void vxPrintImage(vx_image image)
                      image->bounds[p][VX_DIM_Y][VX_BOUND_END]);
     }
 }
+
+vx_bool vxIsLocalOptimized(vx_image image)
+{
+	return image->base.is_local_optimized;
+}
+
+#if defined(EXPERIMENTAL_USE_HEXAGON)
+void *getIONmemoryPtr(vx_image image)
+{
+	image->memory.IONuser--;
+	return image->memory.ptrIONmem;
+}
+
+void setIONmemoryPtr(vx_image image, void *ptr)
+{
+	image->memory.IONuser++;
+	image->memory.ptrIONmem = ptr;
+}
+
+vx_bool canReleaseIONmemory(vx_image image)
+{
+	if (image->memory.IONuser == 0)
+		return vx_true_e;
+	return vx_false_e;
+}
+#endif

@@ -104,6 +104,26 @@ void vxPrintImage(vx_image image);
  */
 void vxDestructImage(vx_reference ref);
 
+/*! \brief Used to get ref->is_local_optimized without the knowledge of 
+ *         the vx_image and vx_reference data structure
+ */
+vx_bool vxIsLocalOptimized(vx_image image);
+
+#if defined(EXPERIMENTAL_USE_HEXAGON)
+/*! \brief Used to get image->memory.ptrIONmem without the knowledge of 
+ *         the vx_image and vx_memory data structure
+ */
+void *getIONmemoryPtr(vx_image image);
+/*! \brief Used to set image->memory.ptrIONmem without the knowledge of 
+ *         the vx_image and vx_memory data structure
+ */
+void setIONmemoryPtr(vx_image image, void *ptr);
+/*! \brief Used to check image->memory.IONuser==0 without the knowledge of 
+ *         the vx_image and vx_memory data structure
+ */
+vx_bool canReleaseIONmemory(vx_image image);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

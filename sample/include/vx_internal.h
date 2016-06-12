@@ -526,6 +526,8 @@ typedef struct _vx_reference {
 #endif
     /*! \brief The reference name */
     char name[VX_MAX_REFERENCE_NAME];
+	/*! \brief The flag indicate that is this data object can be local optimized for target */
+	vx_bool is_local_optimized;
 } vx_reference_t;
 
 
@@ -1157,6 +1159,12 @@ typedef struct _vx_memory_t {
     cl_mem_object_type cl_type;
     /*! \brief This describes the image format (if it is an image) */
     cl_image_format cl_format;
+#endif
+#if defined(EXPERIMENTAL_USE_HEXAGON)
+	/*! \brief This contains the ION memory references */
+	void *ptrIONmem;
+	/*! \brief Determine whether can release the ION memory or not */
+	int IONuser;
 #endif
 } vx_memory_t;
 

@@ -19,6 +19,8 @@ namespace OpenVX
 
 		void removeNode(Node *node);
 
+		void setLocalOptimized(vx_reference ref);
+
 		vx_graph getVxGraph() const;
 		
 		vx_perf_t getPerformance() const;

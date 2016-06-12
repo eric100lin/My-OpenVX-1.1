@@ -637,7 +637,7 @@ vx_status vxclCallOpenCLKernel(vx_node node, const vx_reference *parameters, vx_
                     }
                     err = clSetKernelArg(vxclk->kernels[plidx], argidx++, sizeof(cl_mem), &memory->hdls[pln]);
                     CL_ERROR_MSG(err, "clSetKernelArg");
-                    if (dir == VX_INPUT || dir == VX_BIDIRECTIONAL)
+                    if ((dir == VX_INPUT || dir == VX_BIDIRECTIONAL) && ref->is_local_optimized == vx_false_e)
                     {
                         err = clEnqueueWriteBuffer(context->queues[plidx][didx],
                                                    memory->hdls[pln],
@@ -664,7 +664,7 @@ vx_status vxclCallOpenCLKernel(vx_node node, const vx_reference *parameters, vx_
                     if (err != CL_SUCCESS) {
                         VX_PRINT(VX_ZONE_ERROR, "Error Calling Kernel %s, parameter %u\n", node->kernel->name, pidx);
                     }
-                    if (dir == VX_INPUT || dir == VX_BIDIRECTIONAL)
+                    if ((dir == VX_INPUT || dir == VX_BIDIRECTIONAL) && ref->is_local_optimized == vx_false_e)
                     {
                         err = clEnqueueWriteImage(context->queues[plidx][didx],
                                                   memory->hdls[pln],
@@ -774,6 +774,8 @@ vx_status vxclCallOpenCLKernel(vx_node node, const vx_reference *parameters, vx_
             }
             if (memory) {
                 for (pln = 0; pln < memory->nptrs; pln++) {
+					if(ref->is_local_optimized == vx_true_e)
+						continue;
                     if (memory->cl_type == CL_MEM_OBJECT_BUFFER) {
                         err = clEnqueueReadBuffer(context->queues[plidx][didx],
                             memory->hdls[pln],

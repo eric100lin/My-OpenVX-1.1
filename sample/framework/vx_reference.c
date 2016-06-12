@@ -80,6 +80,7 @@ void vxInitReference(vx_reference ref, vx_context context, vx_enum type, vx_refe
         ref->delay_slot_index = 0;
         ref->is_virtual = vx_false_e;
         ref->is_accessible = vx_false_e;
+		ref->is_local_optimized = vx_false_e;
 #ifdef OPENVX_KHR_XML
         ref->name[0] = 0;
 #endif

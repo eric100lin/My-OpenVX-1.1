@@ -116,6 +116,10 @@ vx_bool vxAllocateMemory(vx_context context, vx_memory_t *memory)
                     }
                 }
 #endif
+#if defined(EXPERIMENTAL_USE_HEXAGON)
+				memory->ptrIONmem = NULL;
+				memory->IONuser = 0;
+#endif
             }
         }
         vxPrintMemory(memory);
