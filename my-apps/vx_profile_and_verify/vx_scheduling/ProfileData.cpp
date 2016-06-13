@@ -84,17 +84,19 @@ float ProfileData::getComputationTime(vx_kernel_e kernel_e, Target target)
 	return computes[kernel_e].time[target];
 }
 
+static Target pTargets[N_TARGETS] = { TARGET_C_MODEL , TARGET_OPENCL , TARGET_HEXAGON };
+
 Target ProfileData::getMiniComputeTimeTarget(vx_kernel_e kernel_e)
 {
 	Triple_t compute = computes[kernel_e];
 	float minimal = compute.time[0];
-	Target miniComputeTimeTarget = (Target)0;
+	Target miniComputeTimeTarget = pTargets[0];
 	for (int i = 1; i < N_TARGETS; i++)
 	{
 		if (compute.time[i] < minimal)
 		{
 			minimal = compute.time[i];
-			miniComputeTimeTarget = (Target)i;
+			miniComputeTimeTarget = pTargets[i];
 		}
 	}
 	return miniComputeTimeTarget;
@@ -105,13 +107,13 @@ Target ProfileData::getMiniTurnAroundTimeTarget(vx_kernel_e kernel_e)
 	Triple_t compute = computes[kernel_e];
 	Triple_t transfer = transfers[kernel_e];
 	float minimal = compute.time[0] + transfer.time[0];
-	Target miniTurnAroundTimeTarget = (Target)0;
+	Target miniTurnAroundTimeTarget = pTargets[0];
 	for (int i = 1; i < N_TARGETS; i++)
 	{
 		if (compute.time[i] + transfer.time[i] < minimal)
 		{
 			minimal = compute.time[i] + transfer.time[i];
-			miniTurnAroundTimeTarget = (Target)i;
+			miniTurnAroundTimeTarget = pTargets[i];
 		}
 	}
 	return miniTurnAroundTimeTarget;
