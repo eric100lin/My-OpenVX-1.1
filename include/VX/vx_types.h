@@ -638,8 +638,6 @@ enum vx_graph_attribute_e {
     VX_GRAPH_NUMPARAMETERS = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_GRAPH) + 0x3,
     /*! \brief Returns the state of the graph. See <tt>\ref vx_graph_state_e</tt> enum. */
     VX_GRAPH_STATE = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_GRAPH) + 0x4,
-	/*! \brief Indicates the reference data object can be local optimized */
-	VX_GRAPH_DO_LOCAL_OPTIMIZED_FOR_REFERENCE = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_GRAPH) + 0x5,
 };
 
 /*! \brief The Conversion Policy Enumeration.
@@ -743,6 +741,12 @@ enum vx_reference_attribute_e {
     VX_REF_ATTRIBUTE_TYPE = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_REFERENCE) + 0x1,
     /*! \brief Used to query the reference for its name. Read-write. Use a <tt>\ref *vx_char</tt> parameter. */
     VX_REF_ATTRIBUTE_NAME = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_REFERENCE) + 0x2,
+	/*! \brief Indicates the reference data object can be local optimized */
+	VX_REF_DO_LOCAL_OPTIMIZED_FOR_REFERENCE = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_REFERENCE) + 0x3,
+	/*! \brief Number of nodes will use this localized reference */
+	VX_REF_LOCAL_OPTIMIZED_REFERENCE_READER_CNT = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_REFERENCE) + 0x4,
+	/*! \brief Indicates the local optimized reference need to duplicate in host memory or not */
+	VX_REF_LOCAL_OPTIMIZED_NEED_TRANSFER_BACK = VX_ATTRIBUTE_BASE(VX_ID_KHRONOS, VX_TYPE_REFERENCE) + 0x5,
 };
 
 /*! \brief A list of context attributes.

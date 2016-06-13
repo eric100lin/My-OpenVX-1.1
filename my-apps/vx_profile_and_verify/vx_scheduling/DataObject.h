@@ -28,6 +28,8 @@ namespace OpenVX
 			static void registerForLocalOptimized(Graph & graph, std::map< Target, std::vector<MyNode *> > &clusters);
 
 			static void releaseDataObjects();
+
+			static void setLocalizedReference(vx_reference ref, vx_uint32 readerCount, vx_bool transferBack);
 	};
 
 	class Lamda

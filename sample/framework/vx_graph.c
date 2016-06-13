@@ -482,17 +482,6 @@ VX_API_ENTRY vx_status VX_API_CALL vxSetGraphAttribute(vx_graph graph, vx_enum a
     {
 		switch (attribute)
 		{
-			case VX_GRAPH_DO_LOCAL_OPTIMIZED_FOR_REFERENCE:
-				if (VX_CHECK_PARAM(ptr, size, vx_reference, 0x3))
-				{
-					vx_reference ptr_ref = (vx_reference)ptr;
-					ptr_ref->is_local_optimized = vx_true_e;
-				}
-				else
-				{
-					status = VX_ERROR_INVALID_PARAMETERS;
-				}
-				break;
 			default:
 				status = VX_ERROR_NOT_SUPPORTED;
 				break;

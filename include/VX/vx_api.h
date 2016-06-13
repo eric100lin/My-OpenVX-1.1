@@ -1323,6 +1323,16 @@ VX_API_ENTRY vx_status VX_API_CALL vxCopyScalar(vx_scalar scalar, void *user_ptr
  */
 VX_API_ENTRY vx_status VX_API_CALL vxQueryReference(vx_reference ref, vx_enum attribute, void *ptr, vx_size size);
 
+/*! \brief Set any reference type for attributes like local optimized.
+* \param [in] ref The reference to set attribute.
+* \param [in] attribute The value for which to query. Use <tt>\ref vx_reference_attribute_e</tt>.
+* \param [out] ptr The location at which to store the resulting value.
+* \param [in] size The size in bytes of the container to which ptr points.
+* \return A <tt>\ref vx_status_e</tt> enumeration.
+* \ingroup group_reference
+*/
+VX_API_ENTRY vx_status VX_API_CALL vxSetReferenceAttribute(vx_reference ref, vx_enum attribute, const void *ptr, vx_size size);
+
 /*! \brief Releases a reference. The reference may potentially refer to multiple OpenVX objects of different types.
  * This function can be used instead of calling a specific release function for each individual object type 
  * (e.g. vxRelease<object>). The object will not be destroyed until its total reference count is zero.

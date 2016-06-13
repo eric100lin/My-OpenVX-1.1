@@ -28,12 +28,6 @@ void Graph::removeNode(Node *node)
 	delete node;
 }
 
-void Graph::setLocalOptimized(vx_reference ref)
-{
-	vx_status status = vxSetGraphAttribute(m_graph, VX_GRAPH_DO_LOCAL_OPTIMIZED_FOR_REFERENCE, ref, sizeof(vx_reference));
-	ERROR_CHECK(status);
-}
-
 vx_graph Graph::getVxGraph() const
 {
 	return m_graph;

@@ -774,7 +774,7 @@ vx_status vxclCallOpenCLKernel(vx_node node, const vx_reference *parameters, vx_
             }
             if (memory) {
                 for (pln = 0; pln < memory->nptrs; pln++) {
-					if(ref->is_local_optimized == vx_true_e)
+					if(ref->is_local_optimized == vx_true_e && ref->is_transfer_back == vx_false_e)
 						continue;
                     if (memory->cl_type == CL_MEM_OBJECT_BUFFER) {
                         err = clEnqueueReadBuffer(context->queues[plidx][didx],

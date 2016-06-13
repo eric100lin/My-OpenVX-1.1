@@ -81,6 +81,8 @@ void vxInitReference(vx_reference ref, vx_context context, vx_enum type, vx_refe
         ref->is_virtual = vx_false_e;
         ref->is_accessible = vx_false_e;
 		ref->is_local_optimized = vx_false_e;
+		ref->local_reader_count = 0;
+		ref->is_transfer_back = vx_true_e;
 #ifdef OPENVX_KHR_XML
         ref->name[0] = 0;
 #endif
@@ -503,6 +505,57 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryReference(vx_reference ref, vx_enum at
             break;
     }
     return status;
+}
+
+VX_API_ENTRY vx_status VX_API_CALL vxSetReferenceAttribute(vx_reference ref, vx_enum attribute, const void *ptr, vx_size size)
+{
+	vx_status status = VX_SUCCESS;
+
+	/* if it is not a reference and not a context */
+	if ((vxIsValidReference(ref) == vx_false_e) &&
+		(vxIsValidContext((vx_context_t *)ref) == vx_false_e)) {
+		return VX_ERROR_INVALID_REFERENCE;
+	}
+	switch (attribute)
+	{
+	case VX_REF_DO_LOCAL_OPTIMIZED_FOR_REFERENCE:
+		if (VX_CHECK_PARAM(ptr, size, vx_bool, 0x3))
+		{
+			vx_bool *ptr_bool = (vx_bool *)ptr;
+			ref->is_local_optimized = *ptr_bool;
+		}
+		else
+		{
+			status = VX_ERROR_INVALID_PARAMETERS;
+		}
+		break;
+	case VX_REF_LOCAL_OPTIMIZED_REFERENCE_READER_CNT:
+		if (VX_CHECK_PARAM(ptr, size, vx_uint32, 0x3))
+		{
+			vx_uint32 *ptr_count = (vx_uint32 *)ptr;
+			ref->local_reader_count = *ptr_count;
+		}
+		else
+		{
+			status = VX_ERROR_INVALID_PARAMETERS;
+		}
+		break;
+	case VX_REF_LOCAL_OPTIMIZED_NEED_TRANSFER_BACK:
+		if (VX_CHECK_PARAM(ptr, size, vx_bool, 0x3))
+		{
+			vx_bool *ptr_bool = (vx_bool *)ptr;
+			ref->is_transfer_back = *ptr_bool;
+		}
+		else
+		{
+			status = VX_ERROR_INVALID_PARAMETERS;
+		}
+		break;
+	default:
+		status = VX_ERROR_NOT_SUPPORTED;
+		break;
+	}
+	return status;
 }
 
 VX_API_ENTRY vx_status VX_API_CALL vxSetReferenceName(vx_reference ref, const vx_char *name)

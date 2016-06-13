@@ -2269,23 +2269,32 @@ vx_bool vxIsLocalOptimized(vx_image image)
 	return image->base.is_local_optimized;
 }
 
+vx_bool vxIsTransferBackNeeded(vx_image image)
+{
+	return image->base.is_transfer_back;
+}
+
 #if defined(EXPERIMENTAL_USE_HEXAGON)
-void *getIONmemoryPtr(vx_image image)
+void *vxGetIONmemoryPtr(vx_image image)
 {
 	image->memory.IONuser--;
+	VX_PRINT(VX_ZONE_TAR_HEXAGON, "vxGetIONmemoryPtr ptr:%p\n", image->memory.ptrIONmem);
 	return image->memory.ptrIONmem;
 }
 
-void setIONmemoryPtr(vx_image image, void *ptr)
+void vxSetIONmemoryPtr(vx_image image, void *ptr)
 {
-	image->memory.IONuser++;
 	image->memory.ptrIONmem = ptr;
+	image->memory.IONuser = image->base.local_reader_count;
+	VX_PRINT(VX_ZONE_TAR_HEXAGON, "vxSetIONmemoryPtr ptr:%p\n", ptr);
 }
 
-vx_bool canReleaseIONmemory(vx_image image)
+vx_bool vxCanReleaseIONmemory(vx_image image)
 {
-	if (image->memory.IONuser == 0)
+	VX_PRINT(VX_ZONE_TAR_HEXAGON, "vxCanReleaseIONmemory return: %d\n", (image->memory.IONuser <= 0));
+	if (image->memory.IONuser <= 0)
 		return vx_true_e;
 	return vx_false_e;
 }
+
 #endif

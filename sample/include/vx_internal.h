@@ -528,6 +528,11 @@ typedef struct _vx_reference {
     char name[VX_MAX_REFERENCE_NAME];
 	/*! \brief The flag indicate that is this data object can be local optimized for target */
 	vx_bool is_local_optimized;
+	/*! \brief The number of localized data readers */
+	vx_uint32 local_reader_count;
+	/*! \brief The flag indicate that is this local optimized reference 
+	 *  need to duplicate in host memory or not */
+	vx_bool is_transfer_back;
 } vx_reference_t;
 
 
