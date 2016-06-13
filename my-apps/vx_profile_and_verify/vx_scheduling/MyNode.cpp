@@ -306,11 +306,11 @@ void MyNode::nodeCoarsen(Graph& graph, ProfileData &profileData,
 			for (int in = 0; in < ncn->m_input_p_cnt; in++)
 			{
 				DataObject *din2ncn = ncn->m_inputs[in];
+				float lamdaValue = profileData.getTransferTime(ncn->m_kernel_e, ncn->mTarget);
+				if (din2ncn->writer != NULL)
+					lamdaValue += profileData.getTransferTime(din2ncn->writer->m_kernel_e, din2ncn->writer->mTarget);
 				lamdaAroundNCP.push_back(
-					Lamda(din2ncn, ncn, din2ncn->writer,
-						profileData.getTransferTime(din2ncn->writer->m_kernel_e, din2ncn->writer->mTarget) +
-						profileData.getTransferTime(ncn->m_kernel_e, ncn->mTarget)
-					)
+					Lamda(din2ncn, ncn, din2ncn->writer, lamdaValue)
 				);
 			}
 			for (int out = 0; out < ncn->m_output_p_cnt; out++)
