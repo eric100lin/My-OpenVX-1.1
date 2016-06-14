@@ -11,6 +11,8 @@ namespace OpenVX
 
 	class DataObject;
 
+	class RandomNodes;
+
 	class MyNode
 	{
 	private:
@@ -23,6 +25,7 @@ namespace OpenVX
 		bool visited;
 		Target mTarget;
 		bool inCluster;
+		RandomNodes *mPtrRandomNodes;
 
 		int getPropagateRank(std::vector<MyNode *> &nodes);
 
@@ -41,6 +44,8 @@ namespace OpenVX
 		Target getTarget() const;
 
 		vx_kernel_e getKernele() const;
+
+		void setRandomNodesPoiter(RandomNodes *ptrRandomNodes);
 
 		static bool addClusterIfValid(Target target, MyNode *node);
 

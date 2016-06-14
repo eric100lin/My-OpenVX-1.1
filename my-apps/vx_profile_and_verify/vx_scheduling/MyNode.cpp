@@ -1,6 +1,7 @@
 #include "MyNode.h"
 #include "ProfileData.h"
 #include "DataObject.h"
+#include "RandomNodes.h"
 #include <cstdarg>
 #include <vector>
 #include <algorithm>
@@ -10,6 +11,7 @@ using namespace OpenVX;
 
 MyNode::MyNode(enum vx_kernel_e kernel_e) : m_kernel_e(kernel_e)
 {
+	mPtrRandomNodes = NULL;
 	mPropagateSuccessor = NULL;
 	visited = false;
 	inCluster = false;
@@ -17,6 +19,8 @@ MyNode::MyNode(enum vx_kernel_e kernel_e) : m_kernel_e(kernel_e)
 
 MyNode::~MyNode()
 {
+	if (mPtrRandomNodes != NULL)
+		delete mPtrRandomNodes;
 }
 
 void MyNode::connect(int input_p_cnt, int output_p_cnt, ...)
@@ -55,6 +59,11 @@ Target MyNode::getTarget() const
 vx_kernel_e MyNode::getKernele() const
 {
 	return m_kernel_e;
+}
+
+void MyNode::setRandomNodesPoiter(RandomNodes *ptrRandomNodes)
+{
+	mPtrRandomNodes = ptrRandomNodes;
 }
 
 void MyNode::generateNodes(int n_nodes, vector<MyNode *> &nodes, vector<vx_kernel_e> &kernel_es)
@@ -169,56 +178,90 @@ void MyNode::nodeCoarsen(Graph& graph, ProfileData &profileData,
 	{
 		nodes[i]->mRank = nodes[i]->rank(nodes, profileData);
 	}
-	vector<MyNode *> critical_path;
-	for (MyNode *c_node = nodes[0]; c_node != nodes[n_nodes - 1];)
+
+	// Find start nodes
+	vector<MyNode *> start_nodes;
+	for (int i = 0; i < n_nodes; i++)
 	{
-		critical_path.push_back(c_node);
-		c_node = c_node->mPropagateSuccessor;
+		bool not_start_node = false;
+		for (int n_in = 0; n_in < nodes[i]->m_input_p_cnt; n_in++)
+		{
+			for (int otherNode = 0; otherNode < n_nodes; otherNode++)
+			{
+				if (i == otherNode)	continue;
+				for (int n_out = 0; n_out < nodes[otherNode]->m_output_p_cnt; n_out++)
+				{
+					if (nodes[i]->m_inputs[n_in] == nodes[otherNode]->m_outputs[n_out])
+					{
+						not_start_node = true;
+						break;
+					}
+				}
+				if (not_start_node)	break;
+			}
+			if (not_start_node)	break;
+		}
+		if (!not_start_node)	start_nodes.push_back(nodes[i]);
 	}
-	critical_path.push_back(nodes[n_nodes - 1]);
+
+	vector<vector<MyNode *>> critical_paths;
+	for (int n_start = 0; n_start < start_nodes.size(); n_start++)
+	{
+		vector<MyNode *> critical_path;
+		for (MyNode *c_node = nodes[0]; c_node != NULL;)
+		{
+			critical_path.push_back(c_node);
+			c_node = c_node->mPropagateSuccessor;
+		}
+		critical_paths.push_back(critical_path);
+	}
 
 	// Get unvisited data objects on CP
 	vector<Lamda> lamdaOnCP;
-	for (int i = 0; i < critical_path.size(); i++)
+	for (int n_critical_path = 0; n_critical_path < critical_paths.size(); n_critical_path++)
 	{
-		MyNode *critical_node = critical_path[i];
-		for (int in = 0; in < critical_node->m_input_p_cnt; in++)
+		vector<MyNode *> &critical_path = critical_paths[n_critical_path];
+		for (int i = 0; i < critical_path.size(); i++)
 		{
-			DataObject *data_in = critical_node->m_inputs[in];
-			if (data_in->writer == NULL)	//src data object
-				lamdaOnCP.push_back(
-					Lamda(data_in, critical_node, NULL, profileData.getTransferTime(critical_node->m_kernel_e, critical_node->mTarget))
-				);
-			//Writer node also on critical path
-			else if(find(critical_path.begin(), critical_path.end(), data_in->writer) != critical_path.end())
+			MyNode *critical_node = critical_path[i];
+			for (int in = 0; in < critical_node->m_input_p_cnt; in++)
 			{
-				lamdaOnCP.push_back(
-					Lamda(data_in, critical_node, data_in->writer,
-						profileData.getTransferTime(data_in->writer->m_kernel_e, data_in->writer->mTarget) +
-						profileData.getTransferTime(critical_node->m_kernel_e, critical_node->mTarget))
-				);
-			}
-		}
-		for (int out = 0; out < critical_node->m_output_p_cnt; out++)
-		{
-			DataObject *data_out = critical_node->m_outputs[out];
-			if (data_out->readers.size() == 0)	//dst data object
-				lamdaOnCP.push_back(
-					Lamda(data_out, NULL, critical_node, profileData.getTransferTime(critical_node->m_kernel_e, critical_node->mTarget))
-				);
-			else
-			{
-				//Reader node also on critical path
-				for (int r = 0; r < data_out->readers.size(); r++)
+				DataObject *data_in = critical_node->m_inputs[in];
+				if (data_in->writer == NULL)	//src data object
+					lamdaOnCP.push_back(
+						Lamda(data_in, critical_node, NULL, profileData.getTransferTime(critical_node->m_kernel_e, critical_node->mTarget))
+					);
+				//Writer node also on critical path
+				else if (find(critical_path.begin(), critical_path.end(), data_in->writer) != critical_path.end())
 				{
-					if (find(critical_path.begin(), critical_path.end(), data_out->readers[r]) != critical_path.end())
+					lamdaOnCP.push_back(
+						Lamda(data_in, critical_node, data_in->writer,
+							profileData.getTransferTime(data_in->writer->m_kernel_e, data_in->writer->mTarget) +
+							profileData.getTransferTime(critical_node->m_kernel_e, critical_node->mTarget))
+					);
+				}
+			}
+			for (int out = 0; out < critical_node->m_output_p_cnt; out++)
+			{
+				DataObject *data_out = critical_node->m_outputs[out];
+				if (data_out->readers.size() == 0)	//dst data object
+					lamdaOnCP.push_back(
+						Lamda(data_out, NULL, critical_node, profileData.getTransferTime(critical_node->m_kernel_e, critical_node->mTarget))
+					);
+				else
+				{
+					//Reader node also on critical path
+					for (int r = 0; r < data_out->readers.size(); r++)
 					{
-						lamdaOnCP.push_back(
-							Lamda(data_out, data_out->readers[r], critical_node,
-								profileData.getTransferTime(critical_node->m_kernel_e, critical_node->mTarget) +
-								profileData.getTransferTime(data_out->readers[r]->m_kernel_e, data_out->readers[r]->mTarget)
-							)
-						);
+						if (find(critical_path.begin(), critical_path.end(), data_out->readers[r]) != critical_path.end())
+						{
+							lamdaOnCP.push_back(
+								Lamda(data_out, data_out->readers[r], critical_node,
+									profileData.getTransferTime(critical_node->m_kernel_e, critical_node->mTarget) +
+									profileData.getTransferTime(data_out->readers[r]->m_kernel_e, data_out->readers[r]->mTarget)
+								)
+							);
+						}
 					}
 				}
 			}
@@ -269,9 +312,13 @@ void MyNode::nodeCoarsen(Graph& graph, ProfileData &profileData,
 	vector<MyNode *> non_critical_nodes;
 	for (int i = 0; i < n_nodes; i++)
 	{
-		if (find(critical_path.begin(), critical_path.end(), nodes[i]) == critical_path.end())
+		for (int n_critical_path = 0; n_critical_path < critical_paths.size(); n_critical_path++)
 		{
-			non_critical_nodes.push_back(nodes[i]);
+			vector<MyNode *> &critical_path = critical_paths[n_critical_path];
+			if (find(critical_path.begin(), critical_path.end(), nodes[i]) == critical_path.end())
+			{
+				non_critical_nodes.push_back(nodes[i]);
+			}
 		}
 	}
 

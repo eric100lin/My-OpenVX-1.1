@@ -28,10 +28,12 @@ int main(int argc, char **argv)
 	fstream csvSpeedup(CSV_SPEEDUP_NAME, std::fstream::out);
 	fstream csvCluster(CSV_CLUSTER_NAME, std::fstream::out);
 
+	srand(time(NULL));
 	Experiment *experiments[] = 
 	{
 		new SuperResolution(context),
 		new RandomFaceDetection(context),
+		new RandomCase1(context)
 	};
 	for (int n_exp = 0; n_exp < sizeof(experiments) / sizeof(experiments[0]); n_exp++)
 	{

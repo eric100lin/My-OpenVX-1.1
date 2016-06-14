@@ -1,5 +1,6 @@
 #include "Experiment.h"
 #include "MyNode.h"
+#include "RandomNodes.h"
 using namespace cv;
 using namespace std;
 using namespace OpenVX;
@@ -14,7 +15,7 @@ Experiment::Experiment(const char *n, Context &c)
 }
 
 RandomFaceDetection::RandomFaceDetection(Context &c)
-	: Experiment("Random graph", c)
+	: Experiment("Face detection", c)
 {
 }
 
@@ -119,4 +120,66 @@ void SuperResolution::releaseDatas()
 	delete thR;
 	vxReleaseScalar(&spolicy);
 	vxReleaseThreshold(&mThreshold);
+}
+
+RandomCase1::RandomCase1(Context &c) : Experiment("Random graph 1", c)
+{
+}
+
+void RandomCase1::prepareNodesAndDatas(Graph &graph, std::vector<vx_kernel_e> &kernel_es, std::vector<MyNode *> &nodes)
+{
+	Mat lena_src = imread(SRC_IMG_NAME1);
+	NULLPTR_CHECK(lena_src.data);
+	resize(lena_src, lena_src, Size(IMG_WIDTH, IMG_HEIGHT));
+	cvtColor(lena_src, lena_src, CV_RGB2GRAY);
+
+	Mat baboon_src = imread(SRC_IMG_NAME2);
+	NULLPTR_CHECK(baboon_src.data);
+	resize(baboon_src, baboon_src, Size(IMG_WIDTH, IMG_HEIGHT));
+	cvtColor(baboon_src, baboon_src, CV_RGB2GRAY);
+
+	Mat xor_lena_baboon(IMG_HEIGHT, IMG_WIDTH, CV_8UC1);
+	bitwise_xor(lena_src, baboon_src, xor_lena_baboon);
+
+	src1 = new Image(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8, lena_src);
+	src2 = new Image(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8, baboon_src);
+	src3 = new Image(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8, xor_lena_baboon);
+	v023 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v1345 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v267 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v489 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v378 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v59 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	dst6 = new Image(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	dst7 = new Image(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	dst8 = new Image(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	dst9 = new Image(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+
+	kernel_es.push_back(OneIOneONodes::random(context, src1->getVxImage(), v023->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::random(context, src2->getVxImage(), src3->getVxImage(), v1345->getVxImage(), nodes));
+	kernel_es.push_back(OneIOneONodes::random(context, v023->getVxImage(), v267->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::random(context, v023->getVxImage(), v1345->getVxImage(), v378->getVxImage(), nodes));
+	kernel_es.push_back(OneIOneONodes::random(context, v1345->getVxImage(), v489->getVxImage(), nodes));
+	kernel_es.push_back(OneIOneONodes::random(context, v1345->getVxImage(), v59->getVxImage(), nodes));
+	kernel_es.push_back(OneIOneONodes::random(context, v267->getVxImage(), dst6->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::random(context, v267->getVxImage(), v378->getVxImage(), dst7->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::random(context, v378->getVxImage(), v489->getVxImage(), dst8->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::random(context, v489->getVxImage(), v59->getVxImage(), dst9->getVxImage(), nodes));
+}
+
+void RandomCase1::releaseDatas()
+{
+	delete src1;
+	delete src2;
+	delete src3;
+	delete v023;
+	delete v1345;
+	delete v267;
+	delete v489;
+	delete v378;
+	delete v59;
+	delete dst6;
+	delete dst7;
+	delete dst8;
+	delete dst9;
 }

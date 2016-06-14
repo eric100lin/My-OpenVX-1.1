@@ -42,6 +42,17 @@ namespace OpenVX
 		void prepareNodesAndDatas(Graph &graph, std::vector<vx_kernel_e> &kernel_es, std::vector<MyNode *> &nodes);
 		void releaseDatas();
 	};
+
+	class RandomCase1 : public Experiment
+	{
+		Image *src1, *src2, *src3;
+		VirtualImage *v023, *v1345, *v267, *v489, *v378, *v59;
+		Image *dst6, *dst7, *dst8, *dst9;
+	public:
+		RandomCase1(Context &c);
+		void prepareNodesAndDatas(Graph &graph, std::vector<vx_kernel_e> &kernel_es, std::vector<MyNode *> &nodes);
+		void releaseDatas();
+	};
 }
 
 #endif
