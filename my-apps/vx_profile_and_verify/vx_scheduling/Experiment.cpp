@@ -138,48 +138,94 @@ void RandomCase1::prepareNodesAndDatas(Graph &graph, std::vector<vx_kernel_e> &k
 	resize(baboon_src, baboon_src, Size(IMG_WIDTH, IMG_HEIGHT));
 	cvtColor(baboon_src, baboon_src, CV_RGB2GRAY);
 
-	Mat xor_lena_baboon(IMG_HEIGHT, IMG_WIDTH, CV_8UC1);
-	bitwise_xor(lena_src, baboon_src, xor_lena_baboon);
-
 	src1 = new Image(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8, lena_src);
 	src2 = new Image(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8, baboon_src);
-	src3 = new Image(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8, xor_lena_baboon);
-	v023 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
-	v1345 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
-	v267 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
-	v489 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
-	v378 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
-	v59 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
-	dst6 = new Image(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
-	dst7 = new Image(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
-	dst8 = new Image(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
-	dst9 = new Image(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v034 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v13456 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v256 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v37 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v47 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v58 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v68 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v79 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v89 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	dst = new Image(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
 
-	kernel_es.push_back(OneIOneONodes::random(context, src1->getVxImage(), v023->getVxImage(), nodes));
-	kernel_es.push_back(TwoIOneONodes::random(context, src2->getVxImage(), src3->getVxImage(), v1345->getVxImage(), nodes));
-	kernel_es.push_back(OneIOneONodes::random(context, v023->getVxImage(), v267->getVxImage(), nodes));
-	kernel_es.push_back(TwoIOneONodes::random(context, v023->getVxImage(), v1345->getVxImage(), v378->getVxImage(), nodes));
-	kernel_es.push_back(OneIOneONodes::random(context, v1345->getVxImage(), v489->getVxImage(), nodes));
-	kernel_es.push_back(OneIOneONodes::random(context, v1345->getVxImage(), v59->getVxImage(), nodes));
-	kernel_es.push_back(OneIOneONodes::random(context, v267->getVxImage(), dst6->getVxImage(), nodes));
-	kernel_es.push_back(TwoIOneONodes::random(context, v267->getVxImage(), v378->getVxImage(), dst7->getVxImage(), nodes));
-	kernel_es.push_back(TwoIOneONodes::random(context, v378->getVxImage(), v489->getVxImage(), dst8->getVxImage(), nodes));
-	kernel_es.push_back(TwoIOneONodes::random(context, v489->getVxImage(), v59->getVxImage(), dst9->getVxImage(), nodes));
+	kernel_es.push_back(OneIOneONodes::get(VX_KERNEL_GAUSSIAN_3x3, context, src1->getVxImage(), v034->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::get(VX_KERNEL_SUBTRACT, context, src1->getVxImage(), src2->getVxImage(), v13456->getVxImage(), nodes));
+	kernel_es.push_back(OneIOneONodes::get(VX_KERNEL_NOT, context, src2->getVxImage(), v256->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::get(VX_KERNEL_AND, context, v034->getVxImage(), v13456->getVxImage(), v37->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::get(VX_KERNEL_SUBTRACT, context, v034->getVxImage(), v13456->getVxImage(), v47->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::get(VX_KERNEL_XOR, context, v13456->getVxImage(), v256->getVxImage(), v58->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::get(VX_KERNEL_AND, context, v13456->getVxImage(), v256->getVxImage(), v68->getVxImage(), nodes));
+	
+	kernel_es.push_back(TwoIOneONodes::get(VX_KERNEL_ADD, context, v37->getVxImage(), v47->getVxImage(), v79->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::get(VX_KERNEL_XOR, context, v58->getVxImage(), v68->getVxImage(), v89->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::get(VX_KERNEL_SUBTRACT, context, v79->getVxImage(), v89->getVxImage(), dst->getVxImage(), nodes));
 }
 
 void RandomCase1::releaseDatas()
 {
 	delete src1;
 	delete src2;
-	delete src3;
-	delete v023;
-	delete v1345;
-	delete v267;
-	delete v489;
-	delete v378;
-	delete v59;
-	delete dst6;
-	delete dst7;
-	delete dst8;
-	delete dst9;
+	delete v034;
+	delete v13456;
+	delete v256;
+	delete v37;
+	delete v47;
+	delete v58;
+	delete v68;
+	delete v79;
+	delete v89;
+	delete dst;
+}
+
+RandomCase2::RandomCase2(Context &c) : Experiment("Random graph 2", c)
+{
+}
+
+void RandomCase2::prepareNodesAndDatas(Graph &graph, std::vector<vx_kernel_e> &kernel_es, std::vector<MyNode *> &nodes)
+{
+	Mat lena_src = imread(SRC_IMG_NAME1);
+	NULLPTR_CHECK(lena_src.data);
+	resize(lena_src, lena_src, Size(IMG_WIDTH, IMG_HEIGHT));
+	cvtColor(lena_src, lena_src, CV_RGB2GRAY);
+
+	src = new Image(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8, lena_src);
+	v01356 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v234 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v15 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v367 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v47 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v58 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v68 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v79 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	v89 = new VirtualImage(graph, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+	dst = new Image(context, IMG_WIDTH, IMG_HEIGHT, VX_DF_IMAGE_U8);
+
+	kernel_es.push_back(OneIOneONodes::get(VX_KERNEL_BOX_3x3, context, src->getVxImage(), v01356->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::get(VX_KERNEL_ADD, context, src->getVxImage(), v01356->getVxImage(), v15->getVxImage(), nodes));
+	kernel_es.push_back(OneIOneONodes::get(VX_KERNEL_GAUSSIAN_3x3, context, src->getVxImage(), v234->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::get(VX_KERNEL_XOR, context, v01356->getVxImage(), v234->getVxImage(), v367->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::get(VX_KERNEL_AND, context, v234->getVxImage(), src->getVxImage(), v47->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::get(VX_KERNEL_ADD, context, v01356->getVxImage(), v15->getVxImage(), v58->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::get(VX_KERNEL_SUBTRACT, context, v01356->getVxImage(), v367->getVxImage(), v68->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::get(VX_KERNEL_XOR, context, v367->getVxImage(), v47->getVxImage(), v79->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::get(VX_KERNEL_ADD, context, v58->getVxImage(), v68->getVxImage(), v89->getVxImage(), nodes));
+	kernel_es.push_back(TwoIOneONodes::get(VX_KERNEL_SUBTRACT, context, v79->getVxImage(), v89->getVxImage(), dst->getVxImage(), nodes));
+}
+
+void RandomCase2::releaseDatas()
+{
+	delete src;
+	delete v01356;
+	delete v234;
+	delete v15;
+	delete v367;
+	delete v47;
+	delete v58;
+	delete v68;
+	delete v79;
+	delete v89;
+	delete dst;
 }

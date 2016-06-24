@@ -20,7 +20,7 @@ namespace OpenVX
 		vx_threshold mThreshold;
 	public:
 		~OneIOneONodes();
-		static vx_kernel_e random(Context &context, vx_image src, vx_image dst, std::vector<MyNode *> &nodes);
+		static vx_kernel_e get(vx_kernel_e k, Context &context, vx_image src, vx_image dst, std::vector<MyNode *> &nodes);
 	};
 
 	class TwoIOneONodes : public RandomNodes
@@ -29,7 +29,7 @@ namespace OpenVX
 		vx_scalar spolicy;
 	public:
 		~TwoIOneONodes();
-		static vx_kernel_e random(Context &context, vx_image src1, vx_image src2, vx_image dst, std::vector<MyNode *> &nodes);
+		static vx_kernel_e get(vx_kernel_e k, Context &context, vx_image src1, vx_image src2, vx_image dst, std::vector<MyNode *> &nodes);
 	};
 }
 

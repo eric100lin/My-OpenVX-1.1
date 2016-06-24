@@ -45,11 +45,23 @@ namespace OpenVX
 
 	class RandomCase1 : public Experiment
 	{
-		Image *src1, *src2, *src3;
-		VirtualImage *v023, *v1345, *v267, *v489, *v378, *v59;
-		Image *dst6, *dst7, *dst8, *dst9;
+		Image *src1, *src2;
+		VirtualImage *v034, *v13456, *v256, *v37, *v47, *v58, *v68, *v79, *v89;
+		Image *dst;
 	public:
 		RandomCase1(Context &c);
+		void prepareNodesAndDatas(Graph &graph, std::vector<vx_kernel_e> &kernel_es, std::vector<MyNode *> &nodes);
+		void releaseDatas();
+	};
+
+	class RandomCase2 : public Experiment
+	{
+		Image *src;
+		VirtualImage *v01356, *v234, *v15, *v367, *v47;
+		VirtualImage *v58, *v68, *v89, *v79;
+		Image *dst;
+	public:
+		RandomCase2(Context &c);
 		void prepareNodesAndDatas(Graph &graph, std::vector<vx_kernel_e> &kernel_es, std::vector<MyNode *> &nodes);
 		void releaseDatas();
 	};

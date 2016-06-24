@@ -33,7 +33,8 @@ int main(int argc, char **argv)
 	{
 		new SuperResolution(context),
 		new RandomFaceDetection(context),
-		new RandomCase1(context)
+		new RandomCase1(context),
+		new RandomCase2(context),
 	};
 	for (int n_exp = 0; n_exp < sizeof(experiments) / sizeof(experiments[0]); n_exp++)
 	{

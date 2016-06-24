@@ -208,7 +208,7 @@ void MyNode::nodeCoarsen(Graph& graph, ProfileData &profileData,
 	for (int n_start = 0; n_start < start_nodes.size(); n_start++)
 	{
 		vector<MyNode *> critical_path;
-		for (MyNode *c_node = nodes[0]; c_node != NULL;)
+		for (MyNode *c_node = nodes[n_start]; c_node != NULL;)
 		{
 			critical_path.push_back(c_node);
 			c_node = c_node->mPropagateSuccessor;
@@ -300,6 +300,7 @@ void MyNode::nodeCoarsen(Graph& graph, ProfileData &profileData,
 				if (cost != changeW)
 					resideTarget = maxLamda.writer->mTarget;
 				maxLamda.reader->mTarget = resideTarget;
+				maxLamda.writer->mTarget = resideTarget;
 				addClusterIfValid(resideTarget, maxLamda.writer);
 				addClusterIfValid(resideTarget, maxLamda.reader);
 			}
